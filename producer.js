@@ -1,17 +1,34 @@
 const XLSX = require('xlsx');
 const fs = require('fs');
 
-const StepMap = {
-    "Latest Feed Clicked": "clickHeaderProducts",
-    "Cluster Buys Clicked": "clickCategoryMen",
-    "Min. unique insiders change to 10": "fillFooterSubscriptionEmail",
-    "Min. unique insiders change to 2": "fillFooterSubscriptionEmail",
-    "Rolling Window (Days) 30 Days": "clickHeaderCart"
-};
+/**
+ * HELPER: Find the scenario file (Excel or CSV)
+ */
+function getScenarioFile() {
+    if (fs.existsSync('scenario.xlsx')) return 'scenario.xlsx';
+    if (fs.existsSync('scenario.csv')) return 'scenario.csv';
+    return null;
+}
 
+/**
+ * OPTIMIZED PRODUCER: THE SCENARIO COMPILER
+ */
 function generateSpec() {
-    console.log('🚀 Compiling Book11.xlsx...');
-    const workbook = XLSX.readFile('Book11.xlsx');
+    const scenarioFile = getScenarioFile();
+    if (!scenarioFile) {
+        console.error('❌ Error: No scenario.xlsx or scenario.csv found!');
+        return;
+    }
+
+    console.log(`🚀 Compiling ${scenarioFile}...`);
+    
+    if (!fs.existsSync('mappings.json')) {
+        console.error('❌ Error: mappings.json not found!');
+        return;
+    }
+    const StepMap = JSON.parse(fs.readFileSync('mappings.json', 'utf8'));
+
+    const workbook = XLSX.readFile(scenarioFile);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
@@ -22,7 +39,6 @@ function generateSpec() {
     for (let r = 0; r < data.length; r++) {
         const firstCell = String(data[r][0] || '').trim();
         
-        // Match A.1, A.2, etc. (More flexible regex)
         if (firstCell.startsWith('A.')) {
             const blockName = firstCell;
             const steps = [];
@@ -30,11 +46,9 @@ function generateSpec() {
             let stepRow = r + 1;
             while (stepRow < data.length) {
                 const stepNum = String(data[stepRow][0] || '').trim();
-                const scriptValue = String(data[stepRow][5] || '').trim(); // Column F
+                const scriptValue = String(data[stepRow][5] || '').trim(); 
                 
-                // If it looks like a step number
                 if (stepNum.match(/^\d+$/)) {
-                    // Scenario A.2 has scriptValue in Column B (Index 1) based on raw dump
                     const fallbackScript = String(data[stepRow][1] || '').trim();
                     const finalScript = scriptValue || fallbackScript;
                     

@@ -1,6 +1,0 @@
-Step / Action,Scenario A.1 (Create),Scenario A.2 (Approve),Expected Outcome
-Login sebagai,SPV UAC,Kaur,User is logged in to dashboard
-Ke menu,Master Data/Aksesoris,Master Data/Aksesoris,Accessories menu is visible
-Buat data baru,di klik,,Form for new data appears
-Isi form,"Name:Keyboard, Price:50",,Fields are populated correctly
-Simpan dan setujui,di klik,di klik,Success message: Data Saved/Approved
