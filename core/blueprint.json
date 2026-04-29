@@ -1,0 +1,20 @@
+[
+  {
+    "Scenario_ID": "A.1",
+    "Role": "SPV UAC",
+    "Flow": [
+      {
+        "Mapping_Key": "Login",
+        "Data": { "creds.username": "spv_user", "creds.password": "secret_pass" }
+      },
+      {
+        "Mapping_Key": "Create_New_Data",
+        "Data": { "Excel.Data_Input_Column": "Keyboard_001" }
+      },
+      {
+        "Mapping_Key": "Approve_Request",
+        "Data": { "Excel.Status_Column": "Approved" }
+      }
+    ]
+  }
+]
