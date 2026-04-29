@@ -1,18 +1,18 @@
 {
   "Login": {
     "version": "1.0",
+    "last_validated": "2026-04-29",
     "steps": [
-      { "type": "fill", "target": "#login_username", "value": "{{creds.username}}" },
-      { "type": "fill", "target": "#mui-3", "value": "{{creds.password}}" },
-      { "type": "click", "target": "button[name='Login']" }
+      { "type": "fill", "target": "#username", "value": "{{Username}}" },
+      { "type": "fill", "target": "#password", "value": "{{Password}}" },
+      { "type": "click", "target": "button[type='submit']" }
     ]
   },
-  "Create_New_Data": {
-    "version": "1.0",
+  "Navigate to Master Data": {
+    "version": "1.2",
+    "last_validated": "2026-04-28",
     "steps": [
-      { "type": "click", "target": "text='Master Data/Aksesoris'" },
-      { "type": "fill", "target": "#data_input", "value": "{{Excel.Data_Input_Column}}" },
-      { "type": "click", "target": "button[name='Save']" }
+      { "type": "click", "target": "nav >> text=Master Data" }
     ]
   }
 }
