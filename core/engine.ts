@@ -1,4 +1,4 @@
-import { test, Page, BrowserContext } from '@playwright/test';
+import { Page, BrowserContext } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -6,7 +6,11 @@ export class AutomationEngine {
     private mappings: any;
 
     constructor(mappingPath: string) {
-        this.mappings = JSON.parse(fs.readFileSync(mappingPath, 'utf8'));
+        if (fs.existsSync(mappingPath)) {
+            this.mappings = JSON.parse(fs.readFileSync(mappingPath, 'utf8'));
+        } else {
+            this.mappings = {};
+        }
     }
 
     async runScenario(page: Page, context: BrowserContext, scenarioId: string, steps: any[], data: any) {
@@ -14,69 +18,123 @@ export class AutomationEngine {
         if (fs.existsSync(resultsDir)) fs.rmSync(resultsDir, { recursive: true, force: true });
         fs.mkdirSync(resultsDir, { recursive: true });
 
-        // 2. INJECT VISUAL TRACE SCRIPT
+        // 2. INJECT VISUAL TRACE SCRIPT (Force red dots to be persistent enough for screenshot)
         await page.addInitScript(() => {
-            window.addEventListener('click', (e) => {
+            window.addEventListener('mousedown', (e) => {
                 const dot = document.createElement('div');
+                dot.id = 'automation-click-dot';
                 dot.style.position = 'fixed';
-                dot.style.left = (e.clientX - 10) + 'px';
-                dot.style.top = (e.clientY - 10) + 'px';
-                dot.style.width = '20px';
-                dot.style.height = '20px';
+                dot.style.left = (e.clientX - 15) + 'px';
+                dot.style.top = (e.clientY - 15) + 'px';
+                dot.style.width = '30px';
+                dot.style.height = '30px';
                 dot.style.borderRadius = '50%';
-                dot.style.backgroundColor = 'rgba(255, 0, 0, 0.6)';
-                dot.style.border = '2px solid red';
-                dot.style.zIndex = '999999';
+                dot.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+                dot.style.border = '3px solid white';
+                dot.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+                dot.style.zIndex = '2147483647';
                 dot.style.pointerEvents = 'none';
                 document.body.appendChild(dot);
-                setTimeout(() => dot.remove(), 2000); // Dot stays for 2s to be caught by screenshot
+                setTimeout(() => dot.remove(), 3000); 
             }, true);
         });
 
-        await context.tracing.start({ screenshots: true, snapshots: true });
+        await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
         console.log(`\n▶️ Starting Scenario: ${scenarioId}`);
         
-        for (const stepLabel of steps) {
-            await this.runStep(page, stepLabel, data, resultsDir);
+        try {
+            for (const stepLabel of steps) {
+                await this.runStep(page, stepLabel, data, resultsDir);
+            }
+            console.log(`✅ Scenario ${scenarioId} Complete.`);
+        } catch (error) {
+            console.error(`❌ Scenario ${scenarioId} FAILED:`, error.message);
+            await page.screenshot({ path: path.join(resultsDir, 'ERROR_STATE.png'), fullPage: true });
+            throw error;
+        } finally {
+            await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+            await page.screenshot({ path: path.join(resultsDir, 'FINAL_VIEW.png'), fullPage: true });
+            await context.tracing.stop({ path: path.join(resultsDir, `trace_${scenarioId}.zip`) });
         }
-
-        await context.tracing.stop({ path: path.join(resultsDir, `trace_${scenarioId}.zip`) });
-        await page.screenshot({ path: path.join(resultsDir, 'STEP_FINAL.png'), fullPage: true });
-        console.log(`✅ Scenario ${scenarioId} Complete.`);
     }
 
     private async runStep(page: Page, stepLabel: string, data: any, resultsDir: string) {
         const action = this.mappings[stepLabel];
         if (!action) {
-            await page.pause();
-            return;
+            console.warn(`⚠️ Warning: No mapping found for "${stepLabel}".`);
+            // THE CRITICAL "PAUSE FOR PM" LOGIC
+            // Instead of throwing, we let the server know we need a recording here
+            throw new Error(`MISSING_MAPPING: ${stepLabel}`);
         }
 
-        try {
-            console.log(`  └─ Executing: ${stepLabel}`);
-            for (let i = 0; i < action.steps.length; i++) {
-                const step = action.steps[i];
-                const value = this.tokenize(step.value, data);
-                const locator = page.locator(step.target);
+        console.log(`  └─ Executing: ${stepLabel}`);
+        for (let i = 0; i < action.steps.length; i++) {
+            const step = action.steps[i];
+            const value = this.tokenize(step.value, data);
+            const locator = this.resolveLocator(page, step.target);
+            
+            try {
+                // Ensure element is ready
+                await locator.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
                 
                 if (step.type === 'fill') {
-                    await locator.fill(value, { timeout: 5000 });
+                    await locator.fill(value, { timeout: 10000 });
                 } else if (step.type === 'click') {
-                    await locator.click({ timeout: 5000 });
-                    // CAPTURE TRACE: Take screenshot immediately after click to catch the red dot
-                    await page.waitForTimeout(200); // Small buffer for dot to appear
+                    // Pre-click screenshot
+                    await locator.scrollIntoViewIfNeeded().catch(() => {});
+                    
+                    await locator.click({ timeout: 10000 });
+                    
+                    // POST-CLICK CAPTURE: Wait for stability
+                    await page.waitForLoadState('domcontentloaded').catch(() => {});
+                    await page.waitForTimeout(500); // Wait for red dot & animations
+                    
                     await page.screenshot({ 
-                        path: path.join(resultsDir, `STEP_${stepLabel}_${i}.png`), 
-                        fullPage: false 
+                        path: path.join(resultsDir, `STEP_${i}_${stepLabel.replace(/[^a-z0-9]/gi, '_')}.png`), 
+                        fullPage: true // CHANGE TO FULLPAGE TO AVOID WHITE BLANKS IN VIEWPORT
                     });
                 } else if (step.type === 'goto') {
                     await page.goto(step.target, { waitUntil: 'networkidle' });
                 }
+            } catch (err) {
+                console.error(`Error in step "${stepLabel}" action ${i}:`, err.message);
+                throw err;
             }
-        } catch (error) {
-            await page.screenshot({ path: path.join(resultsDir, `error_${stepLabel}.png`) });
-            await page.pause();
         }
+    }
+
+    private resolveLocator(page: Page, target: string) {
+        const match = target.match(/^(.*?)\((.*)\)$/);
+        if (!match) return page.locator(target);
+
+        const method = match[1];
+        const rawArgs = match[2];
+
+        try {
+            if (method === 'locator') {
+                return page.locator(this.stripQuotes(rawArgs));
+            } else if (method.startsWith('getBy')) {
+                const args = this.parseArgs(rawArgs);
+                return (page as any)[method](...args);
+            }
+        } catch (e) {
+            console.error(`Error resolving locator "${target}":`, e);
+        }
+        return page.locator(target);
+    }
+
+    private parseArgs(rawArgs: string): any[] {
+        try {
+            // Support for { name: '...' } pattern
+            const jsonFriendly = `[${rawArgs.replace(/'/g, '"')}]`;
+            return JSON.parse(jsonFriendly);
+        } catch (e) {
+            return [this.stripQuotes(rawArgs)];
+        }
+    }
+
+    private stripQuotes(str: string) {
+        return str.replace(/^['"]|['"]$/g, '');
     }
 
     private tokenize(value: string, data: any): string {

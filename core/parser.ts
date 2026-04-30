@@ -5,7 +5,14 @@ import * as path from 'path';
 export function parseDynamicExcel() {
     const rootDir = process.cwd();
     const files = fs.readdirSync(rootDir);
-    const excelFile = files.find(f => f.endsWith('.xlsx') && !f.startsWith('~$'));
+    
+    // Prioritize scenario_uploaded.xlsx (from the UI)
+    let excelFile = files.find(f => f === 'scenario_uploaded.xlsx');
+    
+    // Fallback to any other .xlsx
+    if (!excelFile) {
+        excelFile = files.find(f => f.endsWith('.xlsx') && !f.startsWith('~$'));
+    }
     
     if (!excelFile) throw new Error("❌ No .xlsx file found!");
 

@@ -5,7 +5,7 @@ import * as path from 'path';
 
 // 1. Initialize Engine and Parse Excel
 const engine = new AutomationEngine(path.join(process.cwd(), 'core/mappings.json'));
-const scenarios = parseDynamicExcel(path.join(process.cwd(), 'scenario_pukat.xlsx'));
+const scenarios = parseDynamicExcel();
 
 test.describe('No-Code Automation Suite - Pukat Master', () => {
     for (const scenario of scenarios) {

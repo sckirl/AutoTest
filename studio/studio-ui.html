@@ -3,49 +3,186 @@
 <head>
     <title>Automation Studio</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 40px; background: #f0f2f5; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 24px; }
-        h1 { color: #1877f2; }
-        .btn { padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .btn-primary { background: #1877f2; color: white; }
-        .btn-danger { background: #fb7344; color: white; margin-left: 10px; }
-        .btn:active { transform: scale(0.98); }
-        #status { margin-top: 20px; font-weight: bold; color: #65676b; }
+        body { font-family: 'Segoe UI', sans-serif; padding: 40px; background: #f0f2f5; color: #1c1e21; line-height: 1.6; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid #e5e7eb; }
+        h1 { margin: 0; color: #1877f2; display: flex; align-items: center; gap: 12px; font-size: 28px; }
+        .subtitle { color: #65676b; margin-bottom: 25px; }
+        
+        .drop-zone { border: 2px dashed #bec3c9; padding: 30px; text-align: center; border-radius: 12px; cursor: pointer; transition: 0.3s; background: #fafafa; margin: 20px 0; }
+        .drop-zone.dragover { border-color: #1877f2; background: #e7f3ff; }
+
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px; display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+        .btn-primary { background: #1877f2; color: white; width: 100%; }
+        .btn-record { background: #e7f3ff; color: #1877f2; border: 1px solid #1877f2; }
+        .btn-danger { background: #fff; color: #d93025; border: 1px solid #d93025; margin-top: 20px; }
+        .btn:disabled { background: #ebedf0; color: #bcc0c4; cursor: not-allowed; opacity: 0.6; }
+        
+        #status-box { margin-top: 20px; padding: 16px; border-radius: 8px; font-size: 14px; display: none; border-left: 4px solid #1877f2; }
+        .status-info { background: #e7f3ff; color: #1877f2; }
+        .status-success { background: #e8f5e9; color: #2e7d32; border-left-color: #2e7d32; }
+        
+        .script-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; margin-top: 15px; }
+        .step-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid #f0f2f5; }
+        .step-label { font-weight: 600; font-size: 14px; }
+        .step-instruction { color: #65676b; font-size: 12px; }
+        
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .badge-missing { background: #fff1f0; color: #d93025; }
+        .badge-mapped { background: #f6ffed; color: #52c41a; }
+        
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 600px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        textarea { width: 100%; height: 180px; margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 12px; box-sizing: border-box; resize: none; }
     </style>
 </head>
 <body>
+    <div id="record-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title">Finalize Action Code</h3>
+            <p style="font-size: 13px;">1. Replay will happen first. Wait for the <b>Inspector</b> window.<br>2. Use the <b>"Record"</b> button in Inspector to capture your action.<br>3. <b>Copy the code line</b> from Inspector (e.g. <code>await page.click(...)</code>).<br>4. Paste it here and click Sync.</p>
+            <textarea id="recorded-code" placeholder="Paste your recorded code here..."></textarea>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" style="width: auto;" onclick="saveMapping()">Sync & Save Action</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="card">
             <h1>🚀 Automation Studio</h1>
-            <p>Control Center for No-Code Playwright Automation.</p>
-            <hr>
-            <button class="btn btn-primary" onclick="runTests()">▶️ Start Intelligent Replay</button>
-            <button class="btn btn-danger" onclick="restartSystem()">🗑️ Restart (Wipe All)</button>
-            <div id="status">Ready.</div>
+            <p class="subtitle">Multi-Flow UAT Engine (A.1, B.1, C.1 Support)</p>
+            
+            <div id="drop-zone" class="drop-zone">
+                <span id="drop-text">📄 Drag & Drop <b>scenario.xlsx</b> here or <b>Click to Upload</b></span>
+                <input type="file" id="file-input" style="opacity: 0.01; width: 1px; height: 1px; position: absolute;" accept=".xlsx" />
+            </div>
+
+            <div id="status-box"></div>
+
+            <div id="step-scan-container" style="display: none;">
+                <h3>📋 Unique Action Library</h3>
+                <p style="font-size: 12px; color: #65676b; margin-bottom: 10px;">If a label appears in multiple flows, record it once to map it globally.</p>
+                <div id="step-list-ui" class="script-box"></div>
+                <div style="margin-top: 30px;">
+                    <button class="btn btn-primary" id="run-btn" disabled>🚀 Execute Test Scenarios</button>
+                </div>
+            </div>
         </div>
 
-        <div class="card">
-            <h3>Manual Controls</h3>
-            <p>1. Ensure your Excel file has a <b>"Scenario"</b> column.</p>
-            <p>2. Open <b>results/</b> folder to see screenshots after run.</p>
+        <div class="card" style="background: #f7f8fa; border: none;">
+            <h3 style="margin:0;">⚙️ Project Workspace</h3>
+            <p style="font-size: 13px;">Wiping the system will delete all results and mappings for a clean slate.</p>
+            <button class="btn btn-danger" onclick="restartSystem()">Reset System (Wipe All)</button>
         </div>
     </div>
 
     <script>
-        async function restartSystem() {
-            if (!confirm("Are you sure? This will delete all mappings and result screenshots!")) return;
-            document.getElementById('status').innerText = "Restarting...";
-            const res = await fetch('http://localhost:3000/restart', { method: 'POST' });
-            const data = await res.json();
-            document.getElementById('status').innerText = data.message;
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const runBtn = document.getElementById('run-btn');
+        const statusBox = document.getElementById('status-box');
+        const dropText = document.getElementById('drop-text');
+        const stepListUi = document.getElementById('step-list-ui');
+        const modal = document.getElementById('record-modal');
+        const codeArea = document.getElementById('recorded-code');
+
+        let currentLabel = "";
+        let currentScenarioId = "";
+
+        dropZone.onclick = () => fileInput.click();
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        };
+        fileInput.onchange = (e) => handleFile(e.target.files[0]);
+
+        async function handleFile(file) {
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('excel', file);
+            showStatus("⏳ Processing scenarios...", "info");
+            const res = await fetch('/upload', { method: 'POST', body: formData });
+            if (res.ok) {
+                showStatus("✅ Excel Loaded.", "success");
+                await scanSteps();
+            }
         }
 
-        async function runTests() {
-            document.getElementById('status').innerText = "Running Tests (Headed Mode)... Check your taskbar.";
-            const res = await fetch('http://localhost:3000/run', { method: 'POST' });
+        async function scanSteps() {
+            const res = await fetch('/scan');
             const data = await res.json();
-            document.getElementById('status').innerText = "Run Complete. Check results/ folder.";
+            document.getElementById('step-scan-container').style.display = 'block';
+            let allMapped = true;
+            
+            stepListUi.innerHTML = data.steps.map(s => {
+                if (s.status === 'missing') allMapped = false;
+                return `
+                <div class="step-row">
+                    <div>
+                        <div class="step-label">${s.label}</div>
+                        <div class="step-instruction">Used in: ${s.flows.join(', ')}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="badge ${s.status === 'mapped' ? 'badge-mapped' : 'badge-missing'}">${s.status}</span>
+                        <button class="btn btn-record" onclick="openRecordModal('${s.label}', '${s.scenarioId}')">
+                            ${s.status === 'missing' ? '⏺ Record' : '🔄 Re-Map'}
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+            
+            runBtn.disabled = !allMapped;
+            if (allMapped && data.steps.length > 0) {
+                showStatus("✨ All unique actions mapped. Ready to execute flows.", "success");
+            }
+        }
+
+        async function openRecordModal(label, scenarioId) {
+            currentLabel = label;
+            currentScenarioId = scenarioId;
+            document.getElementById('modal-title').innerText = `Record: "${label}"`;
+            modal.style.display = 'flex';
+            
+            showStatus(`🎬 Replaying preceding steps for context. Please look for the browser window.`, "info");
+            await fetch('/record', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label, scenarioId })
+            });
+        }
+
+        function closeModal() { modal.style.display = 'none'; codeArea.value = ''; }
+
+        async function saveMapping() {
+            const code = codeArea.value.trim();
+            if (!code) return alert("Please paste the recorded code.");
+            const res = await fetch('/save-mapping', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label: currentLabel, code })
+            });
+            if (res.ok) {
+                closeModal();
+                await scanSteps();
+                showStatus(`✅ Mapped "${currentLabel}" globally.`, "success");
+            }
+        }
+
+        runBtn.onclick = () => fetch('/run', { method: 'POST' });
+        function showStatus(msg, type) {
+            statusBox.innerText = msg;
+            statusBox.style.display = 'block';
+            statusBox.className = `status-${type}`;
+        }
+        async function restartSystem() {
+            if (confirm("Wipe everything?")) {
+                await fetch('/restart', { method: 'POST' });
+                location.reload();
+            }
         }
     </script>
 </body>
