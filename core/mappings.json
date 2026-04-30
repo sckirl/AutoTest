@@ -1,18 +1,31 @@
 {
-  "Login": {
-    "version": "1.0",
-    "last_validated": "2026-04-29",
+  "Navigate to Pukat": {
+    "steps": [{ "type": "goto", "target": "http://pukat-master:6969", "value": "" }]
+  },
+  "Latest Feed": {
+    "steps": [{ "type": "click", "target": "text=Latest Feed" }]
+  },
+  "Cluster Buys": {
+    "steps": [{ "type": "click", "target": "text=Cluster Buys 🔥" }]
+  },
+  "Min. unique insiders": {
     "steps": [
-      { "type": "fill", "target": "#username", "value": "{{Username}}" },
-      { "type": "fill", "target": "#password", "value": "{{Password}}" },
-      { "type": "click", "target": "button[type='submit']" }
+      { "type": "click", "target": "#min-insiders-trigger" },
+      { "type": "fill", "target": "#min-insiders-input", "value": "{{Min. unique insiders}}" }
     ]
   },
-  "Navigate to Master Data": {
-    "version": "1.2",
-    "last_validated": "2026-04-28",
+  "Rolling Window (Days)": {
     "steps": [
-      { "type": "click", "target": "nav >> text=Master Data" }
+      { "type": "click", "target": "#rolling-window-trigger" },
+      { "type": "fill", "target": "#rolling-window-input", "value": "{{Rolling Window (Days)}}" }
     ]
+  },
+  "Filter Ticker/name": {
+    "steps": [
+      { "type": "fill", "target": "input[placeholder='Filter Ticker/Name...']", "value": "{{Filter Ticker/name}}" }
+    ]
+  },
+  "Trade First Row": {
+    "steps": [{ "type": "click", "target": "tbody tr >> internal:has-text=\"Trade\" >> nth=0" }]
   }
 }

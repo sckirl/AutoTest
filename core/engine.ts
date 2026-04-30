@@ -1,11 +1,7 @@
-import { test, Page } from '@playwright/test';
+import { test, Page, BrowserContext } from '@playwright/test';
 import * as fs from 'fs';
+import * as path from 'path';
 
-/**
- * The Intelligent Engine that handles the "No-Code" flow.
- * It prioritizes replaying existing mappings and triggers
- * Codegen for anything missing or broken.
- */
 export class AutomationEngine {
     private mappings: any;
 
@@ -13,34 +9,61 @@ export class AutomationEngine {
         this.mappings = JSON.parse(fs.readFileSync(mappingPath, 'utf8'));
     }
 
-    async runStep(page: Page, stepLabel: string, data: any) {
+    async runScenario(page: Page, context: BrowserContext, scenarioId: string, steps: any[], data: any) {
+        const resultsDir = path.join(process.cwd(), 'results', scenarioId);
+        if (!fs.existsSync(resultsDir)) {
+            fs.mkdirSync(resultsDir, { recursive: true });
+        }
+
+        // Start Tracing for "Click Marks" and Screenshots
+        await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
+
+        console.log(`\n▶️ Starting Scenario: ${scenarioId}`);
+        
+        for (const stepLabel of steps) {
+            await this.runStep(page, stepLabel, data, resultsDir);
+        }
+
+        // Stop Tracing and save to the scenario folder
+        await context.tracing.stop({ path: path.join(resultsDir, `trace_${scenarioId}.zip`) });
+        
+        // Take a final screenshot for the folder
+        await page.screenshot({ path: path.join(resultsDir, 'final_result.png'), fullPage: true });
+        console.log(`✅ Scenario ${scenarioId} Complete. Results in: ${resultsDir}`);
+    }
+
+    private async runStep(page: Page, stepLabel: string, data: any, resultsDir: string) {
         const action = this.mappings[stepLabel];
 
         if (!action) {
-            return await this.triggerManualRecording(page, stepLabel);
+            console.warn(`[!] Missing Mapping: '${stepLabel}'. Launching Studio...`);
+            await page.pause();
+            return;
         }
 
         try {
-            console.log(`[Replaying] ${stepLabel}`);
+            console.log(`  └─ Executing: ${stepLabel}`);
             for (const step of action.steps) {
-                // Injects data from Excel into the mapping tokens {{variable}}
                 const value = this.tokenize(step.value, data);
-                await page.locator(step.target).fill(value, { timeout: 3000 });
+                const locator = page.locator(step.target);
+                
+                if (step.type === 'fill') {
+                    await locator.fill(value, { timeout: 5000 });
+                } else if (step.type === 'click') {
+                    await locator.click({ timeout: 5000 });
+                } else if (step.type === 'goto') {
+                    await page.goto(step.target, { waitUntil: 'networkidle' });
+                }
             }
         } catch (error) {
-            console.warn(`[Auto-Heal] Step '${stepLabel}' failed. Launching Studio for fix...`);
-            await this.triggerManualRecording(page, stepLabel);
+            console.error(`  ❌ Auto-Heal Triggered for '${stepLabel}'`);
+            await page.screenshot({ path: path.join(resultsDir, `error_${stepLabel}.png`) });
+            await page.pause();
         }
     }
 
-    private async triggerManualRecording(page: Page, label: string) {
-        console.log(`[Studio] Launching Codegen for: ${label}`);
-        // This is the "UI-First" moment where the user sees the browser
-        // and records the action. The system will then save it back to mappings.json.
-        await page.pause(); 
-    }
-
     private tokenize(value: string, data: any): string {
+        if (!value) return "";
         return value.replace(/\{\{(.*?)\}\}/g, (_, key) => data[key] || "");
     }
 }
