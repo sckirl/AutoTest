@@ -59,6 +59,11 @@
                 <input type="file" id="file-input" style="opacity: 0.01; width: 1px; height: 1px; position: absolute;" accept=".xlsx" />
             </div>
 
+            <div id="url-config" style="margin-bottom: 20px;">
+                <label style="font-size: 13px; font-weight: 600; color: #65676b;">Base URL for Recording:</label>
+                <input type="text" id="base-url" placeholder="https://youtube.com" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 5px;" />
+            </div>
+
             <div id="status-box"></div>
 
             <div id="step-scan-container" style="display: none;">
@@ -124,7 +129,7 @@
                 <div class="step-row">
                     <div>
                         <div class="step-label">${s.label}</div>
-                        <div class="step-instruction">Used in: ${s.flows.join(', ')}</div>
+                        <div class="step-instruction">Scenario: ${s.scenarioId}</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <span class="badge ${s.status === 'mapped' ? 'badge-mapped' : 'badge-missing'}">${s.status}</span>
@@ -144,6 +149,8 @@
         async function openRecordModal(label, scenarioId) {
             currentLabel = label;
             currentScenarioId = scenarioId;
+            const baseUrl = document.getElementById('base-url').value;
+            
             document.getElementById('modal-title').innerText = `Record: "${label}"`;
             modal.style.display = 'flex';
             
@@ -151,7 +158,7 @@
             await fetch('/record', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ label, scenarioId })
+                body: JSON.stringify({ label, scenarioId, url: baseUrl })
             });
         }
 
@@ -172,7 +179,24 @@
             }
         }
 
-        runBtn.onclick = () => fetch('/run', { method: 'POST' });
+        runBtn.onclick = async () => {
+            runBtn.disabled = true;
+            runBtn.innerText = "🚀 Launching Playwright UI...";
+            showStatus("⏳ Launching Playwright Interactive UI on your desktop...", "info");
+            
+            const res = await fetch('/run', { method: 'POST' });
+            const data = await res.json();
+            
+            if (res.ok) {
+                showStatus(`✅ ${data.message} ${data.instruction}`, "success");
+                runBtn.innerText = "🚀 Run Test Execution";
+                runBtn.disabled = false;
+            } else {
+                showStatus("❌ Failed to launch UI. Check server logs.", "error");
+                runBtn.disabled = false;
+                runBtn.innerText = "🚀 Run Test Execution";
+            }
+        };
         function showStatus(msg, type) {
             statusBox.innerText = msg;
             statusBox.style.display = 'block';

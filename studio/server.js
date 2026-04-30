@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
-const { exec } = require('child_process');
+const { exec, execSync, spawn } = require('child_process');
 const multer = require('multer');
 const XLSX = require('xlsx');
 
@@ -38,81 +38,114 @@ app.get('/scan', (req, res) => {
         
         const stepMap = new Map();
         const scenarios = [];
-        const headerRow = rows[0];
+        let currentScenario = null;
 
-        // Advanced Parser: Supports A.1, B.1, C.1...
-        for (let c = 1; c < headerRow.length; c++) {
-            const id = String(headerRow[c] || "").trim();
-            if (id.match(/^[A-Z]\.\d+/)) {
-                scenarios.push({ id, col: c });
+        // Hierarchical Parser: Detects A.1, A.2 and their steps
+        for (let r = 1; r < rows.length; r++) {
+            const scenarioNum = String(rows[r][1] || "").trim();
+            const label = String(rows[r][2] || "").trim();
+
+            if (scenarioNum.match(/^[A-Z]\.\d+/)) {
+                currentScenario = scenarioNum;
+                scenarios.push(currentScenario);
+            } else if (currentScenario && scenarioNum.match(/^\d+$/) && label) {
+                // This is a step within a scenario
+                if (!stepMap.has(label)) {
+                    stepMap.set(label, { 
+                        label, 
+                        status: mappings[label] ? 'mapped' : 'missing',
+                        flows: [currentScenario],
+                        scenarioId: currentScenario
+                    });
+                } else {
+                    stepMap.get(label).flows.push(currentScenario);
+                }
             }
         }
 
-        scenarios.forEach(scen => {
-            for (let r = 1; r < rows.length; r++) {
-                const label = String(rows[r][0] || "").trim();
-                const instruction = String(rows[r][scen.col] || "").trim();
-                if (label && instruction && instruction !== 'null') {
-                    // Shared Mapping Logic: If label exists, we track it globally
-                    if (!stepMap.has(label)) {
-                        stepMap.set(label, { 
-                            label, 
-                            instruction, 
-                            status: mappings[label] ? 'mapped' : 'missing',
-                            flows: [scen.id]
-                        });
-                    } else {
-                        stepMap.get(label).flows.push(scen.id);
+        res.json({ steps: Array.from(stepMap.values()), scenarios });
+    } catch (err) { 
+        console.error("Scan Error:", err);
+        res.status(500).json({ error: err.message }); 
+    }
+});
+
+// --- FIXED RECORDING ENDPOINT ---
+app.post('/record', async (req, res) => {
+    const { label, url, scenarioId } = req.body;
+    console.log(`\n🎬 Recording started for label: "${label}" in scenario: "${scenarioId}"`);
+    
+    try {
+        const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
+        const workbook = XLSX.readFile(UPLOADED_EXCEL);
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        // 1. Generate Replay Script
+        const replayScriptPath = path.join(ROOT_DIR, `replay_${Date.now()}.js`);
+        let scriptContent = `const { chromium } = require('playwright');\n(async () => {\n`;
+        scriptContent += `  console.log('🚀 Launching Browser...');\n`;
+        scriptContent += `  const browser = await chromium.launch({ headless: false });\n`;
+        scriptContent += `  const context = await browser.newContext();\n`;
+        scriptContent += `  const page = await context.newPage();\n`;
+        
+        if (url) {
+            scriptContent += `  await page.goto('${url}');\n`;
+        }
+
+        // Find steps for this scenario up to the current label
+        let currentScen = null;
+        for (let r = 1; r < rows.length; r++) {
+            const scenarioNum = String(rows[r][1] || "").trim();
+            const stepLabel = String(rows[r][2] || "").trim();
+
+            if (scenarioNum.match(/^[A-Z]\.\d+/)) {
+                currentScen = scenarioNum;
+            } else if (currentScen === scenarioId && scenarioNum.match(/^\d+$/) && stepLabel) {
+                if (stepLabel === label) break;
+                
+                if (mappings[stepLabel]) {
+                    console.log(`   Replaying step: ${stepLabel}`);
+                    for (const action of mappings[stepLabel].steps) {
+                        const val = action.value || "";
+                        const target = action.target;
+                        
+                        // Intelligent Locator String Generation
+                        let locatorStr = "";
+                        if (target.startsWith('getBy')) {
+                            locatorStr = `page.${target}`;
+                        } else {
+                            locatorStr = `page.locator(\`${target}\`)`;
+                        }
+
+                        if (action.type === 'goto') scriptContent += `    await page.goto('${action.target}');\n`;
+                        else if (action.type === 'click') scriptContent += `    await ${locatorStr}.click();\n`;
+                        else if (action.type === 'fill') scriptContent += `    await ${locatorStr}.fill(\`${val}\`);\n`;
+                        else if (action.type === 'press') scriptContent += `    await ${locatorStr}.press(\`${val || 'Enter'}\`);\n`;
                     }
                 }
             }
+        }
+        
+        scriptContent += `  console.log('--- REPLAY COMPLETE. INSPECTOR OPENING FOR: ${label} ---');\n`;
+        scriptContent += `  await page.pause();\n`; 
+        scriptContent += `  await browser.close();\n})();`;
+        
+        fs.writeFileSync(replayScriptPath, scriptContent);
+
+        // 2. Execute the script with better logging
+        const child = exec(`node ${replayScriptPath}`, (err, stdout, stderr) => {
+            if (err) console.error(`❌ Execution Error: ${err.message}`);
+            if (stderr) console.error(`⚠️ Stderr: ${stderr}`);
+            console.log(`ℹ️ Stdout: ${stdout}`);
+            if (fs.existsSync(replayScriptPath)) fs.unlinkSync(replayScriptPath);
         });
 
-        res.json({ steps: Array.from(stepMap.values()), scenarios: scenarios.map(s => s.id) });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// --- FIXED RECORDING ENDPOINT (Inspector-First) ---
-app.post('/record', async (req, res) => {
-    const { label, url, scenarioId } = req.body;
-    const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
-    const rows = XLSX.utils.sheet_to_json(XLSX.readFile(UPLOADED_EXCEL).Sheets[XLSX.readFile(UPLOADED_EXCEL).SheetNames[0]], { header: 1 });
-    const colIndex = rows[0].findIndex(h => String(h).trim() === scenarioId);
-
-    // 1. Generate Replay Script for Chaining
-    const replayScriptPath = path.join(ROOT_DIR, `replay_${Date.now()}.js`);
-    let scriptContent = `const { chromium } = require('playwright');\n(async () => {\n`;
-    scriptContent += `  const browser = await chromium.launch({ headed: true });\n`;
-    scriptContent += `  const context = await browser.newContext();\n`;
-    scriptContent += `  const page = await context.newPage();\n`;
-    
-    // Replay preceding steps
-    for (let r = 1; r < rows.length; r++) {
-        const stepLabel = String(rows[r][0] || "").trim();
-        if (stepLabel === label) break;
-        const instruction = String(rows[r][colIndex] || "").trim();
-        if (stepLabel && instruction !== 'null' && mappings[stepLabel]) {
-            for (const action of mappings[stepLabel].steps) {
-                const val = action.value ? action.value.replace(/\{\{(.*?)\}\}/g, instruction) : "";
-                if (action.type === 'goto') scriptContent += `    await page.goto('${action.target}');\n`;
-                else if (action.type === 'click') scriptContent += `    await page.locator("${action.target}").click();\n`;
-                else if (action.type === 'fill') scriptContent += `    await page.locator("${action.target}").fill("${val}");\n`;
-            }
-        }
+        res.json({ message: "Replay started. Look for the browser window." });
+    } catch (err) {
+        console.error("Record Error:", err);
+        res.status(500).json({ error: err.message });
     }
-    
-    scriptContent += `  console.log('--- REPLAY COMPLETE. INSPECTOR OPENING FOR: ${label} ---');\n`;
-    scriptContent += `  await page.pause();\n`; // This triggers the Inspector window
-    scriptContent += `  await browser.close();\n})();`;
-    
-    fs.writeFileSync(replayScriptPath, scriptContent);
-
-    // 2. Execute the script (Non-blocking)
-    exec(`node ${replayScriptPath}`, (err) => {
-        if (fs.existsSync(replayScriptPath)) fs.unlinkSync(replayScriptPath);
-    });
-
-    res.json({ message: "Replay started. Inspector will open automatically." });
 });
 
 app.post('/save-mapping', (req, res) => {
@@ -124,9 +157,38 @@ app.post('/save-mapping', (req, res) => {
     res.json({ message: "Saved." });
 });
 
+// ... existing code ...
+
 app.post('/run', (req, res) => {
-    exec('npx playwright test core/runner.spec.ts --headed');
-    res.json({ message: "Running." });
+    try {
+        console.log("🚀 Generating blueprint...");
+        execSync(`node core/scenario_parser.js ${UPLOADED_EXCEL}`, { stdio: 'inherit' });
+        
+        console.log("🔨 Compiling scenarios into explicit code...");
+        execSync(`node core/compiler.js`, { stdio: 'inherit' });
+
+        console.log("🏃 Launching Playwright UI...");
+        
+        const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--ui'], {
+            env: { ...process.env, PW_HEADLESS: '0' },
+            shell: true
+        });
+
+        pw.stdout.on('data', (data) => console.log(`[PW] ${data}`));
+        pw.stderr.on('data', (data) => console.error(`[PW ERROR] ${data}`));
+
+        pw.on('close', (code) => {
+            console.log(`✅ Playwright UI process closed with code ${code}`);
+        });
+        
+        res.json({ 
+            message: "Playwright UI launched. Check your local desktop for the Trace Viewer window.",
+            instruction: "In the Playwright UI, click 'Run all' or select specific scenarios to see parallel execution."
+        });
+    } catch (err) {
+        console.error("Run Error:", err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.post('/restart', (req, res) => {
@@ -147,24 +209,48 @@ function parseRecordedCode(code) {
     for (let line of lines) {
         line = line.trim();
         if (!line.includes('await')) continue;
+        
+        // Handle goto
         if (line.includes('.goto(')) {
             const m = line.match(/goto\(['"](.*?)['"]\)/);
             if (m) steps.push({ type: 'goto', target: m[1] });
-        } else if (line.includes('.click()')) {
-            const t = extractLocator(line);
-            if (t) steps.push({ type: 'click', target: t });
+            continue;
+        }
+
+        const locator = extractLocator(line);
+        if (!locator) continue;
+
+        if (line.includes('.click(')) {
+            steps.push({ type: 'click', target: locator });
         } else if (line.includes('.fill(')) {
-            const t = extractLocator(line);
             const v = line.match(/\.fill\(['"](.*?)['"]\)/);
-            if (t) steps.push({ type: 'fill', target: t, value: v ? v[1] : "{{data}}" });
+            steps.push({ type: 'fill', target: locator, value: v ? v[1] : "{{data}}" });
+        } else if (line.includes('.press(')) {
+            const v = line.match(/\.press\(['"](.*?)['"]\)/);
+            steps.push({ type: 'press', target: locator, value: v ? v[1] : "" });
+        } else if (line.includes('.type(')) {
+            const v = line.match(/\.type\(['"](.*?)['"]\)/);
+            steps.push({ type: 'fill', target: locator, value: v ? v[1] : "{{data}}" });
         }
     }
     return steps;
 }
 
 function extractLocator(line) {
+    // Matches: page.locator('...'), page.getByRole('...', { ... }), etc.
     const m = line.match(/page\.(locator|getByRole|getByLabel|getByPlaceholder|getByText|getByAltText|getByTitle|getByTestId)\((.*?)\)/);
-    return m ? `${m[1]}(${m[2]})` : null;
+    if (!m) return null;
+    
+    const method = m[1];
+    const args = m[2];
+    
+    if (method === 'locator') {
+        // Strip quotes for simple locators
+        return args.replace(/^['"`]|['"`]$/g, '');
+    }
+    
+    // For getBy*, keep the full method call string (without 'page.')
+    return `${method}(${args})`;
 }
 
 app.listen(3000, () => console.log('🚀 Studio Live on 3000'));

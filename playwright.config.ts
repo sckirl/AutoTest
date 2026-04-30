@@ -2,15 +2,16 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './core',
+  timeout: 60000,
   fullyParallel: false, 
   forbidOnly: !!process.env.CI,
   retries: 0,
   workers: 1, 
-  reporter: 'html',
+  reporter: 'list',
   use: {
-    headless: true, // Switched to true for validation, user will set to false
+    headless: false,
     screenshot: 'off', // Engine handles this
-    trace: 'off', // Engine handles this
+    trace: 'on', // Enable tracing for the UI and Trace Viewer
   },
   projects: [
     {

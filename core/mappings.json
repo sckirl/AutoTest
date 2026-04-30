@@ -1,31 +1,108 @@
 {
-  "Navigate to Pukat": {
-    "steps": [{ "type": "goto", "target": "http://pukat-master:6969", "value": "" }]
-  },
-  "Latest Feed": {
-    "steps": [{ "type": "click", "target": "text=Latest Feed" }]
-  },
-  "Cluster Buys": {
-    "steps": [{ "type": "click", "target": "text=Cluster Buys 🔥" }]
-  },
-  "Min. unique insiders": {
+  "Navigate to YouTube": {
     "steps": [
-      { "type": "click", "target": "#min-insiders-trigger" },
-      { "type": "fill", "target": "#min-insiders-input", "value": "{{Min. unique insiders}}" }
+      {
+        "type": "goto",
+        "target": "https://www.youtube.com/"
+      }
     ]
   },
-  "Rolling Window (Days)": {
+  "Input search term": {
     "steps": [
-      { "type": "click", "target": "#rolling-window-trigger" },
-      { "type": "fill", "target": "#rolling-window-input", "value": "{{Rolling Window (Days)}}" }
+      {
+        "type": "fill",
+        "target": "input[name='search_query']",
+        "value": "{{searchTerm}}"
+      }
     ]
   },
-  "Filter Ticker/name": {
+  "Click search button": {
     "steps": [
-      { "type": "fill", "target": "input[placeholder='Filter Ticker/Name...']", "value": "{{Filter Ticker/name}}" }
+      {
+        "type": "click",
+        "target": "button#search-icon-legacy"
+      }
     ]
   },
-  "Trade First Row": {
-    "steps": [{ "type": "click", "target": "tbody tr >> internal:has-text=\"Trade\" >> nth=0" }]
+  "Click filter button": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "xpath=//yt-formatted-string[contains(text(),'Filters')]"
+      }
+    ]
+  },
+  "Select This Week": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "xpath=//yt-formatted-string[contains(text(),'This week')]"
+      }
+    ]
+  },
+  "Select first video result": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "xpath=(//a[@id='video-title'])[1]"
+      }
+    ]
+  },
+  "Input invalid search term": {
+    "steps": [
+      {
+        "type": "fill",
+        "target": "input[name='search_query']",
+        "value": "{{searchTerm}}"
+      }
+    ]
+  },
+  "Select Playlist type": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "xpath=//yt-formatted-string[contains(text(),'Playlist')]"
+      }
+    ]
+  },
+  "Click profile/menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "button#avatar-btn"
+      }
+    ]
+  },
+  "Click appearance": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "xpath=//*[contains(text(),'Appearance')]"
+      }
+    ]
+  },
+  "Select Dark theme": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "xpath=//*[contains(text(),'Dark theme')]"
+      }
+    ]
+  },
+  "Click like button": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "xpath=(//button[@aria-label='like this video'])[1]"
+      }
+    ]
+  },
+  "Click subscribe button": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "xpath=(//button[contains(@aria-label,'Subscribe')])[1]"
+      }
+    ]
   }
 }
