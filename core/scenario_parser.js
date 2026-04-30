@@ -18,6 +18,7 @@ function generateBlueprintFromExcel(excelPath) {
 
     const blueprint = [];
     let currentScenario = null;
+    const globalStepDataCache = {}; // Cache to inherit data across scenarios
 
     for (let r = 1; r < rows.length; r++) {
         const scenarioNum = String(rows[r][1] || "").trim();
@@ -48,6 +49,11 @@ function generateBlueprintFromExcel(excelPath) {
                 } catch (e) {
                     data["default"] = testDataRaw;
                 }
+                // Save to global cache for future scenarios to inherit
+                globalStepDataCache[labelOrTitle] = { ...data };
+            } else if (globalStepDataCache[labelOrTitle]) {
+                // Inherit data from a previous scenario's execution of this step
+                Object.assign(data, globalStepDataCache[labelOrTitle]);
             }
 
             currentScenario.Flow.push({

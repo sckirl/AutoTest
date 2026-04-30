@@ -1,107 +1,59 @@
 {
-  "Navigate to YouTube": {
+  "Navigate to OrangeHRM": {
     "steps": [
       {
         "type": "goto",
-        "target": "https://www.youtube.com/"
+        "target": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login"
       }
     ]
   },
-  "Input search term": {
+  "Input Username": {
     "steps": [
       {
         "type": "fill",
-        "target": "input[name='search_query']",
-        "value": "{{searchTerm}}"
+        "target": "input[name='username']",
+        "value": "{{username}}"
       }
     ]
   },
-  "Click search button": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "button#search-icon-legacy"
-      }
-    ]
-  },
-  "Click filter button": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "xpath=//yt-formatted-string[contains(text(),'Filters')]"
-      }
-    ]
-  },
-  "Select This Week": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "xpath=//yt-formatted-string[contains(text(),'This week')]"
-      }
-    ]
-  },
-  "Select first video result": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "xpath=(//a[@id='video-title'])[1]"
-      }
-    ]
-  },
-  "Input invalid search term": {
+  "Input Password": {
     "steps": [
       {
         "type": "fill",
-        "target": "input[name='search_query']",
-        "value": "{{searchTerm}}"
+        "target": "input[name='password']",
+        "value": "{{password}}"
       }
     ]
   },
-  "Select Playlist type": {
+  "Click Login Button": {
     "steps": [
       {
         "type": "click",
-        "target": "xpath=//yt-formatted-string[contains(text(),'Playlist')]"
+        "target": "button[type='submit']"
       }
     ]
   },
-  "Click profile/menu": {
+  "Click My Info Tab": {
     "steps": [
       {
         "type": "click",
-        "target": "button#avatar-btn"
+        "target": "xpath=//span[text()='My Info']"
       }
     ]
   },
-  "Click appearance": {
+  "Verify Personal Details Header": {
     "steps": [
       {
         "type": "click",
-        "target": "xpath=//*[contains(text(),'Appearance')]"
+        "target": "xpath=//h6[text()='Personal Details']"
       }
     ]
   },
-  "Select Dark theme": {
+  "Verify Login Error Message": {
     "steps": [
       {
         "type": "click",
-        "target": "xpath=//*[contains(text(),'Dark theme')]"
-      }
-    ]
-  },
-  "Click like button": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "xpath=(//button[@aria-label='like this video'])[1]"
-      }
-    ]
-  },
-  "Click subscribe button": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "xpath=(//button[contains(@aria-label,'Subscribe')])[1]"
+        "target": "xpath=//p[contains(@class, 'oxd-alert-content-text')]"
       }
     ]
   }

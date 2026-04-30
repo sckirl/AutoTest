@@ -54,9 +54,9 @@ function compile() {
                         code += `                await acceptBtn.click({ force: true });\n`;
                         code += `            } catch (e) {}\n`;
                     }
-                    else if (action.type === 'click') code += `            await ${locator}.first().click({ force: true });\n`;
-                    else if (action.type === 'fill') code += `            await ${locator}.first().fill(\`${finalValue}\`);\n`;
-                    else if (action.type === 'press') code += `            await ${locator}.first().press(\`${finalValue || 'Enter'}\`);\n`;
+                    else if (action.type === 'click') code += `            await ${locator}.click({ force: true });\n`;
+                    else if (action.type === 'fill') code += `            await ${locator}.fill(\`${finalValue}\`);\n`;
+                    else if (action.type === 'press') code += `            await ${locator}.press(\`${finalValue || 'Enter'}\`);\n`;
                     
                     code += `            await page.waitForTimeout(500);\n`;
                     code += `            await page.screenshot({ path: path.join(resultsDir, \`STEP_${i}_ACT_${j}.png\`), fullPage: true });\n`;
