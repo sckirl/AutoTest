@@ -11,39 +11,51 @@ export class AutomationEngine {
 
     async runScenario(page: Page, context: BrowserContext, scenarioId: string, steps: any[], data: any) {
         const resultsDir = path.join(process.cwd(), 'results', scenarioId);
-        if (!fs.existsSync(resultsDir)) {
-            fs.mkdirSync(resultsDir, { recursive: true });
-        }
+        if (fs.existsSync(resultsDir)) fs.rmSync(resultsDir, { recursive: true, force: true });
+        fs.mkdirSync(resultsDir, { recursive: true });
 
-        // Start Tracing for "Click Marks" and Screenshots
-        await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
+        // 2. INJECT VISUAL TRACE SCRIPT
+        await page.addInitScript(() => {
+            window.addEventListener('click', (e) => {
+                const dot = document.createElement('div');
+                dot.style.position = 'fixed';
+                dot.style.left = (e.clientX - 10) + 'px';
+                dot.style.top = (e.clientY - 10) + 'px';
+                dot.style.width = '20px';
+                dot.style.height = '20px';
+                dot.style.borderRadius = '50%';
+                dot.style.backgroundColor = 'rgba(255, 0, 0, 0.6)';
+                dot.style.border = '2px solid red';
+                dot.style.zIndex = '999999';
+                dot.style.pointerEvents = 'none';
+                document.body.appendChild(dot);
+                setTimeout(() => dot.remove(), 2000); // Dot stays for 2s to be caught by screenshot
+            }, true);
+        });
 
+        await context.tracing.start({ screenshots: true, snapshots: true });
         console.log(`\n▶️ Starting Scenario: ${scenarioId}`);
         
         for (const stepLabel of steps) {
             await this.runStep(page, stepLabel, data, resultsDir);
         }
 
-        // Stop Tracing and save to the scenario folder
         await context.tracing.stop({ path: path.join(resultsDir, `trace_${scenarioId}.zip`) });
-        
-        // Take a final screenshot for the folder
-        await page.screenshot({ path: path.join(resultsDir, 'final_result.png'), fullPage: true });
-        console.log(`✅ Scenario ${scenarioId} Complete. Results in: ${resultsDir}`);
+        await page.screenshot({ path: path.join(resultsDir, 'STEP_FINAL.png'), fullPage: true });
+        console.log(`✅ Scenario ${scenarioId} Complete.`);
     }
 
     private async runStep(page: Page, stepLabel: string, data: any, resultsDir: string) {
         const action = this.mappings[stepLabel];
-
         if (!action) {
-            console.warn(`[!] Missing Mapping: '${stepLabel}'. Launching Studio...`);
             await page.pause();
             return;
         }
 
         try {
             console.log(`  └─ Executing: ${stepLabel}`);
-            for (const step of action.steps) {
+            for (let i = 0; i < action.steps.length; i++) {
+                const step = action.steps[i];
                 const value = this.tokenize(step.value, data);
                 const locator = page.locator(step.target);
                 
@@ -51,12 +63,17 @@ export class AutomationEngine {
                     await locator.fill(value, { timeout: 5000 });
                 } else if (step.type === 'click') {
                     await locator.click({ timeout: 5000 });
+                    // CAPTURE TRACE: Take screenshot immediately after click to catch the red dot
+                    await page.waitForTimeout(200); // Small buffer for dot to appear
+                    await page.screenshot({ 
+                        path: path.join(resultsDir, `STEP_${stepLabel}_${i}.png`), 
+                        fullPage: false 
+                    });
                 } else if (step.type === 'goto') {
                     await page.goto(step.target, { waitUntil: 'networkidle' });
                 }
             }
         } catch (error) {
-            console.error(`  ❌ Auto-Heal Triggered for '${stepLabel}'`);
             await page.screenshot({ path: path.join(resultsDir, `error_${stepLabel}.png`) });
             await page.pause();
         }

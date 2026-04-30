@@ -3,57 +3,50 @@
 <head>
     <title>Automation Studio</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; background: #f0f2f5; color: #1c1e21; }
+        body { font-family: 'Segoe UI', sans-serif; padding: 40px; background: #f0f2f5; }
         .container { max-width: 900px; margin: 0 auto; }
         .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 24px; }
-        h1 { margin-top: 0; color: #1877f2; }
-        .drop-zone { border: 2px dashed #bec3c9; padding: 40px; text-align: center; border-radius: 8px; cursor: pointer; transition: 0.3s; }
-        .drop-zone:hover { border-color: #1877f2; background: #f0f7ff; }
-        .btn { background: #1877f2; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
-        .mapping-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .mapping-table th, .mapping-table td { text-align: left; padding: 12px; border-bottom: 1px solid #ebedf0; }
-        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .status-ready { background: #e7f3ff; color: #1877f2; }
-        .status-missing { background: #fff0f0; color: #d93025; }
+        h1 { color: #1877f2; }
+        .btn { padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background: #1877f2; color: white; }
+        .btn-danger { background: #fb7344; color: white; margin-left: 10px; }
+        .btn:active { transform: scale(0.98); }
+        #status { margin-top: 20px; font-weight: bold; color: #65676b; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
             <h1>🚀 Automation Studio</h1>
-            <p>The no-code bridge between your <b>UAT Excel</b> and <b>Playwright</b>.</p>
-            <div class="drop-zone" onclick="document.getElementById('fileInput').click()">
-                <p>Drag & Drop Scenario.xlsx here or <b>Browse</b></p>
-                <input type="file" id="fileInput" style="display:none" />
-            </div>
+            <p>Control Center for No-Code Playwright Automation.</p>
+            <hr>
+            <button class="btn btn-primary" onclick="runTests()">▶️ Start Intelligent Replay</button>
+            <button class="btn btn-danger" onclick="restartSystem()">🗑️ Restart (Wipe All)</button>
+            <div id="status">Ready.</div>
         </div>
 
         <div class="card">
-            <h3>Library Sync Status</h3>
-            <table class="mapping-table">
-                <thead>
-                    <tr>
-                        <th>Excel Label</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Login sebagai SPV</td>
-                        <td><span class="status-badge status-ready">READY</span></td>
-                        <td><button class="btn" style="padding: 6px 12px; font-size: 12px;">Edit</button></td>
-                    </tr>
-                    <tr>
-                        <td>Create New Data</td>
-                        <td><span class="status-badge status-missing">MISSING / CHANGED</span></td>
-                        <td><button class="btn" style="padding: 6px 12px; font-size: 12px; background: #fb7344;">Record Fix</button></td>
-                    </tr>
-                </tbody>
-            </table>
-            <br>
-            <button class="btn" onclick="alert('Running Auto-Heal Engine...')">Start Intelligent Replay</button>
+            <h3>Manual Controls</h3>
+            <p>1. Ensure your Excel file has a <b>"Scenario"</b> column.</p>
+            <p>2. Open <b>results/</b> folder to see screenshots after run.</p>
         </div>
     </div>
+
+    <script>
+        async function restartSystem() {
+            if (!confirm("Are you sure? This will delete all mappings and result screenshots!")) return;
+            document.getElementById('status').innerText = "Restarting...";
+            const res = await fetch('http://localhost:3000/restart', { method: 'POST' });
+            const data = await res.json();
+            document.getElementById('status').innerText = data.message;
+        }
+
+        async function runTests() {
+            document.getElementById('status').innerText = "Running Tests (Headed Mode)... Check your taskbar.";
+            const res = await fetch('http://localhost:3000/run', { method: 'POST' });
+            const data = await res.json();
+            document.getElementById('status').innerText = "Run Complete. Check results/ folder.";
+        }
+    </script>
 </body>
 </html>

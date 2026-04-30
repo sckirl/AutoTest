@@ -1,6 +1,6 @@
 # QA COMPLETION CERTIFICATE (100%)
 
-**Project:** Full Automation Studio (Killer App)
+**Project:** Full Automation Studio 
 **Branch:** Full-Automation
 **Status:** CERTIFIED READY FOR PRODUCTION
 
