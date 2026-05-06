@@ -56,5 +56,112 @@
         "target": "xpath=//p[contains(@class, 'oxd-alert-content-text')]"
       }
     ]
+  },
+  "Navigate to YouTube": {
+    "steps": [
+      {
+        "type": "goto",
+        "target": "https://www.youtube.com/"
+      }
+    ]
+  },
+  "Input search term": {
+    "steps": [
+      {
+        "type": "fill",
+        "target": "input[name='search_query']",
+        "value": "{{searchTerm}}"
+      }
+    ]
+  },
+  "Click search button": {
+    "steps": [
+      {
+        "type": "press",
+        "target": "input[name='search_query']",
+        "value": "Enter"
+      }
+    ]
+  },
+  "Click filter button": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "button:has-text('Filters')"
+      }
+    ]
+  },
+  "Select This Week": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a:has-text('This week')"
+      }
+    ]
+  },
+  "Select first video result": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "ytd-video-renderer a#video-title"
+      }
+    ]
+  },
+  "Click like button": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "button[aria-label*='like this video']"
+      }
+    ]
+  },
+  "Click subscribe button": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "button:has-text('Subscribe')"
+      }
+    ]
+  },
+  "Input invalid search term": {
+    "steps": [
+      {
+        "type": "fill",
+        "target": "input[name='search_query']",
+        "value": "{{searchTerm}}"
+      }
+    ]
+  },
+  "Select Playlist type": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a:has-text('Playlist')"
+      }
+    ]
+  },
+  "Click profile/menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "button[aria-label='Settings']"
+      }
+    ]
+  },
+  "Click appearance": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "text=Appearance: Device theme"
+      }
+    ]
+  },
+  "Select Dark theme": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "text=Dark theme"
+      }
+    ]
   }
 }

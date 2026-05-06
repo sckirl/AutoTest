@@ -1,90 +1,116 @@
 [
   {
     "Scenario_ID": "A.1",
-    "Role": "Successful Admin Login",
+    "Role": "Search for a video",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to OrangeHRM",
+        "Mapping_Key": "Navigate to YouTube",
         "Data": {}
       },
       {
-        "Mapping_Key": "Input Username",
+        "Mapping_Key": "Input search term",
         "Data": {
-          "username": "Admin"
+          "searchTerm": "Playwright Tutorial"
         }
       },
       {
-        "Mapping_Key": "Input Password",
-        "Data": {
-          "password": "admin123"
-        }
-      },
-      {
-        "Mapping_Key": "Click Login Button",
+        "Mapping_Key": "Click search button",
         "Data": {}
       }
     ]
   },
   {
     "Scenario_ID": "A.2",
-    "Role": "Navigate to My Info",
+    "Role": "Filter by This Week",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to OrangeHRM",
+        "Mapping_Key": "Navigate to YouTube",
         "Data": {}
       },
       {
-        "Mapping_Key": "Input Username",
+        "Mapping_Key": "Input search term",
         "Data": {
-          "username": "Admin"
+          "searchTerm": "Playwright Tutorial"
         }
       },
       {
-        "Mapping_Key": "Input Password",
-        "Data": {
-          "password": "admin123"
-        }
-      },
-      {
-        "Mapping_Key": "Click Login Button",
+        "Mapping_Key": "Click search button",
         "Data": {}
       },
       {
-        "Mapping_Key": "Click My Info Tab",
+        "Mapping_Key": "Click filter button",
         "Data": {}
       },
       {
-        "Mapping_Key": "Verify Personal Details Header",
+        "Mapping_Key": "Select This Week",
         "Data": {}
       }
     ]
   },
   {
-    "Scenario_ID": "B.1",
-    "Role": "Invalid Login Attempt",
+    "Scenario_ID": "A.3",
+    "Role": "Click first video",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to OrangeHRM",
+        "Mapping_Key": "Navigate to YouTube",
         "Data": {}
       },
       {
-        "Mapping_Key": "Input Username",
+        "Mapping_Key": "Input search term",
         "Data": {
-          "username": "Invalid"
+          "searchTerm": "Playwright Tutorial"
         }
       },
       {
-        "Mapping_Key": "Input Password",
-        "Data": {
-          "password": "Wrong123"
-        }
-      },
-      {
-        "Mapping_Key": "Click Login Button",
+        "Mapping_Key": "Click search button",
         "Data": {}
       },
       {
-        "Mapping_Key": "Verify Login Error Message",
+        "Mapping_Key": "Click filter button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Select This Week",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Select first video result",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "A.4",
+    "Role": "Like the video",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to YouTube",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input search term",
+        "Data": {
+          "searchTerm": "Playwright Tutorial"
+        }
+      },
+      {
+        "Mapping_Key": "Click search button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click filter button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Select This Week",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Select first video result",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click like button",
         "Data": {}
       }
     ]
