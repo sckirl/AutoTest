@@ -1,22 +1,24 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './core',
-  timeout: 60000,
-  fullyParallel: false, 
-  forbidOnly: !!process.env.CI,
-  retries: 0,
-  workers: 1, 
-  reporter: 'list',
-  use: {
-    headless: false,
-    screenshot: 'off', // Engine handles this
-    trace: 'on', // Enable tracing for the UI and Trace Viewer
-  },
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+    testDir: './core',
+    timeout: 60000,
+    fullyParallel: false,
+    forbidOnly: !!process.env.CI,
+    retries: 0,
+    workers: 1,
+    reporter: 'list',
+    use: {
+        headless: process.env.PW_HEADLESS !== '0',
+        screenshot: 'off', // Engine handles screenshots itself
+        trace: 'on',       // Enables Trace Viewer for debugging
     },
-  ],
+    projects: [
+        {
+            name: 'chromium',
+            use: { ...devices['Desktop Chrome'] },
+        },
+    ],
+    // Note: to run the E2E Studio audit explicitly, use:
+    //   npx playwright test core/studio_audit.spec.ts
 });

@@ -1,9 +1,9 @@
-import { Page, BrowserContext } from '@playwright/test';
+import { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 
 export class AutomationEngine {
-    private mappings: any;
+    private mappings: Record<string, any>;
 
     constructor(mappingPath: string) {
         if (fs.existsSync(mappingPath)) {
@@ -13,38 +13,52 @@ export class AutomationEngine {
         }
     }
 
-    public async runStep(page: Page, stepLabel: string, data: any, resultsDir: string, stepIdx: number) {
+    public async runStep(page: Page, stepLabel: string, data: Record<string, string>, resultsDir: string, stepIdx: number) {
         const action = this.mappings[stepLabel];
         if (!action) {
-            throw new Error(`MISSING_MAPPING: ${stepLabel}`);
+            throw new Error(`MISSING_MAPPING: "${stepLabel}" — Add it to core/mappings.json`);
         }
 
         for (let i = 0; i < action.steps.length; i++) {
             const step = action.steps[i];
             const value = this.tokenize(step.value, data);
-            const locator = this.resolveLocator(page, step.target);
-            
+
             try {
-                if (step.type === 'fill') {
-                    await locator.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+                if (step.type === 'goto') {
+                    await page.goto(step.target, { waitUntil: 'domcontentloaded', timeout: 30000 });
+                    // After navigation, wait for network to settle
+                    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+                } else if (step.type === 'fill') {
+                    const locator = this.resolveLocator(page, step.target).first();
+                    await locator.scrollIntoViewIfNeeded();
+                    await locator.waitFor({ state: 'visible', timeout: 10000 });
                     await locator.fill(value, { timeout: 10000 });
+                } else if (step.type === 'upload') {
+                    const locator = this.resolveLocator(page, step.target).first();
+                    await locator.setInputFiles(value);
                 } else if (step.type === 'click') {
-                    await locator.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+                    const locator = this.resolveLocator(page, step.target).first();
+                    await locator.scrollIntoViewIfNeeded();
+                    await locator.waitFor({ state: 'visible', timeout: 10000 });
                     await locator.click({ timeout: 10000, force: true });
-                } else if (step.type === 'goto') {
-                    await page.goto(step.target, { waitUntil: 'networkidle' });
+                    // Wait for any navigation or DOM update triggered by the click
+                    await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {});
                 } else if (step.type === 'press') {
+                    const locator = this.resolveLocator(page, step.target).first();
                     await locator.press(step.value || 'Enter');
+                    await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {});
                 }
 
-                // Wait for UI to settle
-                await page.waitForTimeout(500);
+                // Capture screenshot after each action
                 const screenshotName = `STEP_${stepIdx}_ACT_${i}_${stepLabel.replace(/[^a-z0-9]/gi, '_')}.png`;
                 await page.screenshot({ path: path.join(resultsDir, screenshotName), fullPage: true });
 
-            } catch (err) {
-                console.error(`     ❌ Error in action ${i}:`, err.message);
-                await page.screenshot({ path: path.join(resultsDir, `ERR_STEP_${stepIdx}_ACT_${i}.png`), fullPage: true });
+            } catch (err: any) {
+                console.error(`     ❌ Error in "${stepLabel}" action ${i}:`, err.message);
+                await page.screenshot({
+                    path: path.join(resultsDir, `ERR_STEP_${stepIdx}_ACT_${i}.png`),
+                    fullPage: true
+                });
                 throw err;
             }
         }
@@ -55,7 +69,7 @@ export class AutomationEngine {
             return page.locator(target);
         }
 
-        const match = target.match(/^(.*?)\((.*)\)$/);
+        const match = target.match(/^(.*?)\((.*)\)$/s);
         if (!match) return page.locator(target);
 
         const method = match[1];
@@ -70,28 +84,27 @@ export class AutomationEngine {
                     return (page as any)[method](...args);
                 }
             }
-        } catch (e) {
-            console.error(`Error resolving complex locator "${target}":`, e.message);
+        } catch (e: any) {
+            console.error(`Error resolving locator "${target}":`, e.message);
         }
         return page.locator(target);
     }
 
     private parseArgs(rawArgs: string): any[] {
         try {
-            // Support for { name: '...' } pattern
             const jsonFriendly = `[${rawArgs.replace(/'/g, '"')}]`;
             return JSON.parse(jsonFriendly);
-        } catch (e) {
+        } catch {
             return [this.stripQuotes(rawArgs)];
         }
     }
 
-    private stripQuotes(str: string) {
-        return str.replace(/^['"]|['"]$/g, '');
+    private stripQuotes(str: string): string {
+        return str.replace(/^['""]|['""]$/g, '');
     }
 
-    private tokenize(value: string, data: any): string {
-        if (!value) return "";
-        return value.replace(/\{\{(.*?)\}\}/g, (_, key) => data[key] || "");
+    private tokenize(value: string, data: Record<string, string>): string {
+        if (!value) return '';
+        return value.replace(/\{\{(.*?)\}\}/g, (_, key) => data[key.trim()] ?? '');
     }
 }

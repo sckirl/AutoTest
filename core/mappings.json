@@ -1,166 +1,267 @@
 {
-  "Navigate to OrangeHRM": {
+  "Navigate to Studio": {
     "steps": [
       {
         "type": "goto",
-        "target": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login"
+        "target": "http://localhost:3000"
       }
     ]
   },
-  "Input Username": {
+  "Upload Valid Excel": {
+    "steps": [
+      {
+        "type": "upload",
+        "target": "input#file-input",
+        "value": "scenario.xlsx"
+      }
+    ]
+  },
+  "Click Record Button": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "button.btn-record"
+      }
+    ]
+  },
+  "Perform Direct Action": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "body"
+      }
+    ]
+  },
+  "Click Execute Scenarios": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "button#run-btn"
+      }
+    ]
+  },
+  "Upload Invalid File": {
+    "steps": [
+      {
+        "type": "upload",
+        "target": "input#file-input",
+        "value": "image.png"
+      }
+    ]
+  },
+  "Upload Empty Excel": {
+    "steps": [
+      {
+        "type": "upload",
+        "target": "input#file-input",
+        "value": "empty.xlsx"
+      }
+    ]
+  },
+  "Upload Large Excel": {
+    "steps": [
+      {
+        "type": "upload",
+        "target": "input#file-input",
+        "value": "large.xlsx"
+      }
+    ]
+  },
+  "Input Base URL": {
     "steps": [
       {
         "type": "fill",
-        "target": "input[name='username']",
-        "value": "{{username}}"
+        "target": "input#base-url",
+        "value": "{{url}}"
       }
     ]
   },
-  "Input Password": {
+  "Click Reset System": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "button:has-text('Reset System')"
+      }
+    ]
+  },
+  "Run Tokenized Step": {
     "steps": [
       {
         "type": "fill",
-        "target": "input[name='password']",
-        "value": "{{password}}"
+        "target": "input#base-url",
+        "value": "{{user}}"
       }
     ]
   },
-  "Click Login Button": {
+  "Click Re-Map Button": {
     "steps": [
       {
         "type": "click",
-        "target": "button[type='submit']"
+        "target": "button.btn-record"
       }
     ]
   },
-  "Click My Info Tab": {
+  "Paste Malicious Script": {
     "steps": [
       {
-        "type": "click",
-        "target": "xpath=//span[text()='My Info']"
+        "type": "fill",
+        "target": "body",
+        "value": "{{code}}"
       }
     ]
   },
-  "Verify Personal Details Header": {
+  "Upload Special Char Excel": {
     "steps": [
       {
-        "type": "click",
-        "target": "xpath=//h6[text()='Personal Details']"
+        "type": "upload",
+        "target": "input#file-input",
+        "value": "special_char.xlsx"
       }
     ]
   },
-  "Verify Login Error Message": {
+  "Upload Multi-Sheet Excel": {
+    "steps": [
+      {
+        "type": "upload",
+        "target": "input#file-input",
+        "value": "multi_sheet.xlsx"
+      }
+    ]
+  },
+  "Drag File Over Zone": {
     "steps": [
       {
         "type": "click",
-        "target": "xpath=//p[contains(@class, 'oxd-alert-content-text')]"
+        "target": "div#drop-zone"
+      }
+    ]
+  },
+  "Trigger Info Status": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "div#drop-zone"
+      }
+    ]
+  },
+  "Run Step for Hidden Element": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "button.btn-danger"
+      }
+    ]
+  },
+  "Perform Multi-Step Action": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "body"
+      },
+      {
+        "type": "click",
+        "target": "body"
+      }
+    ]
+  },
+  "Run Long Goto Step": {
+    "steps": [
+      {
+        "type": "goto",
+        "target": "http://localhost:3000"
+      }
+    ]
+  },
+  "Upload Long Label Excel": {
+    "steps": [
+      {
+        "type": "upload",
+        "target": "input#file-input",
+        "value": "long_label.xlsx"
+      }
+    ]
+  },
+  "Upload No-ID Excel": {
+    "steps": [
+      {
+        "type": "upload",
+        "target": "input#file-input",
+        "value": "no_id.xlsx"
+      }
+    ]
+  },
+  "Upload Multi-Flow Excel": {
+    "steps": [
+      {
+        "type": "upload",
+        "target": "input#file-input",
+        "value": "autotest_self_scenario.xlsx"
+      }
+    ]
+  },
+  "Run JSON Data Step": {
+    "steps": [
+      {
+        "type": "fill",
+        "target": "input#base-url",
+        "value": "{{data}}"
+      }
+    ]
+  },
+  "Trigger Studio Error": {
+    "steps": [
+      {
+        "type": "upload",
+        "target": "input#file-input",
+        "value": "image.png"
+      }
+    ]
+  },
+  "Run Any Scenario": {
+    "steps": [
+      {
+        "type": "goto",
+        "target": "http://localhost:3000"
+      }
+    ]
+  },
+  "Perform All Steps": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "button#run-btn"
+      }
+    ]
+  },
+  "Verified": {
+    "steps": [
+      {
+        "type": "goto",
+        "target": "http://localhost:3000"
+      }
+    ]
+  },
+  "Rapidly Click Elements": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "#drop-zone"
+      }
+    ]
+  },
+  "Navigate to OrangeHRM": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "div"
       }
     ]
   },
   "Navigate to YouTube": {
     "steps": [
       {
-        "type": "goto",
-        "target": "https://www.youtube.com/"
-      }
-    ]
-  },
-  "Input search term": {
-    "steps": [
-      {
-        "type": "fill",
-        "target": "input[name='search_query']",
-        "value": "{{searchTerm}}"
-      }
-    ]
-  },
-  "Click search button": {
-    "steps": [
-      {
-        "type": "press",
-        "target": "input[name='search_query']",
-        "value": "Enter"
-      }
-    ]
-  },
-  "Click filter button": {
-    "steps": [
-      {
         "type": "click",
-        "target": "button:has-text('Filters')"
-      }
-    ]
-  },
-  "Select This Week": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "a:has-text('This week')"
-      }
-    ]
-  },
-  "Select first video result": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "ytd-video-renderer a#video-title"
-      }
-    ]
-  },
-  "Click like button": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "button[aria-label*='like this video']"
-      }
-    ]
-  },
-  "Click subscribe button": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "button:has-text('Subscribe')"
-      }
-    ]
-  },
-  "Input invalid search term": {
-    "steps": [
-      {
-        "type": "fill",
-        "target": "input[name='search_query']",
-        "value": "{{searchTerm}}"
-      }
-    ]
-  },
-  "Select Playlist type": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "a:has-text('Playlist')"
-      }
-    ]
-  },
-  "Click profile/menu": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "button[aria-label='Settings']"
-      }
-    ]
-  },
-  "Click appearance": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "text=Appearance: Device theme"
-      }
-    ]
-  },
-  "Select Dark theme": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "text=Dark theme"
+        "target": "div"
       }
     ]
   }

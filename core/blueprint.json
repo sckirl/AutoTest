@@ -1,116 +1,330 @@
 [
   {
     "Scenario_ID": "A.1",
-    "Role": "Search for a video",
+    "Role": "E2E: Happy Path Upload & Scan",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to YouTube",
+        "Mapping_Key": "Navigate to Studio",
         "Data": {}
       },
       {
-        "Mapping_Key": "Input search term",
-        "Data": {
-          "searchTerm": "Playwright Tutorial"
-        }
-      },
-      {
-        "Mapping_Key": "Click search button",
+        "Mapping_Key": "Upload Valid Excel",
         "Data": {}
       }
     ]
   },
   {
     "Scenario_ID": "A.2",
-    "Role": "Filter by This Week",
+    "Role": "E2E: Direct Recording Workflow",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to YouTube",
+        "Mapping_Key": "Navigate to Studio",
         "Data": {}
       },
       {
-        "Mapping_Key": "Input search term",
-        "Data": {
-          "searchTerm": "Playwright Tutorial"
-        }
-      },
-      {
-        "Mapping_Key": "Click search button",
+        "Mapping_Key": "Click Record Button",
         "Data": {}
       },
       {
-        "Mapping_Key": "Click filter button",
-        "Data": {}
-      },
-      {
-        "Mapping_Key": "Select This Week",
+        "Mapping_Key": "Perform Direct Action",
         "Data": {}
       }
     ]
   },
   {
     "Scenario_ID": "A.3",
-    "Role": "Click first video",
+    "Role": "E2E: Full Execution Launch",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to YouTube",
+        "Mapping_Key": "Navigate to Studio",
         "Data": {}
       },
       {
-        "Mapping_Key": "Input search term",
-        "Data": {
-          "searchTerm": "Playwright Tutorial"
-        }
-      },
-      {
-        "Mapping_Key": "Click search button",
-        "Data": {}
-      },
-      {
-        "Mapping_Key": "Click filter button",
-        "Data": {}
-      },
-      {
-        "Mapping_Key": "Select This Week",
-        "Data": {}
-      },
-      {
-        "Mapping_Key": "Select first video result",
+        "Mapping_Key": "Click Execute Scenarios",
         "Data": {}
       }
     ]
   },
   {
-    "Scenario_ID": "A.4",
-    "Role": "Like the video",
+    "Scenario_ID": "B.1",
+    "Role": "Edge: Upload Non-Excel File",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to YouTube",
+        "Mapping_Key": "Navigate to Studio",
         "Data": {}
       },
       {
-        "Mapping_Key": "Input search term",
-        "Data": {
-          "searchTerm": "Playwright Tutorial"
-        }
-      },
+        "Mapping_Key": "Upload Invalid File",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "B.2",
+    "Role": "Edge: Upload Empty Excel",
+    "Flow": [
       {
-        "Mapping_Key": "Click search button",
+        "Mapping_Key": "Navigate to Studio",
         "Data": {}
       },
       {
-        "Mapping_Key": "Click filter button",
+        "Mapping_Key": "Upload Empty Excel",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "B.3",
+    "Role": "Edge: Large Dataset Stress Test",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to Studio",
         "Data": {}
       },
       {
-        "Mapping_Key": "Select This Week",
+        "Mapping_Key": "Upload Large Excel",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "C.1",
+    "Role": "UX: Base URL Persistence",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to Studio",
         "Data": {}
       },
       {
-        "Mapping_Key": "Select first video result",
+        "Mapping_Key": "Input Base URL",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "C.2",
+    "Role": "UX: System Reset Verification",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to Studio",
         "Data": {}
       },
       {
-        "Mapping_Key": "Click like button",
+        "Mapping_Key": "Click Reset System",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "D.1",
+    "Role": "Data: Token Replacement",
+    "Flow": [
+      {
+        "Mapping_Key": "Run Tokenized Step",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "E.1",
+    "Role": "Function: Re-mapping existing",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to Studio",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Re-Map Button",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "F.1",
+    "Role": "Security: Malicious Code Input",
+    "Flow": [
+      {
+        "Mapping_Key": "Paste Malicious Script",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "G.1",
+    "Role": "Vari: Special Chars in Labels",
+    "Flow": [
+      {
+        "Mapping_Key": "Upload Special Char Excel",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "G.2",
+    "Role": "Vari: Multiple Sheets in Excel",
+    "Flow": [
+      {
+        "Mapping_Key": "Upload Multi-Sheet Excel",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "H.1",
+    "Role": "UX: Drag & Drop Area Feedback",
+    "Flow": [
+      {
+        "Mapping_Key": "Drag File Over Zone",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "H.2",
+    "Role": "UX: Polling for Mapped Status",
+    "Flow": [
+      {
+        "Mapping_Key": "Trigger Info Status",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "I.1",
+    "Role": "Engine: Scroll into View Check",
+    "Flow": [
+      {
+        "Mapping_Key": "Run Step for Hidden Element",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "I.2",
+    "Role": "Engine: Multi-step action",
+    "Flow": [
+      {
+        "Mapping_Key": "Perform Multi-Step Action",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "I.3",
+    "Role": "Engine: Navigation Timeouts",
+    "Flow": [
+      {
+        "Mapping_Key": "Run Long Goto Step",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "J.1",
+    "Role": "Bnd: Max Length Label",
+    "Flow": [
+      {
+        "Mapping_Key": "Upload Long Label Excel",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "J.2",
+    "Role": "Bnd: Missing Change ID",
+    "Flow": [
+      {
+        "Mapping_Key": "Upload No-ID Excel",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "K.1",
+    "Role": "Flow: A.1 and B.1 conflict",
+    "Flow": [
+      {
+        "Mapping_Key": "Upload Multi-Flow Excel",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "L.1",
+    "Role": "Data: JSON in Test Data",
+    "Flow": [
+      {
+        "Mapping_Key": "Run JSON Data Step",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "M.1",
+    "Role": "UX: Error Alert Visibility",
+    "Flow": [
+      {
+        "Mapping_Key": "Trigger Studio Error",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "N.1",
+    "Role": "Sys: Directory Cleanup",
+    "Flow": [
+      {
+        "Mapping_Key": "Click Reset System",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "N.2",
+    "Role": "Sys: Spec File Generation",
+    "Flow": [
+      {
+        "Mapping_Key": "Click Execute Scenarios",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "O.1",
+    "Role": "Perf: Concurrent Scan Request",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to Studio",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "O.2",
+    "Role": "Perf: Rapid UI Interaction",
+    "Flow": [
+      {
+        "Mapping_Key": "Rapidly Click Elements",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "P.1",
+    "Role": "Cert: Final Certification Run",
+    "Flow": [
+      {
+        "Mapping_Key": "Perform All Steps",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "P.2",
+    "Role": "Cert: Regression Check",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to Studio",
         "Data": {}
       }
     ]

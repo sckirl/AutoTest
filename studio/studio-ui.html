@@ -21,38 +21,24 @@
         #status-box { margin-top: 20px; padding: 16px; border-radius: 8px; font-size: 14px; display: none; border-left: 4px solid #1877f2; }
         .status-info { background: #e7f3ff; color: #1877f2; }
         .status-success { background: #e8f5e9; color: #2e7d32; border-left-color: #2e7d32; }
+        .status-error { background: #ffebee; color: #c62828; border-left-color: #c62828; }
         
         .script-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; margin-top: 15px; }
-        .step-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid #f0f2f5; }
+        .step-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid #f0f2f5; transition: background 0.3s; }
+        .step-row.just-mapped { background: #f6ffed; }
         .step-label { font-weight: 600; font-size: 14px; }
         .step-instruction { color: #65676b; font-size: 12px; }
         
         .badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
         .badge-missing { background: #fff1f0; color: #d93025; }
         .badge-mapped { background: #f6ffed; color: #52c41a; }
-        
-        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 600px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
-        textarea { width: 100%; height: 180px; margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 12px; box-sizing: border-box; resize: none; }
     </style>
 </head>
 <body>
-    <div id="record-modal" class="modal">
-        <div class="modal-content">
-            <h3 id="modal-title">Finalize Action Code</h3>
-            <p style="font-size: 13px;">1. Replay will happen first. Wait for the <b>Inspector</b> window.<br>2. Use the <b>"Record"</b> button in Inspector to capture your action.<br>3. <b>Copy the code line</b> from Inspector (e.g. <code>await page.click(...)</code>).<br>4. Paste it here and click Sync.</p>
-            <textarea id="recorded-code" placeholder="Paste your recorded code here..."></textarea>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="btn" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-primary" style="width: auto;" onclick="saveMapping()">Sync & Save Action</button>
-            </div>
-        </div>
-    </div>
-
     <div class="container">
         <div class="card">
             <h1>🚀 Automation Studio</h1>
-            <p class="subtitle">Multi-Flow UAT Engine (A.1, B.1, C.1 Support)</p>
+            <p class="subtitle">End-to-End No-Code Automation Engine</p>
             
             <div id="drop-zone" class="drop-zone">
                 <span id="drop-text">📄 Drag & Drop <b>scenario.xlsx</b> here or <b>Click to Upload</b></span>
@@ -67,11 +53,11 @@
             <div id="status-box"></div>
 
             <div id="step-scan-container" style="display: none;">
-                <h3>📋 Unique Action Library</h3>
-                <p style="font-size: 12px; color: #65676b; margin-bottom: 10px;">If a label appears in multiple flows, record it once to map it globally.</p>
+                <h3>📋 Scenario Flow Mapping</h3>
+                <p style="font-size: 12px; color: #65676b; margin-bottom: 10px;">Click <b>Record</b> for a step. We will replay preceding actions, then you can map multiple steps sequentially without closing the browser.</p>
                 <div id="step-list-ui" class="script-box"></div>
                 <div style="margin-top: 30px;">
-                    <button class="btn btn-primary" id="run-btn" disabled>🚀 Execute Test Scenarios</button>
+                    <button class="btn btn-primary" id="run-btn" disabled>🚀 Execute All Scenarios</button>
                 </div>
             </div>
         </div>
@@ -88,13 +74,9 @@
         const fileInput = document.getElementById('file-input');
         const runBtn = document.getElementById('run-btn');
         const statusBox = document.getElementById('status-box');
-        const dropText = document.getElementById('drop-text');
         const stepListUi = document.getElementById('step-list-ui');
-        const modal = document.getElementById('record-modal');
-        const codeArea = document.getElementById('recorded-code');
 
-        let currentLabel = "";
-        let currentScenarioId = "";
+        let isRecording = false;
 
         dropZone.onclick = () => fileInput.click();
         dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
@@ -126,14 +108,14 @@
             stepListUi.innerHTML = data.steps.map(s => {
                 if (s.status === 'missing') allMapped = false;
                 return `
-                <div class="step-row">
+                <div class="step-row" id="row-${s.label.replace(/\s+/g, '-')}">
                     <div>
                         <div class="step-label">${s.label}</div>
-                        <div class="step-instruction">Scenario: ${s.scenarioId}</div>
+                        <div class="step-instruction">Scenario Context: ${s.scenarioId}</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <span class="badge ${s.status === 'mapped' ? 'badge-mapped' : 'badge-missing'}">${s.status}</span>
-                        <button class="btn btn-record" onclick="openRecordModal('${s.label}', '${s.scenarioId}')">
+                        <button class="btn btn-record" onclick="startContinuousRecord('${s.label}', '${s.scenarioId}')">
                             ${s.status === 'missing' ? '⏺ Record' : '🔄 Re-Map'}
                         </button>
                     </div>
@@ -146,36 +128,47 @@
             }
         }
 
-        async function openRecordModal(label, scenarioId) {
-            currentLabel = label;
-            currentScenarioId = scenarioId;
+        async function startContinuousRecord(label, scenarioId) {
             const baseUrl = document.getElementById('base-url').value;
+            showStatus(`🎬 Replaying and Recording. Perform your actions in the new browser window. You can map multiple steps sequentially.`, "info");
             
-            document.getElementById('modal-title').innerText = `Record: "${label}"`;
-            modal.style.display = 'flex';
-            
-            showStatus(`🎬 Replaying preceding steps for context. Please look for the browser window.`, "info");
-            await fetch('/record', {
+            isRecording = true;
+            const res = await fetch('/record', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ label, scenarioId, url: baseUrl })
             });
-        }
 
-        function closeModal() { modal.style.display = 'none'; codeArea.value = ''; }
-
-        async function saveMapping() {
-            const code = codeArea.value.trim();
-            if (!code) return alert("Please paste the recorded code.");
-            const res = await fetch('/save-mapping', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ label: currentLabel, code })
-            });
             if (res.ok) {
-                closeModal();
-                await scanSteps();
-                showStatus(`✅ Mapped "${currentLabel}" globally.`, "success");
+                // Poll aggressively for status changes
+                const poller = setInterval(async () => {
+                    const scanRes = await fetch('/scan');
+                    const scanData = await scanRes.json();
+                    
+                    let missingFound = false;
+                    scanData.steps.forEach(s => {
+                        const row = document.getElementById(`row-${s.label.replace(/\s+/g, '-')}`);
+                        if (row) {
+                            const badge = row.querySelector('.badge');
+                            const wasMissing = badge.classList.contains('badge-missing');
+                            if (s.status === 'mapped' && wasMissing) {
+                                badge.className = 'badge badge-mapped';
+                                badge.innerText = 'mapped';
+                                row.classList.add('just-mapped');
+                                setTimeout(() => row.classList.remove('just-mapped'), 2000);
+                            }
+                        }
+                        if (s.status === 'missing') missingFound = true;
+                    });
+
+                    if (!missingFound) {
+                        runBtn.disabled = false;
+                        showStatus("✨ All steps mapped! You can close the browser or keep recording.", "success");
+                    }
+                }, 1000);
+
+                // Stop polling if recording flag is cleared or after a long timeout
+                setTimeout(() => clearInterval(poller), 600000); 
             }
         }
 
@@ -188,7 +181,7 @@
             const data = await res.json();
             
             if (res.ok) {
-                showStatus(`✅ ${data.message} ${data.instruction}`, "success");
+                showStatus(`✅ ${data.message}`, "success");
                 runBtn.innerText = "🚀 Run Test Execution";
                 runBtn.disabled = false;
             } else {
@@ -197,11 +190,13 @@
                 runBtn.innerText = "🚀 Run Test Execution";
             }
         };
+
         function showStatus(msg, type) {
             statusBox.innerText = msg;
             statusBox.style.display = 'block';
             statusBox.className = `status-${type}`;
         }
+
         async function restartSystem() {
             if (confirm("Wipe everything?")) {
                 await fetch('/restart', { method: 'POST' });
