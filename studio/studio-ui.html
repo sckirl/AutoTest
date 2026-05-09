@@ -21,6 +21,7 @@
         #status-box { margin-top: 20px; padding: 16px; border-radius: 8px; font-size: 14px; display: none; border-left: 4px solid #1877f2; }
         .status-info { background: #e7f3ff; color: #1877f2; }
         .status-success { background: #e8f5e9; color: #2e7d32; border-left-color: #2e7d32; }
+        .status-error { background: #fff1f0; color: #d93025; border-left-color: #d93025; }
         
         .script-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; margin-top: 15px; }
         .step-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid #f0f2f5; }
@@ -40,9 +41,10 @@
     <div id="record-modal" class="modal">
         <div class="modal-content">
             <h3 id="modal-title">Finalize Action Code</h3>
-            <p style="font-size: 13px;">1. Replay will happen first. Wait for the <b>Inspector</b> window.<br>2. Use the <b>"Record"</b> button in Inspector to capture your action.<br>3. <b>Copy the code line</b> from Inspector (e.g. <code>await page.click(...)</code>).<br>4. Paste it here and click Sync.</p>
+            <p style="font-size: 13px;">1. Replay is optional. You can type/paste code manually.<br>2. Use Inspector Record if needed.<br>3. Paste one or many lines (action + expect supported).<br>4. Click Sync to save the parsed mapping.</p>
             <textarea id="recorded-code" placeholder="Paste your recorded code here..."></textarea>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn" onclick="pasteFromClipboard()">Paste Clipboard</button>
                 <button class="btn" onclick="closeModal()">Cancel</button>
                 <button class="btn btn-primary" style="width: auto;" onclick="saveMapping()">Sync & Save Action</button>
             </div>
@@ -63,6 +65,19 @@
                 <label style="font-size: 13px; font-weight: 600; color: #65676b;">Base URL for Recording:</label>
                 <input type="text" id="base-url" placeholder="https://youtube.com" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 5px;" />
             </div>
+            <div id="execution-config" style="margin-bottom: 20px;">
+                <label style="font-size: 13px; font-weight: 600; color: #65676b;">Execution Mode:</label>
+                <div style="display:flex; gap:16px; align-items:center; margin-top:8px;">
+                    <label style="font-size:13px;">
+                        <input type="checkbox" id="fully-parallel" checked />
+                        Fully Parallel
+                    </label>
+                    <label style="font-size:13px;">
+                        Workers:
+                        <input type="number" id="worker-count" min="1" value="2" style="width:70px; padding:5px; border:1px solid #e5e7eb; border-radius:6px;" />
+                    </label>
+                </div>
+            </div>
 
             <div id="status-box"></div>
 
@@ -70,6 +85,7 @@
                 <h3>📋 Unique Action Library</h3>
                 <p style="font-size: 12px; color: #65676b; margin-bottom: 10px;">If a label appears in multiple flows, record it once to map it globally.</p>
                 <div id="step-list-ui" class="script-box"></div>
+                <pre id="mapping-preview" style="display:none; white-space:pre-wrap; margin-top:12px; padding:12px; border-radius:8px; background:#111827; color:#e5e7eb; font-size:12px;"></pre>
                 <div style="margin-top: 30px;">
                     <button class="btn btn-primary" id="run-btn" disabled>🚀 Execute Test Scenarios</button>
                 </div>
@@ -92,9 +108,15 @@
         const stepListUi = document.getElementById('step-list-ui');
         const modal = document.getElementById('record-modal');
         const codeArea = document.getElementById('recorded-code');
+        const previewBox = document.getElementById('mapping-preview');
 
         let currentLabel = "";
         let currentScenarioId = "";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedUrl = localStorage.getItem('autotest_base_url');
+            if (savedUrl) document.getElementById('base-url').value = savedUrl;
+        });
 
         dropZone.onclick = () => fileInput.click();
         dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
@@ -128,7 +150,7 @@
                 return `
                 <div class="step-row">
                     <div>
-                        <div class="step-label">${s.label}</div>
+                        <div class="step-label" style="cursor:pointer;" onclick="viewMapping('${s.label.replace(/'/g, "\\'")}')">${s.label}</div>
                         <div class="step-instruction">Scenario: ${s.scenarioId}</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
@@ -136,6 +158,7 @@
                         <button class="btn btn-record" onclick="openRecordModal('${s.label}', '${s.scenarioId}')">
                             ${s.status === 'missing' ? '⏺ Record' : '🔄 Re-Map'}
                         </button>
+                        <button class="btn" onclick="openManualModal('${s.label}', '${s.scenarioId}')">⌨️ Manual</button>
                     </div>
                 </div>`;
             }).join('');
@@ -150,16 +173,32 @@
             currentLabel = label;
             currentScenarioId = scenarioId;
             const baseUrl = document.getElementById('base-url').value;
+            localStorage.setItem('autotest_base_url', baseUrl);
             
             document.getElementById('modal-title').innerText = `Record: "${label}"`;
             modal.style.display = 'flex';
             
             showStatus(`🎬 Replaying preceding steps for context. Please look for the browser window.`, "info");
-            await fetch('/record', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ label, scenarioId, url: baseUrl })
-            });
+            try {
+                const res = await fetch('/record', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label, scenarioId, url: baseUrl })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Record failed');
+                showStatus(`✅ ${data.message}`, "success");
+            } catch (e) {
+                showStatus(`❌ ${e.message}`, "error");
+            }
+        }
+        function openManualModal(label, scenarioId) {
+            currentLabel = label;
+            currentScenarioId = scenarioId;
+            document.getElementById('modal-title').innerText = `Manual Map: "${label}"`;
+            codeArea.value = '';
+            modal.style.display = 'flex';
+            showStatus(`⌨️ Manual mapping mode for "${label}"`, "info");
         }
 
         function closeModal() { modal.style.display = 'none'; codeArea.value = ''; }
@@ -167,28 +206,39 @@
         async function saveMapping() {
             const code = codeArea.value.trim();
             if (!code) return alert("Please paste the recorded code.");
-            const res = await fetch('/save-mapping', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ label: currentLabel, code })
-            });
-            if (res.ok) {
+            try {
+                const res = await fetch('/save-mapping', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label: currentLabel, code })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Save failed');
                 closeModal();
                 await scanSteps();
-                showStatus(`✅ Mapped "${currentLabel}" globally.`, "success");
+                showStatus(`✅ Mapped "${currentLabel}" globally (${data.stepCount} parsed steps).`, "success");
+            } catch (e) {
+                showStatus(`❌ Save failed: ${e.message}`, "error");
             }
         }
 
         runBtn.onclick = async () => {
+            const workers = Math.max(1, Number(document.getElementById('worker-count').value || 2));
+            const fullyParallel = document.getElementById('fully-parallel').checked;
             runBtn.disabled = true;
             runBtn.innerText = "🚀 Launching Playwright UI...";
-            showStatus("⏳ Launching Playwright Interactive UI on your desktop...", "info");
+            showStatus("⏳ Queueing run...", "info");
             
-            const res = await fetch('/run', { method: 'POST' });
+            const res = await fetch('/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ workers, fullyParallel })
+            });
             const data = await res.json();
             
             if (res.ok) {
-                showStatus(`✅ ${data.message} ${data.instruction}`, "success");
+                showStatus(`✅ ${data.message}`, "success");
+                pollRunStatus();
                 runBtn.innerText = "🚀 Run Test Execution";
                 runBtn.disabled = false;
             } else {
@@ -202,11 +252,46 @@
             statusBox.style.display = 'block';
             statusBox.className = `status-${type}`;
         }
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text && text.trim()) codeArea.value = text;
+            } catch (e) {
+                alert("Clipboard read failed. Paste manually.");
+            }
+        }
         async function restartSystem() {
-            if (confirm("Wipe everything?")) {
-                await fetch('/restart', { method: 'POST' });
+            if (confirm("Reset run artifacts? (Mappings will be kept)")) {
+                await fetch('/restart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ clearMappings: false })
+                });
                 location.reload();
             }
+        }
+        async function viewMapping(label) {
+            try {
+                const res = await fetch(`/mapping/${encodeURIComponent(label)}`);
+                const data = await res.json();
+                previewBox.style.display = 'block';
+                previewBox.textContent = data.mapping ? JSON.stringify(data.mapping, null, 2) : `No mapping found for "${label}"`;
+            } catch (e) {
+                showStatus(`❌ Failed to load mapping preview: ${e.message}`, "error");
+            }
+        }
+        async function pollRunStatus() {
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch('/run-status');
+                    const data = await res.json();
+                    const type = data.ok ? (data.phase === 'failed' ? 'error' : 'info') : 'error';
+                    showStatus(`⏱ ${data.phase.toUpperCase()}: ${data.message}`, type);
+                    if (data.phase === 'completed' || data.phase === 'failed') clearInterval(interval);
+                } catch (e) {
+                    clearInterval(interval);
+                }
+            }, 1500);
         }
     </script>
 </body>

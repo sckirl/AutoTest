@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Test/runtime artifacts
+results/
+playwright-report/
+test-results/
+blob-report/
+
+# Logs
+*.log
+logs/
+studio_logs.txt
+studio_server_output.log
+studio_audit.log
+
+# OS/editor noise
+.DS_Store
+.idea/
+.vscode/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+~$*.xlsx
+
+# Environment / local secrets
+.env
+.env.*
+!.env.example

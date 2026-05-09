@@ -3,15 +3,15 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './core',
   timeout: 60000,
-  fullyParallel: false, 
+  fullyParallel: process.env.AUTOTEST_FULLY_PARALLEL === '1',
   forbidOnly: !!process.env.CI,
   retries: 0,
-  workers: 1, 
+  workers: Number(process.env.AUTOTEST_WORKERS || 2),
   reporter: 'list',
   use: {
     headless: false,
-    screenshot: 'off', // Engine handles this
-    trace: 'on', // Enable tracing for the UI and Trace Viewer
+    screenshot: 'off',
+    trace: 'off',
   },
   projects: [
     {

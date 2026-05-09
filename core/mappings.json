@@ -33,134 +33,171 @@
       }
     ]
   },
-  "Click My Info Tab": {
+  "Verify Dashboard Header": {
     "steps": [
       {
-        "type": "click",
-        "target": "xpath=//span[text()='My Info']"
-      }
-    ]
-  },
-  "Verify Personal Details Header": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "xpath=//h6[text()='Personal Details']"
+        "type": "verifyVisible",
+        "target": "h6:has-text('Dashboard')"
       }
     ]
   },
   "Verify Login Error Message": {
     "steps": [
       {
-        "type": "click",
-        "target": "xpath=//p[contains(@class, 'oxd-alert-content-text')]"
+        "type": "verifyVisible",
+        "target": "p.oxd-alert-content-text"
       }
     ]
   },
-  "Navigate to YouTube": {
-    "steps": [
-      {
-        "type": "goto",
-        "target": "https://www.youtube.com/"
-      }
-    ]
-  },
-  "Input search term": {
-    "steps": [
-      {
-        "type": "fill",
-        "target": "input[name='search_query']",
-        "value": "{{searchTerm}}"
-      }
-    ]
-  },
-  "Click search button": {
-    "steps": [
-      {
-        "type": "press",
-        "target": "input[name='search_query']",
-        "value": "Enter"
-      }
-    ]
-  },
-  "Click filter button": {
+  "Click Admin Menu": {
     "steps": [
       {
         "type": "click",
-        "target": "button:has-text('Filters')"
+        "target": "a.oxd-main-menu-item:has-text('Admin')"
       }
     ]
   },
-  "Select This Week": {
+  "Verify Admin Header": {
+    "steps": [
+      {
+        "type": "verifyVisible",
+        "target": "h6:has-text('Admin')"
+      }
+    ]
+  },
+  "Click PIM Menu": {
     "steps": [
       {
         "type": "click",
-        "target": "a:has-text('This week')"
+        "target": "a.oxd-main-menu-item:has-text('PIM')"
       }
     ]
   },
-  "Select first video result": {
+  "Verify PIM Header": {
+    "steps": [
+      {
+        "type": "verifyVisible",
+        "target": "h6:has-text('PIM')"
+      }
+    ]
+  },
+  "Click Leave Menu": {
     "steps": [
       {
         "type": "click",
-        "target": "ytd-video-renderer a#video-title"
+        "target": "a.oxd-main-menu-item:has-text('Leave')"
       }
     ]
   },
-  "Click like button": {
+  "Verify Leave Header": {
+    "steps": [
+      {
+        "type": "verifyVisible",
+        "target": "h6:has-text('Leave')"
+      }
+    ]
+  },
+  "Click Time Menu": {
     "steps": [
       {
         "type": "click",
-        "target": "button[aria-label*='like this video']"
+        "target": "a.oxd-main-menu-item:has-text('Time')"
       }
     ]
   },
-  "Click subscribe button": {
+  "Verify Time Header": {
+    "steps": [
+      {
+        "type": "verifyVisible",
+        "target": "h6:has-text('Time')"
+      }
+    ]
+  },
+  "Click Recruitment Menu": {
     "steps": [
       {
         "type": "click",
-        "target": "button:has-text('Subscribe')"
+        "target": "a.oxd-main-menu-item:has-text('Recruitment')"
       }
     ]
   },
-  "Input invalid search term": {
+  "Verify Recruitment Header": {
     "steps": [
       {
-        "type": "fill",
-        "target": "input[name='search_query']",
-        "value": "{{searchTerm}}"
+        "type": "verifyVisible",
+        "target": "h6:has-text('Recruitment')"
       }
     ]
   },
-  "Select Playlist type": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "a:has-text('Playlist')"
-      }
-    ]
-  },
-  "Click profile/menu": {
+  "Click My Info Menu": {
     "steps": [
       {
         "type": "click",
-        "target": "button[aria-label='Settings']"
+        "target": "a.oxd-main-menu-item:has-text('My Info')"
       }
     ]
   },
-  "Click appearance": {
+  "Verify Personal Details Header": {
     "steps": [
       {
-        "type": "click",
-        "target": "text=Appearance: Device theme"
+        "type": "verifyVisible",
+        "target": "h6:has-text('Personal Details')"
       }
     ]
   },
-  "Select Dark theme": {
+  "Click Performance Menu": {
     "steps": [
       {
         "type": "click",
-        "target": "text=Dark theme"
+        "target": "a.oxd-main-menu-item:has-text('Performance')"
+      }
+    ]
+  },
+  "Verify Performance Header": {
+    "steps": [
+      {
+        "type": "verifyVisible",
+        "target": "h6:has-text('Performance')"
+      }
+    ]
+  },
+  "Click Dashboard Menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-main-menu-item:has-text('Dashboard')"
+      }
+    ]
+  },
+  "Click Directory Menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-main-menu-item:has-text('Directory')"
+      }
+    ]
+  },
+  "Verify Directory Header": {
+    "steps": [
+      {
+        "type": "verifyVisible",
+        "target": "h6:has-text('Directory')"
+      }
+    ]
+  },
+  "Click Maintenance Menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-main-menu-item:has-text('Maintenance')"
+      }
+    ]
+  },
+  "Verify Maintenance Header": {
+    "steps": [
+      {
+        "type": "verifyVisible",
+        "target": "h6:has-text('Maintenance')"
       }
     ]
   }
