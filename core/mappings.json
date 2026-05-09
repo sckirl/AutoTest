@@ -8,19 +8,6 @@
       {
         "type": "verifyVisible",
         "target": "getByText('Username : AdminPassword :')"
-      },
-      {
-        "type": "verifyVisible",
-        "target": "getByRole('textbox', { name: 'Username' })"
-      },
-      {
-        "type": "verifyVisible",
-        "target": "getByRole('textbox', { name: 'Password' })"
-      },
-      {
-        "type": "verifyText",
-        "target": "getByRole('heading')",
-        "value": "Login"
       }
     ]
   },
@@ -40,30 +27,153 @@
   "Input Password": {
     "steps": [
       {
-        "type": "click",
-        "target": "form.oxd-form > div.oxd-form-row > div.oxd-input-group.oxd-input-field-bottom-space > div > input.oxd-input.oxd-input--active"
-      },
-      {
-        "type": "fill",
-        "target": "form.oxd-form > div.oxd-form-row > div.oxd-input-group.oxd-input-field-bottom-space > div > input.oxd-input.oxd-input--focus",
-        "value": "Admin"
+        "type": "verifyVisible",
+        "target": "getByRole('textbox', { name: 'Password' })"
       },
       {
         "type": "click",
-        "target": "form.oxd-form > div.oxd-form-row > div.oxd-input-group.oxd-input-field-bottom-space > div > input.oxd-input.oxd-input--focus"
+        "target": "getByRole('textbox', { name: 'Password' })"
       },
       {
         "type": "fill",
-        "target": "form.oxd-form > div.oxd-form-row > div.oxd-input-group.oxd-input-field-bottom-space > div > input.oxd-input.oxd-input--focus",
+        "target": "getByRole('textbox', { name: 'Password' })",
         "value": "admin123"
+      }
+    ]
+  },
+  "Click Login Button": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "getByRole('button', { name: 'Login' })"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByText('Time at WorkPunched')"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByText('My Actions(1) Pending Self')"
+      },
+      {
+        "type": "verifyText",
+        "target": "getByRole('heading')",
+        "value": "Dashboard"
+      }
+    ]
+  },
+  "Click My Info Tab": {
+    "steps": [
+      {
+        "type": "verifyVisible",
+        "target": "getByRole('link', { name: 'My Info' })"
       },
       {
         "type": "click",
-        "target": "html > x-pw-glass"
+        "target": "getByRole('link', { name: 'My Info' })"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByText('Personal DetailsEmployee Full')"
+      },
+      {
+        "type": "verifyText",
+        "target": "#app",
+        "value": "Personal Details"
+      },
+      {
+        "type": "verifyText",
+        "target": "#app",
+        "value": "Berry Parisian"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByRole('textbox', { name: 'First Name' })"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByRole('textbox', { name: 'Middle Name' })"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByRole('textbox', { name: 'Last Name' })"
+      },
+      {
+        "type": "verifyText",
+        "target": "getByRole('banner')",
+        "value": "PIM"
+      }
+    ]
+  },
+  "Verify Personal Details Header": {
+    "steps": [
+      {
+        "type": "verifyVisible",
+        "target": "getByRole('textbox', { name: 'First Name' })"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByRole('textbox', { name: 'Middle Name' })"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByRole('textbox', { name: 'Last Name' })"
+      },
+      {
+        "type": "verifyText",
+        "target": "#app",
+        "value": "Employee Id"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByText('Berry ParisianPersonal')"
       },
       {
         "type": "click",
-        "target": "div.orangehrm-login-slot > div.orangehrm-login-form > form.oxd-form > div.oxd-form-row > div.oxd-input-group.oxd-input-field-bottom-space"
+        "target": "getByRole('link', { name: 'Contact Details' })"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByText('Contact DetailsAddressStreet')"
+      },
+      {
+        "type": "click",
+        "target": "getByRole('link', { name: 'Emergency Contacts' })"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByRole('heading', { name: 'Assigned Emergency Contacts' })"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByText('No Records Found').first()"
+      },
+      {
+        "type": "verifyText",
+        "target": "#app",
+        "value": "Attachments"
+      }
+    ]
+  },
+  "Verify Login Error Message": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "getByRole('textbox', { name: 'Username' })"
+      },
+      {
+        "type": "fill",
+        "target": "getByRole('textbox', { name: 'Username' })",
+        "value": "alksdjfa"
+      },
+      {
+        "type": "click",
+        "target": "getByRole('textbox', { name: 'Password' })"
+      },
+      {
+        "type": "fill",
+        "target": "getByRole('textbox', { name: 'Password' })",
+        "value": "aslkdjfklasjdf"
       }
     ]
   }

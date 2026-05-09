@@ -20,6 +20,7 @@ let currentExcelPath = path.join(ROOT_DIR, 'scenario_uploaded.xlsx');
 const RUN_STATUS = {
     phase: 'idle',
     ok: true,
+    kind: 'idle',
     message: 'Idle',
     updatedAt: new Date().toISOString()
 };
@@ -27,10 +28,11 @@ let activeRecord = null;
 let latestAutoRecordedCode = '';
 let activeRun = null;
 
-function setRunStatus(phase, message, ok = true) {
+function setRunStatus(phase, message, ok = true, kind = 'system') {
     RUN_STATUS.phase = phase;
     RUN_STATUS.message = message;
     RUN_STATUS.ok = ok;
+    RUN_STATUS.kind = kind;
     RUN_STATUS.updatedAt = new Date().toISOString();
 }
 
@@ -72,9 +74,10 @@ function safeJsString(value) {
 
 function safeGetBy(target) {
     if (typeof target !== 'string') return null;
-    if (!target.startsWith('getBy')) return null;
-    if (!/^getBy(Role|Label|Placeholder|Text|AltText|Title|TestId|DisplayValue)\([\s\S]*\)$/.test(target)) return null;
-    if (/[;\n\r`]/.test(target)) return null;
+    const m = target.match(/^getBy(Role|Label|Placeholder|Text|AltText|Title|TestId|DisplayValue)\((.*)\)$/);
+    if (!m) return null;
+    // Security: Block advanced injections and logical operators within arguments
+    if (/[;+\-*\/%&|<>!^~?:]/.test(m[2]) || /\b(require|exec|eval|process|import|global|constructor|window|document)\b/.test(m[2])) return null;
     return target;
 }
 
@@ -82,11 +85,24 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, ROOT_DIR),
     filename: (req, file, cb) => cb(null, `scenario_uploaded_${Date.now()}.xlsx`)
 });
-const upload = multer({ storage: storage });
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (!/\.xlsx$/i.test(file.originalname || '')) {
+            return cb(new Error('Only .xlsx files are allowed'));
+        }
+        cb(null, true);
+    }
+});
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'studio-ui.html')));
 app.post('/upload', upload.single('excel'), (req, res) => {
-    if (!req.file?.path) return res.status(400).json({ error: 'No upload file found' });
+    if (!req.file || !req.file.path) return res.status(400).json({ error: 'No upload file found' });
+    if (!req.file.originalname.toLowerCase().endsWith('.xlsx')) {
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        return res.status(400).json({ error: 'Invalid file format. Only .xlsx files are allowed.' });
+    }
     setCurrentExcelPath(req.file.path);
     res.json({ message: "Uploaded.", fileName: path.basename(req.file.path) });
 });
@@ -110,7 +126,6 @@ app.get('/scan', (req, res) => {
         const scenarios = [];
         let currentScenario = null;
 
-        // Hierarchical Parser: Detects A.1, A.2 and their steps
         for (let r = 1; r < rows.length; r++) {
             const scenarioNum = String(rows[r][1] || "").trim();
             const label = String(rows[r][2] || "").trim();
@@ -119,7 +134,6 @@ app.get('/scan', (req, res) => {
                 currentScenario = scenarioNum;
                 scenarios.push(currentScenario);
             } else if (currentScenario && scenarioNum.match(/^\d+$/) && label) {
-                // This is a step within a scenario
                 if (!stepMap.has(label)) {
                     stepMap.set(label, { 
                         label, 
@@ -140,10 +154,8 @@ app.get('/scan', (req, res) => {
     }
 });
 
-// --- FIXED RECORDING ENDPOINT ---
 app.post('/record', async (req, res) => {
     const { label, url, scenarioId } = req.body;
-    console.log(`\n🎬 Recording started for label: "${label}" in scenario: "${scenarioId}"`);
     if (activeRecord && !activeRecord.killed) {
         return res.status(409).json({
             error: "Another recording is already active. Close that recording browser first."
@@ -158,14 +170,26 @@ app.post('/record', async (req, res) => {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-        // 1. Generate Replay Script
         const replayScriptPath = path.join(ROOT_DIR, `replay_${Date.now()}.js`);
         let scriptContent = `const { chromium } = require('playwright');\n(async () => {\n`;
-        scriptContent += `  console.log('🚀 Launching Browser...');\n`;
+        scriptContent += `  console.log('Launching Browser...');\n`;
         scriptContent += `  const browser = await chromium.launch({ headless: false });\n`;
         scriptContent += `  const context = await browser.newContext();\n`;
         scriptContent += `  const page = await context.newPage();\n`;
         
+        scriptContent += `  const resolveTarget = (page, target) => {\n`;
+        scriptContent += `    if (typeof target !== 'string') return page.locator(String(target || ''));\n`;
+        scriptContent += `    const m = target.match(/^(getBy(?:Role|Label|Placeholder|Text|AltText|Title|TestId|DisplayValue))\\((.*)\\)$/s);\n`;
+        scriptContent += `    if (!m) return page.locator(target);\n`;
+        scriptContent += `    const method = m[1];\n`;
+        scriptContent += `    const raw = m[2];\n`;
+        scriptContent += `    try {\n`;
+        scriptContent += `      const args = JSON.parse('[' + raw.replace(/'/g, '\"') + ']');\n`;
+        scriptContent += `      if (typeof page[method] === 'function') return page[method](...args);\n`;
+        scriptContent += `    } catch (_) {}\n`;
+        scriptContent += `    return page.locator(target);\n`;
+        scriptContent += `  };\n`;
+
         if (url) {
             try { new URL(String(url)); } catch {
                 return res.status(400).json({ error: "Invalid URL format." });
@@ -173,7 +197,6 @@ app.post('/record', async (req, res) => {
             scriptContent += `  await page.goto(${safeJsString(url)});\n`;
         }
 
-        // Find steps for this scenario up to the current label
         let currentScen = null;
         for (let r = 1; r < rows.length; r++) {
             const scenarioNum = String(rows[r][1] || "").trim();
@@ -183,24 +206,16 @@ app.post('/record', async (req, res) => {
                 currentScen = scenarioNum;
             } else if (currentScen === scenarioId && scenarioNum.match(/^\d+$/) && stepLabel) {
                 if (stepLabel === label) break;
-                
                 if (mappings[stepLabel]) {
-                    console.log(`   Replaying step: ${stepLabel}`);
                     for (const action of mappings[stepLabel].steps) {
                         const val = action.value || "";
-                        const target = action.target;
-                        
-                        // Intelligent Locator String Generation
-                        let locatorStr = "";
-                        const safeTarget = safeGetBy(target);
-                        if (safeTarget) {
-                            locatorStr = `page.${safeTarget}`;
-                        } else {
-                            locatorStr = `page.locator(${safeJsString(target)})`;
-                        }
-
+                        const locatorStr = `resolveTarget(page, ${safeJsString(action.target)})`;
                         if (action.type === 'goto') scriptContent += `    await page.goto(${safeJsString(action.target)});\n`;
                         else if (action.type === 'click') scriptContent += `    await ${locatorStr}.click();\n`;
+                        else if (action.type === 'dblclick') scriptContent += `    await ${locatorStr}.dblclick();\n`;
+                        else if (action.type === 'check') scriptContent += `    await ${locatorStr}.check();\n`;
+                        else if (action.type === 'uncheck') scriptContent += `    await ${locatorStr}.uncheck();\n`;
+                        else if (action.type === 'selectOption') scriptContent += `    await ${locatorStr}.selectOption(${safeJsString(val)});\n`;
                         else if (action.type === 'fill') scriptContent += `    await ${locatorStr}.fill(${safeJsString(val)});\n`;
                         else if (action.type === 'press') scriptContent += `    await ${locatorStr}.press(${safeJsString(val || 'Enter')});\n`;
                         else if (action.type === 'verifyVisible') scriptContent += `    await ${locatorStr}.waitFor({ state: 'visible', timeout: 5000 });\n`;
@@ -251,7 +266,6 @@ app.post('/record', async (req, res) => {
         
         fs.writeFileSync(replayScriptPath, scriptContent);
 
-        // 2. Execute the script with better logging
         const child = spawn('node', [replayScriptPath], { cwd: ROOT_DIR });
         child.stdout.on('data', (d) => {
             const text = String(d);
@@ -261,163 +275,143 @@ app.post('/record', async (req, res) => {
                     if (snippet) latestAutoRecordedCode += `${snippet}\n`;
                 }
             }
-            console.log(`ℹ️ ${text}`);
         });
-        child.stderr.on('data', (d) => console.error(`⚠️ ${String(d)}`));
         child.on('close', () => {
             if (fs.existsSync(replayScriptPath)) fs.unlinkSync(replayScriptPath);
             activeRecord = null;
         });
         activeRecord = child;
-
-        res.json({ message: "Replay started. Auto-record is enabled by default after replay completes." });
+        res.json({ message: "Replay started." });
     } catch (err) {
-        console.error("Record Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
 app.post('/save-mapping', (req, res) => {
     const { label, code } = req.body;
-    if (!label || !code || !String(code).trim()) {
-        return res.status(400).json({ error: "Label and code are required." });
+    if (!label || !code || !String(code).trim()) return res.status(400).json({ error: "Label and code are required." });
+    const parsed = parseRecordedCode(code);
+    const validLinesCount = code.split('\n').map(l => l.trim()).filter(l => {
+        const line = l.toLowerCase();
+        // Ignore boilerplate lines in the count validation
+        if (line.startsWith('import ') || line.startsWith('test(') || line.startsWith('});') || line === '' || line.startsWith('//')) return false;
+        return true;
+    }).length;
+
+    if (parsed.steps.length === 0) return res.status(400).json({ error: "No valid steps parsed from submitted code." });
+    
+    // Valid count check to prevent silent data loss, ignoring boilerplate
+    if (parsed.steps.length < validLinesCount) {
+        return res.status(400).json({ 
+            error: "Partial parsing failure. Ensure your manual code follows Playwright action/assertion patterns.",
+            parsed: parsed.steps.length,
+            expected: validLinesCount,
+            ignored: parsed.ignored.slice(0, 5)
+        });
     }
-    const steps = parseRecordedCode(code);
-    if (steps.length === 0) {
-        return res.status(400).json({ error: "No valid steps parsed from submitted code." });
-    }
+
     const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
-    mappings[label] = { steps };
+    mappings[label] = { steps: parsed.steps };
     try {
         fs.writeFileSync(MAPPINGS_PATH, JSON.stringify(mappings, null, 2));
-        res.json({ message: "Saved.", stepCount: steps.length });
+        res.json({ message: "Saved.", stepCount: parsed.steps.length });
     } catch (err) {
-        res.status(500).json({ error: `Failed to save mapping: ${err.message}` });
+        res.status(500).json({ error: err.message });
     }
 });
 
 app.get('/mapping/:label', (req, res) => {
     try {
-        const label = req.params.label;
         const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
-        return res.json({ label, mapping: mappings[label] || null });
-    } catch (err) {
-        return res.status(500).json({ error: err.message });
-    }
+        return res.json({ label: req.params.label, mapping: mappings[req.params.label] || null });
+    } catch (err) { return res.status(500).json({ error: err.message }); }
 });
 
 app.delete('/mapping/:label', (req, res) => {
     try {
-        const label = req.params.label;
         const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
-        if (!mappings[label]) return res.status(404).json({ error: 'Mapping not found' });
-        delete mappings[label];
+        delete mappings[req.params.label];
         fs.writeFileSync(MAPPINGS_PATH, JSON.stringify(mappings, null, 2));
-        return res.json({ message: `Mapping '${label}' deleted.` });
-    } catch (err) {
-        return res.status(500).json({ error: err.message });
-    }
+        return res.json({ message: "Deleted." });
+    } catch (err) { return res.status(500).json({ error: err.message }); }
 });
 
-// ... existing code ...
-
 app.post('/run', (req, res) => {
-    if (activeRun) {
-        return res.status(409).json({
-            error: 'A run is already in progress. Cancel it or wait until completion.'
-        });
-    }
+    if (activeRun) return res.status(409).json({ error: 'A run is already in progress.' });
     const rawWorkers = Number(req.body?.workers);
     const workers = Number.isInteger(rawWorkers) && rawWorkers > 0 ? rawWorkers : 2;
     const fullyParallel = req.body?.fullyParallel === true;
 
-    setRunStatus('queued', 'Run request accepted');
-    res.json({
-        message: "Run accepted. Follow /run-status for progress.",
-        runtime: { workers, fullyParallel }
-    });
+    setRunStatus('queued', 'Run accepted');
+    res.json({ message: "Run accepted." });
 
     (async () => {
         try {
             activeRun = { startedAt: Date.now() };
             setRunStatus('blueprint', 'Generating blueprint...');
             await runCommand('node', ['core/scenario_parser.js', getCurrentExcelPath()], { cwd: ROOT_DIR });
-
-            setRunStatus('compile', 'Compiling executable spec...');
+            setRunStatus('compile', 'Compiling spec...');
             await runCommand('node', ['core/compiler.js'], { cwd: ROOT_DIR });
-
-            setRunStatus('playwright', 'Launching Playwright UI...');
-            const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--ui', `--workers=${workers}`], {
-                env: {
-                    ...process.env,
-                    PW_HEADLESS: '0',
-                    AUTOTEST_FULLY_PARALLEL: fullyParallel ? '1' : '0',
-                    AUTOTEST_WORKERS: String(workers)
-                },
+            setRunStatus('playwright', 'Launching Playwright tests...');
+            const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', `--workers=${workers}`, '--headed'], {
+                env: { ...process.env, PW_HEADLESS: '0', AUTOTEST_FULLY_PARALLEL: fullyParallel ? '1' : '0', AUTOTEST_WORKERS: String(workers) },
                 cwd: ROOT_DIR
             });
-            pw.stdout.on('data', (data) => console.log(`[PW] ${data}`));
-            pw.stderr.on('data', (data) => console.error(`[PW ERROR] ${data}`));
             pw.on('close', (code) => {
-                setRunStatus(code === 0 ? 'completed' : 'failed', `Playwright UI process closed with code ${code}`, code === 0);
+                if (code === 0) setRunStatus('completed', `Closed with code ${code}`);
+                else setRunStatus('failed', `Finished with failures (code ${code})`);
                 activeRun = null;
             });
             activeRun.process = pw;
         } catch (err) {
-            console.error("Run Error:", err);
-            setRunStatus('failed', `Run failed: ${err.message}`, false);
+            setRunStatus('failed', `Error: ${err.message}`, false);
             activeRun = null;
         }
     })();
 });
 
 app.post('/run-cancel', (req, res) => {
-    if (!activeRun?.process) return res.status(404).json({ error: 'No running Playwright process found.' });
-    try {
-        activeRun.process.kill('SIGTERM');
-        setRunStatus('cancelled', 'Run cancelled by user.', false);
-        activeRun = null;
-        return res.json({ message: 'Run cancelled.' });
-    } catch (err) {
-        return res.status(500).json({ error: err.message });
-    }
+    if (!activeRun?.process) return res.status(404).json({ error: 'No process found.' });
+    activeRun.process.kill('SIGTERM');
+    setRunStatus('cancelled', 'Cancelled');
+    activeRun = null;
+    return res.json({ message: 'Cancelled.' });
 });
 
 app.post('/restart', (req, res) => {
     try {
-        const clearMappings = req.body?.clearMappings === true;
-        if (clearMappings) fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
-        const excelPath = getCurrentExcelPath();
-        if (fs.existsSync(excelPath)) fs.unlinkSync(excelPath);
-        if (fs.existsSync(RESULTS_DIR)) {
-            fs.rmSync(RESULTS_DIR, { recursive: true, force: true });
-            fs.mkdirSync(RESULTS_DIR);
-        }
-        res.json({ message: clearMappings ? "Reset + mappings cleared." : "Reset run artifacts only." });
+        if (req.body?.clearMappings === true) fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
+        const p = getCurrentExcelPath();
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+        if (fs.existsSync(RESULTS_DIR)) { fs.rmSync(RESULTS_DIR, { recursive: true, force: true }); fs.mkdirSync(RESULTS_DIR); }
+        res.json({ message: "Reset." });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 function parseRecordedCode(code) {
     const lines = code.split('\n');
     const steps = [];
+    const ignored = [];
     for (let line of lines) {
+        const rawLine = line;
         line = line.trim();
-        if (!line.includes('await')) continue;
+        if (!line || !line.includes('await')) continue;
+
+        // SKIP BOILERPLATE
+        if (line.startsWith('import ') || line.startsWith('test(') || line.startsWith('});')) continue;
         
-        // Handle goto
         if (line.includes('.goto(')) {
             const m = line.match(/goto\(['"](.*?)['"]\)/);
             if (m) steps.push({ type: 'goto', target: m[1] });
+            else ignored.push(rawLine);
             continue;
         }
 
         const expectLocator = extractExpectLocator(line);
         if (expectLocator) {
-            if (line.includes('.toBeVisible(')) {
-                steps.push({ type: 'verifyVisible', target: expectLocator });
-                continue;
-            }
+            if (line.includes('.toBeVisible(')) { steps.push({ type: 'verifyVisible', target: expectLocator }); continue; }
             if (line.includes('.toContainText(') || line.includes('.toHaveText(')) {
+                // Better string handling for escaped quotes
                 const t = line.match(/to(?:ContainText|HaveText)\((['"`])([\s\S]*?)\1\)/);
                 steps.push({ type: 'verifyText', target: expectLocator, value: t ? t[2] : '' });
                 continue;
@@ -425,34 +419,30 @@ function parseRecordedCode(code) {
         }
 
         const locator = extractLocator(line);
-        if (!locator) continue;
+        if (!locator) { ignored.push(rawLine); continue; }
 
-        if (line.includes('.click(') || line.includes('.dblclick(') || line.includes('.check(') || line.includes('.uncheck(')) {
-            steps.push({ type: 'click', target: locator });
-        } else if (line.includes('.fill(')) {
-            const v = line.match(/\.fill\(['"](.*?)['"]\)/);
-            steps.push({ type: 'fill', target: locator, value: v ? v[1] : "{{data}}" });
-        } else if (line.includes('.selectOption(')) {
-            const v = line.match(/\.selectOption\((['"`])(.*?)\1\)/);
+        if (line.includes('.click(')) steps.push({ type: 'click', target: locator });
+        else if (line.includes('.dblclick(')) steps.push({ type: 'dblclick', target: locator });
+        else if (line.includes('.check(')) steps.push({ type: 'check', target: locator });
+        else if (line.includes('.uncheck(')) steps.push({ type: 'uncheck', target: locator });
+        else if (line.includes('.fill(')) {
+            const v = line.match(/\.fill\((['"`])([\s\S]*?)\1\)/);
             steps.push({ type: 'fill', target: locator, value: v ? v[2] : "{{data}}" });
+        } else if (line.includes('.selectOption(')) {
+            const v = line.match(/\.selectOption\((['"`])([\s\S]*?)\1\)/);
+            steps.push({ type: 'selectOption', target: locator, value: v ? v[2] : "{{data}}" });
         } else if (line.includes('.press(')) {
-            const v = line.match(/\.press\(['"](.*?)['"]\)/);
-            steps.push({ type: 'press', target: locator, value: v ? v[1] : "" });
-        } else if (line.includes('.type(')) {
-            const v = line.match(/\.type\(['"](.*?)['"]\)/);
-            steps.push({ type: 'fill', target: locator, value: v ? v[1] : "{{data}}" });
-        } else if (line.includes('.hover(')) {
-            steps.push({ type: 'hover', target: locator });
-        } else if (line.includes('.scrollIntoViewIfNeeded(')) {
-            steps.push({ type: 'scrollIntoView', target: locator });
-        } else if (line.includes('.toBeVisible(')) {
-            steps.push({ type: 'verifyVisible', target: locator });
-        } else if (line.includes('.toContainText(') || line.includes('.toHaveText(')) {
-            const t = line.match(/to(?:ContainText|HaveText)\((['"`])(.*?)\1\)/);
+            const v = line.match(/\.press\((['"`])([\s\S]*?)\1\)/);
+            steps.push({ type: 'press', target: locator, value: v ? v[2] : "" });
+        } else if (line.includes('.hover(')) steps.push({ type: 'hover', target: locator });
+        else if (line.includes('.scrollIntoViewIfNeeded(')) steps.push({ type: 'scrollIntoView', target: locator });
+        else if (line.includes('.toBeVisible(')) steps.push({ type: 'verifyVisible', target: locator });
+        else if (line.includes('.toContainText(') || line.includes('.toHaveText(')) {
+            const t = line.match(/to(?:ContainText|HaveText)\((['"`])([\s\S]*?)\1\)/);
             steps.push({ type: 'verifyText', target: locator, value: t ? t[2] : "" });
-        }
+        } else ignored.push(rawLine);
     }
-    return steps;
+    return { steps, ignored };
 }
 
 function extractExpectLocator(line) {
@@ -471,15 +461,13 @@ function extractLocator(line) {
     const actionMatch = line.match(/await\s+(page\..*?)\.(click|dblclick|check|uncheck|fill|type|press|hover|scrollIntoViewIfNeeded|selectOption|toBeVisible|toContainText|toHaveText)\(/);
     if (!actionMatch) return null;
     const locatorExpr = actionMatch[1];
-
     if (locatorExpr.startsWith('page.locator(')) {
         const m = locatorExpr.match(/^page\.locator\((['"`])([\s\S]*)\1\)$/);
         if (m) return m[2];
     }
-
     if (locatorExpr.startsWith('page.')) return locatorExpr.slice(5);
     return null;
 }
 
 const PORT = Number(process.env.PORT || 3000);
-app.listen(PORT, () => console.log(`🚀 Studio Live on ${PORT}`));
+app.listen(PORT, () => console.log(`Studio Live on ${PORT}`));

@@ -6,50 +6,82 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Montserrat', sans-serif; padding: 40px; background: #F5F5F5; color: #333333; line-height: 1.6; }
+        :root {
+            --primary-action: #0D5CAB;
+            --deep-corporate: #014C8B;
+            --sidebar-base: #156DB8;
+            --app-bg: #F5F5F5;
+            --surface: #FFFFFF;
+            --disabled-field: #E0E0E0;
+            --table-alt: #E2E2EB;
+            --danger: #C8463F;
+            --warning-bg: #FFF0C8;
+            --info-bg: #86C7FF;
+            --muted-text: #65748B;
+            --body-text: #333333;
+        }
+        body { font-family: 'Montserrat', sans-serif; padding: 40px; background: var(--app-bg); color: var(--body-text); line-height: 1.6; }
         .container { max-width: 1000px; margin: 0 auto; }
-        .card { background: #FFFFFF; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid #E5E7EB; }
-        h1 { margin: 0; color: #0F76CD; display: flex; align-items: center; gap: 12px; font-size: 32px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
-        .subtitle { color: #65748B; margin-bottom: 25px; font-weight: 500; font-size: 13px; }
+        .card { background: var(--surface); padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid #E5E7EB; min-height: 400px; }
+        h1 { margin: 0; color: var(--deep-corporate); display: flex; align-items: center; gap: 12px; font-size: 32px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
+        .subtitle { color: var(--muted-text); margin-bottom: 25px; font-weight: 500; font-size: 13px; }
         
-        .drop-zone { border: 2px dashed #C4C4C4; padding: 30px; text-align: center; border-radius: 8px; cursor: pointer; transition: 0.3s; background: #FFFFFF; margin: 20px 0; font-weight: 500; }
-        .drop-zone.dragover { border-color: #0D5CAB; background: #F0F8FF; }
+        /* Tabs */
+        .tab-strip { display: flex; gap: 4px; margin: 16px 0 0; }
+        .tab { cursor: pointer; padding: 10px 24px; border-radius: 6px 6px 0 0; font-size: 16px; font-weight: 600; transition: 0.2s; border: none; font-family: 'Montserrat', sans-serif; }
+        .tab-active { background: var(--surface); border-top: 8px solid var(--primary-action); color: var(--deep-corporate); font-weight: 700; border-left: 1px solid #E5E7EB; border-right: 1px solid #E5E7EB; }
+        .tab-inactive { background: var(--primary-action); color: #fff; opacity: 0.85; }
+        .tab-inactive:hover { opacity: 1; }
+
+        .view-pane { display: none; padding-top: 20px; }
+        .view-pane.active { display: block; }
+
+        /* UI Components */
+        .drop-zone { border: 2px dashed #C4C4C4; padding: 50px 30px; text-align: center; border-radius: 8px; cursor: pointer; transition: 0.3s; background: var(--surface); margin: 20px 0; font-weight: 500; }
+        .drop-zone.dragover { border-color: var(--primary-action); background: #F0F8FF; }
+        .form-label { display: block; font-size: 16px; font-weight: 600; color: var(--muted-text); margin-bottom: 6px; }
+        .text-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #D0D5DD; margin-top: 5px; font-family: 'Open Sans', sans-serif; font-size: 14px; color: var(--body-text); box-sizing: border-box; }
+        .small-input { width: 70px; padding: 5px; border: 1px solid #D0D5DD; border-radius: 6px; }
 
         .btn { padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; justify-content: center; font-family: 'Montserrat', sans-serif; }
-        .btn-primary { background: #0D5CAB; color: #FFFFFF; width: 100%; }
-        .btn-record { background: #FFF5F4; color: #C8463F; border: 1px solid #C8463F; }
-        .btn-remap { background: #FFFFFF; color: #0D5CAB; border: 1px solid #0D5CAB; }
-        .btn-danger { background: #FFFFFF; color: #C8463F; border: 1px solid #C8463F; margin-top: 20px; }
-        .btn:disabled { background: #E2E2EB; color: #65748B; cursor: not-allowed; opacity: 0.7; border: none; }
+        .btn-primary { background: var(--primary-action); color: #FFFFFF; width: 100%; }
+        .btn-record { background: #FFF5F4; color: var(--danger); border: 1px solid var(--danger); }
+        .btn-remap { background: #FFFFFF; color: var(--primary-action); border: 1px solid var(--primary-action); }
+        .btn-secondary { background: #F5F5F5; color: var(--body-text); border: 1px solid #E5E7EB; }
+        .btn-danger { background: #FFFFFF; color: var(--danger); border: 1px solid var(--danger); }
+        .btn:disabled { background: var(--table-alt); color: var(--muted-text); cursor: not-allowed; opacity: 0.7; border: none; }
         
         #status-box { margin-top: 20px; padding: 16px; border-radius: 4px; font-size: 13px; display: none; font-weight: 600; }
-        .status-info { background: #F0F8FF; color: #0D5CAB; border-left: 4px solid #0D5CAB; }
-        .status-success { background: #F6FFED; color: #0D5CAB; border-left: 4px solid #0D5CAB; }
-        .status-error { background: #FFF5F4; color: #C8463F; border-left: 4px solid #C8463F; }
+        .status-info { background: #F0F8FF; color: var(--primary-action); border-left: 4px solid var(--primary-action); }
+        .status-success { background: #F6FFED; color: var(--primary-action); border-left: 4px solid var(--primary-action); }
+        .status-error { background: #FFF5F4; color: var(--danger); border-left: 4px solid var(--danger); }
         
         .script-box { background: transparent; border-radius: 8px; margin-top: 15px; }
-        .step-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border: 1px solid #E5E7EB; border-radius: 6px; margin-bottom: 8px; background: #FFFFFF; }
-        .step-label { font-weight: 600; font-size: 16px; color: #014C8B; }
-        .step-instruction { color: #65748B; font-size: 12px; margin-top: 4px; font-weight: 500; }
+        .step-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border: 1px solid #E5E7EB; border-radius: 6px; margin-bottom: 8px; background: var(--surface); }
+        .step-row:nth-child(odd) { background: var(--table-alt); }
+        .step-label { font-weight: 600; font-size: 16px; color: var(--deep-corporate); }
+        .step-instruction { color: var(--muted-text); font-size: 12px; margin-top: 4px; font-weight: 500; font-family: 'Open Sans', sans-serif; }
         
         .badge { padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; font-family: 'Open Sans', sans-serif; }
-        .badge-missing { background: #FFF5F4; color: #C8463F; }
-        .badge-mapped { background: #86C7FF; color: #333333; }
+        .badge-missing { background: #FFE1E1; color: #A11515; }
+        .badge-mapped { background: var(--info-bg); color: var(--body-text); }
         
         .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; }
-        .modal-content { background: #FFFFFF; padding: 30px; border-radius: 8px; width: 600px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
-        textarea { width: 100%; height: 180px; margin: 15px 0; padding: 12px; border: 1px solid #C4C4C4; border-radius: 8px; font-family: 'Open Sans', monospace; font-size: 13px; box-sizing: border-box; resize: none; color: #333333; }
+        .modal-content { background: #FFFFFF; padding: 30px; border-radius: 8px; width: 750px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        textarea { width: 100%; height: 300px; margin: 15px 0; padding: 12px; border: 1px solid #C4C4C4; border-radius: 8px; font-family: 'Open Sans', monospace; font-size: 13px; box-sizing: border-box; resize: none; color: var(--body-text); }
+        textarea:focus { border-color: var(--primary-action); outline: none; box-shadow: 0 0 0 3px rgba(13,92,171,0.1); }
     </style>
 </head>
 <body>
     <div id="record-modal" class="modal">
         <div class="modal-content">
-            <h3 id="modal-title">Finalize Action Code</h3>
-            <p style="font-size: 13px;">1. Replay is optional. You can type/paste code manually.<br>2. If you clicked Record, auto-recording starts by default after replay completes.<br>3. Use Inspector Record if needed.<br>4. Paste one or many lines (action + expect supported).<br>5. Click Sync to save the parsed mapping.</p>
-            <textarea id="recorded-code" placeholder="Paste your recorded code here..."></textarea>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="btn" onclick="pasteFromClipboard()">Paste Clipboard</button>
-                <button class="btn" onclick="closeModal()">Cancel</button>
+            <h3 id="modal-title" style="margin-top:0;">Record Action</h3>
+            <p style="font-size: 13px; color: var(--muted-text);">Any clicks or typing in the browser will appear below. Boilerplate is automatically ignored. Once you type or paste manually, auto-recording will stop overwriting your work.</p>
+            <textarea id="recorded-code" placeholder="Paste or record code here..."></textarea>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; align-items: center;">
+                <span id="recording-indicator" style="display:none; color: var(--danger); font-size: 12px; font-weight: 700; animation: blink 1s infinite;">● AUTO-RECORDING ACTIVE</span>
+                <button class="btn btn-secondary" onclick="pasteFromClipboard()">Paste Clipboard</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                 <button class="btn btn-primary" style="width: auto;" onclick="saveMapping()">Sync & Save Action</button>
             </div>
         </div>
@@ -57,52 +89,72 @@
 
     <div class="container">
         <div class="card">
-            <h1>🚀 Automation Studio</h1>
-            <p class="subtitle">Multi-Flow UAT Engine (A.1, B.1, C.1 Support)</p>
+            <h1>Automation Studio</h1>
+            <p class="subtitle">Enterprise Multi-Flow UAT Orchestrator</p>
             
-            <div id="drop-zone" class="drop-zone">
-                <span id="drop-text">📄 Drag & Drop <b>.xlsx</b> here or <b>Click to Upload</b></span>
-                <input type="file" id="file-input" style="opacity: 0.01; width: 1px; height: 1px; position: absolute;" accept=".xlsx" />
+            <div class="tab-strip">
+                <button class="tab tab-active" onclick="switchTab('studio')" id="tab-studio">Studio</button>
+                <button class="tab tab-inactive" onclick="switchTab('mappings')" id="tab-mappings">Mappings</button>
+                <button class="tab tab-inactive" onclick="switchTab('execution')" id="tab-execution">Execution</button>
             </div>
 
-            <div id="url-config" style="margin-bottom: 20px;">
-                <label style="font-size: 13px; font-weight: 600; color: #65676b;">Base URL for Recording:</label>
-                <input type="text" id="base-url" placeholder="https://youtube.com" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 5px;" />
-            </div>
-            <div id="execution-config" style="margin-bottom: 20px;">
-                <label style="font-size: 13px; font-weight: 600; color: #65676b;">Execution Mode:</label>
-                <div style="display:flex; gap:16px; align-items:center; margin-top:8px;">
-                    <label style="font-size:13px;">
-                        <input type="checkbox" id="fully-parallel" checked />
-                        Fully Parallel
-                    </label>
-                    <label style="font-size:13px;">
-                        Workers:
-                        <input type="number" id="worker-count" min="1" value="2" style="width:70px; padding:5px; border:1px solid #e5e7eb; border-radius:6px;" />
-                    </label>
+            <!-- View: Studio -->
+            <div id="view-studio" class="view-pane active">
+                <div id="drop-zone" class="drop-zone">
+                    <span id="drop-text">Drag & Drop <b>.xlsx</b> Scenario Matrix or <b>Click to Upload</b></span>
+                    <input type="file" id="file-input" style="opacity: 0.01; width: 1px; height: 1px; position: absolute;" accept=".xlsx" />
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <label class="form-label">Base URL for Recording:</label>
+                    <input type="text" id="base-url" class="text-input" placeholder="https://example.com" />
+                </div>
+                
+                <div style="background: #F8F9FA; padding: 20px; border-radius: 8px; border: 1px solid #E5E7EB; margin-top: 25px;">
+                    <h4 style="margin-top:0;">Workspace Controls</h4>
+                    <p style="font-size: 13px; color: var(--muted-text);">Wiping the system will delete all results and current mappings for a clean slate.</p>
+                    <button class="btn btn-danger" onclick="restartSystem()">Reset System (Wipe All)</button>
                 </div>
             </div>
 
-            <div id="status-box"></div>
-
-            <div id="step-scan-container" style="display: none;">
-                <h3>📋 Unique Action Library</h3>
-                <p style="font-size: 12px; color: #65676b; margin-bottom: 10px;">If a label appears in multiple flows, record it once to map it globally.</p>
+            <!-- View: Mappings -->
+            <div id="view-mappings" class="view-pane">
+                <div style="display:flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin:0;">Unique Action Library</h3>
+                    <div id="mapping-stats" style="font-size: 13px; font-weight: 600;"></div>
+                </div>
+                <p style="font-size: 12px; color: #65676b; margin-bottom: 15px;">Actions are mapped globally across all scenarios (A.1, B.1, etc.)</p>
                 <div id="step-list-ui" class="script-box"></div>
-                <pre id="mapping-preview" style="display:none; white-space:pre-wrap; margin-top:12px; padding:12px; border-radius:8px; background:#111827; color:#e5e7eb; font-size:12px;"></pre>
+                <pre id="mapping-preview" style="display:none; white-space:pre-wrap; margin-top:12px; padding:12px; border-radius:8px; background:#111827; color:#e5e7eb; font-size:12px; max-height: 250px; overflow-y: auto;"></pre>
+            </div>
+
+            <!-- View: Execution -->
+            <div id="view-execution" class="view-pane">
+                <div id="execution-config" class="card" style="min-height: auto; background: #F8F9FA; border-color: #E5E7EB;">
+                    <h4 style="margin-top:0;">Run Configuration</h4>
+                    <div style="display:flex; gap:24px; align-items:center;">
+                        <label style="font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" id="fully-parallel" checked /> Fully Parallel
+                        </label>
+                        <label style="font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px;">
+                            Workers: <input type="number" id="worker-count" min="1" value="4" class="small-input" />
+                        </label>
+                    </div>
+                </div>
+
+                <div id="status-box"></div>
+
                 <div style="margin-top: 30px;">
-                    <button class="btn btn-primary" id="run-btn" disabled>🚀 Execute Test Scenarios</button>
-                    <button class="btn btn-danger" id="cancel-run-btn" style="margin-top:10px; display:none;" onclick="cancelRun()">🛑 Cancel Current Run</button>
+                    <button class="btn btn-primary" id="run-btn" disabled style="font-size: 16px; padding: 14px;">Execute Test Scenarios</button>
+                    <button class="btn btn-danger" id="cancel-run-btn" style="margin-top:12px; display:none; width:100%; font-size: 16px; padding: 14px;" onclick="cancelRun()">Cancel Execution</button>
                 </div>
             </div>
-        </div>
-
-        <div class="card" style="background: #f7f8fa; border: none;">
-            <h3 style="margin:0;">⚙️ Project Workspace</h3>
-            <p style="font-size: 13px;">Wiping the system will delete all results and mappings for a clean slate.</p>
-            <button class="btn btn-danger" onclick="restartSystem()">Reset All (Wipe All)</button>
         </div>
     </div>
+
+    <style>
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    </style>
 
     <script>
         const dropZone = document.getElementById('drop-zone');
@@ -114,42 +166,57 @@
         const modal = document.getElementById('record-modal');
         const codeArea = document.getElementById('recorded-code');
         const previewBox = document.getElementById('mapping-preview');
+        const recIndicator = document.getElementById('recording-indicator');
 
         let currentLabel = "";
         let currentScenarioId = "";
+        let isUserInteracting = false;
+
+        codeArea.onfocus = () => { isUserInteracting = true; };
+        codeArea.oninput = () => { isUserInteracting = true; };
 
         document.addEventListener('DOMContentLoaded', () => {
             const savedUrl = localStorage.getItem('autotest_base_url');
             if (savedUrl) document.getElementById('base-url').value = savedUrl;
         });
 
+        function switchTab(tabId) {
+            document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => {
+                t.classList.remove('tab-active');
+                t.classList.add('tab-inactive');
+            });
+            document.getElementById(`view-${tabId}`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.remove('tab-inactive');
+            document.getElementById(`tab-${tabId}`).classList.add('tab-active');
+        }
+
         dropZone.onclick = () => fileInput.click();
         dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
-        dropZone.ondrop = (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            handleFile(e.dataTransfer.files[0]);
-        };
+        dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); };
         fileInput.onchange = (e) => handleFile(e.target.files[0]);
 
         async function handleFile(file) {
             if (!file) return;
             const formData = new FormData();
             formData.append('excel', file);
-            showStatus("⏳ Processing scenarios...", "info");
+            showStatus("Uploading scenario matrix...", "info");
             const res = await fetch('/upload', { method: 'POST', body: formData });
             if (res.ok) {
                 const payload = await res.json();
-                dropText.textContent = `✅ Active file: ${payload.fileName || file.name}`;
-                showStatus("✅ Excel Loaded.", "success");
+                dropText.innerHTML = `Active Matrix: <b>${payload.fileName || file.name}</b>`;
+                showStatus("Excel loaded. Switching to Mappings...", "success");
                 await scanSteps();
+                setTimeout(() => switchTab('mappings'), 800);
+            } else {
+                const err = await res.json();
+                showStatus(`Upload failed: ${err.error}`, "error");
             }
         }
 
         async function scanSteps() {
             const res = await fetch('/scan');
             const data = await res.json();
-            document.getElementById('step-scan-container').style.display = 'block';
             let mappedCount = 0;
             stepListUi.innerHTML = '';
             for (const s of data.steps) {
@@ -165,28 +232,33 @@
                 labelEl.onclick = () => viewMapping(String(s.label || ''));
                 const scenEl = document.createElement('div');
                 scenEl.className = 'step-instruction';
-                scenEl.textContent = `Scenario: ${String(s.scenarioId || '')}`;
+                scenEl.textContent = `Flow: ${String(s.scenarioId || '')}`;
                 left.appendChild(labelEl);
                 left.appendChild(scenEl);
 
                 const right = document.createElement('div');
                 right.style.display = 'flex';
                 right.style.alignItems = 'center';
-                right.style.gap = '12px';
+                right.style.gap = '8px';
                 const badge = document.createElement('span');
                 badge.className = `badge ${s.status === 'mapped' ? 'badge-mapped' : 'badge-missing'}`;
                 badge.textContent = String(s.status || '');
+                
                 const recordBtn = document.createElement('button');
                 recordBtn.className = s.status === 'missing' ? 'btn btn-record' : 'btn btn-remap';
-                recordBtn.textContent = s.status === 'missing' ? '⏺ Record' : '🔄 Re-Map';
+                recordBtn.textContent = s.status === 'missing' ? 'Record' : 'Re-Map';
                 recordBtn.onclick = () => openRecordModal(String(s.label || ''), String(s.scenarioId || ''));
+                
                 const manualBtn = document.createElement('button');
-                manualBtn.className = 'btn';
-                manualBtn.textContent = '⌨️ Manual';
+                manualBtn.className = 'btn btn-secondary';
+                manualBtn.textContent = 'Manual';
                 manualBtn.onclick = () => openManualModal(String(s.label || ''), String(s.scenarioId || ''));
+                
                 const delBtn = document.createElement('button');
-                delBtn.className = 'btn';
-                delBtn.textContent = '🗑 Delete';
+                delBtn.className = 'btn btn-danger';
+                delBtn.style.padding = '8px';
+                delBtn.innerHTML = '&times;';
+                delBtn.title = 'Delete Mapping';
                 delBtn.onclick = () => deleteMapping(String(s.label || ''));
 
                 right.appendChild(badge);
@@ -198,33 +270,35 @@
                 stepListUi.appendChild(row);
             }
             
+            document.getElementById('mapping-stats').innerText = `${mappedCount}/${data.steps.length} Mapped`;
             runBtn.disabled = mappedCount === 0;
-            if (mappedCount > 0) showStatus(`✨ ${mappedCount}/${data.steps.length} actions mapped. Partial execution allowed.`, "success");
-            else showStatus("⚠️ No mapped actions yet. Map at least one action to run.", "info");
+            if (mappedCount > 0) showStatus(`${mappedCount}/${data.steps.length} actions mapped.`, "success");
         }
 
         async function openRecordModal(label, scenarioId) {
             currentLabel = label;
             currentScenarioId = scenarioId;
             const baseUrl = document.getElementById('base-url').value;
-            localStorage.setItem('autotest_base_url', baseUrl);
-            
+            if (baseUrl) localStorage.setItem('autotest_base_url', baseUrl);
+
             document.getElementById('modal-title').innerText = `Record: "${label}"`;
+            codeArea.value = '';
             modal.style.display = 'flex';
+            recIndicator.style.display = 'inline';
+            isUserInteracting = false;
             
-            showStatus(`🎬 Replaying preceding steps for context. Please look for the browser window.`, "info");
+            showStatus(`Launching replay for context...`, "info");
             try {
                 const res = await fetch('/record', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ label, scenarioId, url: baseUrl })
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Record failed');
-                showStatus(`✅ ${data.message}`, "success");
+                if (!res.ok) throw new Error((await res.json()).error || 'Record failed');
                 startAutoRecordPolling();
             } catch (e) {
-                showStatus(`❌ ${e.message}`, "error");
+                showStatus(`${e.message}`, "error");
+                recIndicator.style.display = 'none';
             }
         }
         function openManualModal(label, scenarioId) {
@@ -233,17 +307,15 @@
             document.getElementById('modal-title').innerText = `Manual Map: "${label}"`;
             codeArea.value = '';
             modal.style.display = 'flex';
-            showStatus(`⌨️ Manual mapping mode for "${label}"`, "info");
+            recIndicator.style.display = 'none';
+            isUserInteracting = true; 
         }
 
-        function closeModal() { modal.style.display = 'none'; codeArea.value = ''; }
+        function closeModal() { modal.style.display = 'none'; codeArea.value = ''; recIndicator.style.display = 'none'; isUserInteracting = false; }
 
         async function saveMapping() {
             const code = codeArea.value.trim();
-            if (!code) return alert("Please paste the recorded code.");
-            if (!/await\s+page\./.test(code) && !/expect\(/.test(code)) {
-                return showStatus("❌ Invalid mapping code. Paste Playwright await/expect lines only.", "error");
-            }
+            if (!code) return alert("No code to save.");
             try {
                 const res = await fetch('/save-mapping', {
                     method: 'POST',
@@ -251,41 +323,42 @@
                     body: JSON.stringify({ label: currentLabel, code })
                 });
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Save failed');
+                if (!res.ok) {
+                    let msg = data.error;
+                    if (data.ignoredLines) msg += "\n\nBroken lines: " + data.ignoredLines.join(", ");
+                    throw new Error(msg);
+                }
                 closeModal();
                 await scanSteps();
-                showStatus(`✅ Mapped "${currentLabel}" globally (${data.stepCount} parsed steps).`, "success");
+                showStatus(`Successfully saved mapping for "${currentLabel}".`, "success");
             } catch (e) {
-                showStatus(`❌ Save failed: ${e.message}`, "error");
+                alert(`Save failed: ${e.message}`);
             }
         }
 
         runBtn.onclick = async () => {
-            const workers = Math.max(1, Number(document.getElementById('worker-count').value || 2));
+            const workers = Math.max(1, Number(document.getElementById('worker-count').value || 4));
             const fullyParallel = document.getElementById('fully-parallel').checked;
             runBtn.disabled = true;
-            runBtn.innerText = "🚀 Launching Playwright UI...";
-            showStatus("⏳ Queueing run...", "info");
+            runBtn.innerText = "Initializing Execution...";
+            switchTab('execution');
+            showStatus("Preparing execution environment...", "info");
             
             const res = await fetch('/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ workers, fullyParallel })
             });
-            const data = await res.json();
-            
             if (res.ok) {
-                showStatus(`✅ ${data.message}`, "success");
                 document.getElementById('cancel-run-btn').style.display = 'inline-flex';
                 pollRunStatus();
-                runBtn.innerText = "🚀 Run Test Execution";
-                runBtn.disabled = false;
             } else {
-                showStatus("❌ Failed to launch UI. Check server logs.", "error");
+                showStatus("Execution failed to start.", "error");
                 runBtn.disabled = false;
-                runBtn.innerText = "🚀 Run Test Execution";
             }
+            runBtn.innerText = "Execute Test Scenarios";
         };
+
         function showStatus(msg, type) {
             statusBox.innerText = msg;
             statusBox.style.display = 'block';
@@ -294,80 +367,55 @@
         async function pasteFromClipboard() {
             try {
                 const text = await navigator.clipboard.readText();
-                if (text && text.trim()) codeArea.value = text;
-            } catch (e) {
-                alert("Clipboard read failed. Paste manually.");
-            }
+                if (text) { codeArea.value = text; isUserInteracting = true; }
+            } catch (e) { alert("Clipboard access denied."); }
         }
         async function restartSystem() {
-            if (confirm("Reset all for the current uploaded project? This will wipe mappings and results.")) {
-                await fetch('/restart', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ clearMappings: true })
-                });
+            if (confirm("DANGER: This will wipe all current mappings and results for this project. Continue?")) {
+                await fetch('/restart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clearMappings: true }) });
                 location.reload();
             }
         }
         async function viewMapping(label) {
-            try {
-                const res = await fetch(`/mapping/${encodeURIComponent(label)}`);
-                const data = await res.json();
-                previewBox.style.display = 'block';
-                previewBox.textContent = data.mapping ? JSON.stringify(data.mapping, null, 2) : `No mapping found for "${label}"`;
-            } catch (e) {
-                showStatus(`❌ Failed to load mapping preview: ${e.message}`, "error");
-            }
+            const res = await fetch(`/mapping/${encodeURIComponent(label)}`);
+            const data = await res.json();
+            previewBox.style.display = 'block';
+            previewBox.textContent = data.mapping ? JSON.stringify(data.mapping, null, 2) : `No data for "${label}"`;
+            previewBox.scrollIntoView({ behavior: 'smooth' });
         }
         async function deleteMapping(label) {
-            if (!confirm(`Delete mapping "${label}"?`)) return;
-            try {
-                const res = await fetch(`/mapping/${encodeURIComponent(label)}`, { method: 'DELETE' });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Delete failed');
-                showStatus(`✅ ${data.message}`, "success");
-                await scanSteps();
-            } catch (e) {
-                showStatus(`❌ Failed to delete mapping: ${e.message}`, "error");
-            }
+            if (!confirm(`Permanently delete mapping for "${label}"?`)) return;
+            await fetch(`/mapping/${encodeURIComponent(label)}`, { method: 'DELETE' });
+            await scanSteps();
         }
         async function pollRunStatus() {
             const interval = setInterval(async () => {
+                if (document.getElementById('view-execution').style.display === 'none' && !runBtn.disabled) return;
                 try {
                     const res = await fetch('/run-status');
                     const data = await res.json();
-                    const phase = String(data.phase || '').toLowerCase();
+                    const phase = data.phase.toLowerCase();
                     let type = 'info';
-                    if (phase === 'failed') {
-                        const failureLooksLikeTests = String(data.message || '').includes('closed with code 1');
-                        type = failureLooksLikeTests ? 'info' : 'error';
-                    } else if (phase === 'completed') type = 'success';
+                    if (phase === 'failed') type = 'error';
+                    else if (phase === 'completed') type = 'success';
                     else if (phase === 'cancelled') type = 'error';
-                    showStatus(`⏱ ${data.phase.toUpperCase()}: ${data.message}`, type);
+                    
+                    showStatus(`PHASE [${data.phase.toUpperCase()}]: ${data.message}`, type);
                     if (phase === 'completed' || phase === 'failed' || phase === 'cancelled') {
                         clearInterval(interval);
                         document.getElementById('cancel-run-btn').style.display = 'none';
+                        runBtn.disabled = false;
                     }
-                } catch (e) {
-                    clearInterval(interval);
-                }
+                } catch (e) { clearInterval(interval); }
             }, 1500);
         }
         async function cancelRun() {
-            try {
-                const res = await fetch('/run-cancel', { method: 'POST' });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Cancel failed');
-                showStatus(`🛑 ${data.message}`, "error");
-                document.getElementById('cancel-run-btn').style.display = 'none';
-            } catch (e) {
-                showStatus(`❌ ${e.message}`, "error");
-            }
+            await fetch('/run-cancel', { method: 'POST' });
         }
         function startAutoRecordPolling() {
             const interval = setInterval(async () => {
-                if (modal.style.display !== 'flex') {
-                    clearInterval(interval);
+                if (modal.style.display !== 'flex' || isUserInteracting) {
+                    if (modal.style.display !== 'flex') clearInterval(interval);
                     return;
                 }
                 try {

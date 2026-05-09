@@ -37,7 +37,7 @@ test.describe('Automated UAT Execution', () => {
 
     test.beforeEach(async () => {});
 
-    test('Scenario A.1: Login Scenario 1', async ({ page }) => {
+    test('Scenario A.1: Successful Admin Login', async ({ page }) => {
         const resultsDir = path.join(process.cwd(), 'results', 'A_1');
         if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
 
@@ -47,52 +47,57 @@ test.describe('Automated UAT Execution', () => {
             await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
             await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
+            await markLocator(page.getByText('Username : AdminPassword :'));
+            await expect(page.getByText('Username : AdminPassword :')).toBeVisible();
+            await unmarkLocator(page.getByText('Username : AdminPassword :'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_1.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
             await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
             await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
             await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible();
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).fill("admin123");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_2.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
+            await markLocator(page.getByRole('button', { name: 'Login' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
+            await page.getByRole('button', { name: 'Login' }).click({ force: true });
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator("h6:has-text('Dashboard')"));
-            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
+            await markLocator(page.getByText('Time at WorkPunched'));
+            await expect(page.getByText('Time at WorkPunched')).toBeVisible();
+            await unmarkLocator(page.getByText('Time at WorkPunched'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_1.png`) });
+            await markLocator(page.getByText('My Actions(1) Pending Self'));
+            await expect(page.getByText('My Actions(1) Pending Self')).toBeVisible();
+            await unmarkLocator(page.getByText('My Actions(1) Pending Self'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_2.png`) });
+            await markLocator(page.getByRole('heading'));
+            await expect(page.getByRole('heading')).toContainText("Dashboard");
+            await unmarkLocator(page.getByRole('heading'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_3.png`) });
             });
 
             await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
@@ -101,7 +106,7 @@ test.describe('Automated UAT Execution', () => {
         }
     });
 
-    test('Scenario A.2: Invalid Username', async ({ page }) => {
+    test('Scenario A.2: Navigate to My Info', async ({ page }) => {
         const resultsDir = path.join(process.cwd(), 'results', 'A_2');
         if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
 
@@ -111,52 +116,143 @@ test.describe('Automated UAT Execution', () => {
             await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
             await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
+            await markLocator(page.getByText('Username : AdminPassword :'));
+            await expect(page.getByText('Username : AdminPassword :')).toBeVisible();
+            await unmarkLocator(page.getByText('Username : AdminPassword :'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_1.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
             await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
             await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
             await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible();
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).fill("admin123");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_2.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
+            await markLocator(page.getByRole('button', { name: 'Login' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
+            await page.getByRole('button', { name: 'Login' }).click({ force: true });
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
+            await markLocator(page.getByText('Time at WorkPunched'));
+            await expect(page.getByText('Time at WorkPunched')).toBeVisible();
+            await unmarkLocator(page.getByText('Time at WorkPunched'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_1.png`) });
+            await markLocator(page.getByText('My Actions(1) Pending Self'));
+            await expect(page.getByText('My Actions(1) Pending Self')).toBeVisible();
+            await unmarkLocator(page.getByText('My Actions(1) Pending Self'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_2.png`) });
+            await markLocator(page.getByRole('heading'));
+            await expect(page.getByRole('heading')).toContainText("Dashboard");
+            await unmarkLocator(page.getByRole('heading'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_3.png`) });
             });
 
-            await test.step('Verify Login Error Message', async () => {
-            await markLocator(page.locator("p.oxd-alert-content-text"));
-            await expect(page.locator("p.oxd-alert-content-text")).toBeVisible();
-            await unmarkLocator(page.locator("p.oxd-alert-content-text"));
+            await test.step('Click My Info Tab', async () => {
+            await markLocator(page.getByRole('link', { name: 'My Info' }));
+            await expect(page.getByRole('link', { name: 'My Info' })).toBeVisible();
+            await unmarkLocator(page.getByRole('link', { name: 'My Info' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
+            await markLocator(page.getByRole('link', { name: 'My Info' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_1_MARK.png`) });
+            await page.getByRole('link', { name: 'My Info' }).click({ force: true });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_1.png`) });
+            await markLocator(page.getByText('Personal DetailsEmployee Full'));
+            await expect(page.getByText('Personal DetailsEmployee Full')).toBeVisible();
+            await unmarkLocator(page.getByText('Personal DetailsEmployee Full'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_2.png`) });
+            await markLocator(page.locator("#app"));
+            await expect(page.locator("#app")).toContainText("Personal Details");
+            await unmarkLocator(page.locator("#app"));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_3.png`) });
+            await markLocator(page.locator("#app"));
+            await expect(page.locator("#app")).toContainText("Berry Parisian");
+            await unmarkLocator(page.locator("#app"));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_4.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'First Name' }));
+            await expect(page.getByRole('textbox', { name: 'First Name' })).toBeVisible();
+            await unmarkLocator(page.getByRole('textbox', { name: 'First Name' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_5.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Middle Name' }));
+            await expect(page.getByRole('textbox', { name: 'Middle Name' })).toBeVisible();
+            await unmarkLocator(page.getByRole('textbox', { name: 'Middle Name' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_6.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Last Name' }));
+            await expect(page.getByRole('textbox', { name: 'Last Name' })).toBeVisible();
+            await unmarkLocator(page.getByRole('textbox', { name: 'Last Name' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_7.png`) });
+            await markLocator(page.getByRole('banner'));
+            await expect(page.getByRole('banner')).toContainText("PIM");
+            await unmarkLocator(page.getByRole('banner'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_8.png`) });
+            });
+
+            await test.step('Verify Personal Details Header', async () => {
+            await markLocator(page.getByRole('textbox', { name: 'First Name' }));
+            await expect(page.getByRole('textbox', { name: 'First Name' })).toBeVisible();
+            await unmarkLocator(page.getByRole('textbox', { name: 'First Name' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Middle Name' }));
+            await expect(page.getByRole('textbox', { name: 'Middle Name' })).toBeVisible();
+            await unmarkLocator(page.getByRole('textbox', { name: 'Middle Name' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Last Name' }));
+            await expect(page.getByRole('textbox', { name: 'Last Name' })).toBeVisible();
+            await unmarkLocator(page.getByRole('textbox', { name: 'Last Name' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_2.png`) });
+            await markLocator(page.locator("#app"));
+            await expect(page.locator("#app")).toContainText("Employee Id");
+            await unmarkLocator(page.locator("#app"));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_3.png`) });
+            await markLocator(page.getByText('Berry ParisianPersonal'));
+            await expect(page.getByText('Berry ParisianPersonal')).toBeVisible();
+            await unmarkLocator(page.getByText('Berry ParisianPersonal'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_4.png`) });
+            await markLocator(page.getByRole('link', { name: 'Contact Details' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_5_MARK.png`) });
+            await page.getByRole('link', { name: 'Contact Details' }).click({ force: true });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_5.png`) });
+            await markLocator(page.getByText('Contact DetailsAddressStreet'));
+            await expect(page.getByText('Contact DetailsAddressStreet')).toBeVisible();
+            await unmarkLocator(page.getByText('Contact DetailsAddressStreet'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_6.png`) });
+            await markLocator(page.getByRole('link', { name: 'Emergency Contacts' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_7_MARK.png`) });
+            await page.getByRole('link', { name: 'Emergency Contacts' }).click({ force: true });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_7.png`) });
+            await markLocator(page.getByRole('heading', { name: 'Assigned Emergency Contacts' }));
+            await expect(page.getByRole('heading', { name: 'Assigned Emergency Contacts' })).toBeVisible();
+            await unmarkLocator(page.getByRole('heading', { name: 'Assigned Emergency Contacts' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_8.png`) });
+            await markLocator(page.getByText('No Records Found').first());
+            await expect(page.getByText('No Records Found').first()).toBeVisible();
+            await unmarkLocator(page.getByText('No Records Found').first());
+            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_9.png`) });
+            await markLocator(page.locator("#app"));
+            await expect(page.locator("#app")).toContainText("Attachments");
+            await unmarkLocator(page.locator("#app"));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_10.png`) });
             });
 
             await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
@@ -165,199 +261,7 @@ test.describe('Automated UAT Execution', () => {
         }
     });
 
-    test('Scenario A.3: Invalid Password', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'A_3');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("WrongPass");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Verify Login Error Message', async () => {
-            await markLocator(page.locator("p.oxd-alert-content-text"));
-            await expect(page.locator("p.oxd-alert-content-text")).toBeVisible();
-            await unmarkLocator(page.locator("p.oxd-alert-content-text"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario A.4: Empty Login', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'A_4');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Verify Login Error Message', async () => {
-            await markLocator(page.locator("p.oxd-alert-content-text"));
-            await expect(page.locator("p.oxd-alert-content-text")).toBeVisible();
-            await unmarkLocator(page.locator("p.oxd-alert-content-text"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario A.5: Case Sensitive Password', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'A_5');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("ADMIN123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Verify Login Error Message', async () => {
-            await markLocator(page.locator("p.oxd-alert-content-text"));
-            await expect(page.locator("p.oxd-alert-content-text")).toBeVisible();
-            await unmarkLocator(page.locator("p.oxd-alert-content-text"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario B.1: Navigate to Admin', async ({ page }) => {
+    test('Scenario B.1: Invalid Login Attempt', async ({ page }) => {
         const resultsDir = path.join(process.cwd(), 'results', 'B_1');
         if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
 
@@ -367,1748 +271,78 @@ test.describe('Automated UAT Execution', () => {
             await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
             await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
+            await markLocator(page.getByText('Username : AdminPassword :'));
+            await expect(page.getByText('Username : AdminPassword :')).toBeVisible();
+            await unmarkLocator(page.getByText('Username : AdminPassword :'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_1.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
             await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
             await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
             await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible();
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).fill("admin123");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_2.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
+            await markLocator(page.getByRole('button', { name: 'Login' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
+            await page.getByRole('button', { name: 'Login' }).click({ force: true });
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
+            await markLocator(page.getByText('Time at WorkPunched'));
+            await expect(page.getByText('Time at WorkPunched')).toBeVisible();
+            await unmarkLocator(page.getByText('Time at WorkPunched'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_1.png`) });
+            await markLocator(page.getByText('My Actions(1) Pending Self'));
+            await expect(page.getByText('My Actions(1) Pending Self')).toBeVisible();
+            await unmarkLocator(page.getByText('My Actions(1) Pending Self'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_2.png`) });
+            await markLocator(page.getByRole('heading'));
+            await expect(page.getByRole('heading')).toContainText("Dashboard");
+            await unmarkLocator(page.getByRole('heading'));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_3.png`) });
             });
 
-            await test.step('Click Admin Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Admin')"));
+            await test.step('Verify Login Error Message', async () => {
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Admin')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Admin')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Admin Header', async () => {
-            await markLocator(page.locator("h6:has-text('Admin')"));
-            await expect(page.locator("h6:has-text('Admin')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Admin')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario B.2: Navigate to PIM', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'B_2');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
             await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click PIM Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('PIM')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('PIM')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('PIM')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify PIM Header', async () => {
-            await markLocator(page.locator("h6:has-text('PIM')"));
-            await expect(page.locator("h6:has-text('PIM')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('PIM')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario B.3: Navigate to Leave', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'B_3');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
             await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("alksdjfa");
             await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Leave Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Leave')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Leave')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Leave')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Leave Header', async () => {
-            await markLocator(page.locator("h6:has-text('Leave')"));
-            await expect(page.locator("h6:has-text('Leave')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Leave')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario B.4: Navigate to Time', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'B_4');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_1.png`) });
             await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_2_MARK.png`) });
             await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_2.png`) });
             await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).fill("aslkdjfklasjdf");
             await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Time Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Time')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Time')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Time')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Time Header', async () => {
-            await markLocator(page.locator("h6:has-text('Time')"));
-            await expect(page.locator("h6:has-text('Time')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Time')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario B.5: Navigate to Recruitment', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'B_5');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Recruitment Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Recruitment')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Recruitment')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Recruitment')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Recruitment Header', async () => {
-            await markLocator(page.locator("h6:has-text('Recruitment')"));
-            await expect(page.locator("h6:has-text('Recruitment')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Recruitment')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario B.6: Navigate to My Info', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'B_6');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click My Info Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('My Info')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('My Info')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('My Info')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Personal Details Header', async () => {
-            await markLocator(page.locator("h6:has-text('Personal Details')"));
-            await expect(page.locator("h6:has-text('Personal Details')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Personal Details')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario B.7: Navigate to Performance', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'B_7');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Performance Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Performance')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Performance')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Performance')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Performance Header', async () => {
-            await markLocator(page.locator("h6:has-text('Performance')"));
-            await expect(page.locator("h6:has-text('Performance')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Performance')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario B.8: Navigate to Dashboard', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'B_8');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Dashboard Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Dashboard')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Dashboard')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Dashboard')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator("h6:has-text('Dashboard')"));
-            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario B.9: Navigate to Directory', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'B_9');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Directory Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Directory')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Directory')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Directory')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Directory Header', async () => {
-            await markLocator(page.locator("h6:has-text('Directory')"));
-            await expect(page.locator("h6:has-text('Directory')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Directory')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario B.10: Navigate to Maintenance', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'B_10');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Maintenance Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Maintenance')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Maintenance')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Maintenance')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Maintenance Header', async () => {
-            await markLocator(page.locator("h6:has-text('Maintenance')"));
-            await expect(page.locator("h6:has-text('Maintenance')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Maintenance')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario C.1: Stress Test: Admin', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'C_1');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Admin Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Admin')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Admin')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Admin')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Admin Header', async () => {
-            await markLocator(page.locator("h6:has-text('Admin')"));
-            await expect(page.locator("h6:has-text('Admin')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Admin')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario C.2: Stress Test: PIM', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'C_2');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click PIM Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('PIM')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('PIM')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('PIM')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify PIM Header', async () => {
-            await markLocator(page.locator("h6:has-text('PIM')"));
-            await expect(page.locator("h6:has-text('PIM')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('PIM')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario C.3: Stress Test: Leave', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'C_3');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Leave Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Leave')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Leave')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Leave')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Leave Header', async () => {
-            await markLocator(page.locator("h6:has-text('Leave')"));
-            await expect(page.locator("h6:has-text('Leave')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Leave')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario C.4: Stress Test: Time', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'C_4');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Time Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Time')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Time')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Time')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Time Header', async () => {
-            await markLocator(page.locator("h6:has-text('Time')"));
-            await expect(page.locator("h6:has-text('Time')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Time')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario C.5: Stress Test: Recruitment', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'C_5');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Recruitment Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Recruitment')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Recruitment')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Recruitment')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Recruitment Header', async () => {
-            await markLocator(page.locator("h6:has-text('Recruitment')"));
-            await expect(page.locator("h6:has-text('Recruitment')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Recruitment')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario C.6: Stress Test: My Info', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'C_6');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click My Info Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('My Info')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('My Info')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('My Info')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Personal Details Header', async () => {
-            await markLocator(page.locator("h6:has-text('Personal Details')"));
-            await expect(page.locator("h6:has-text('Personal Details')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Personal Details')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario C.7: Stress Test: Performance', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'C_7');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Performance Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Performance')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Performance')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Performance')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Performance Header', async () => {
-            await markLocator(page.locator("h6:has-text('Performance')"));
-            await expect(page.locator("h6:has-text('Performance')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Performance')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario C.8: Stress Test: Dashboard', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'C_8');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Dashboard Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Dashboard')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Dashboard')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Dashboard')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator("h6:has-text('Dashboard')"));
-            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario C.9: Stress Test: Directory', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'C_9');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Directory Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Directory')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Directory')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Directory')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Directory Header', async () => {
-            await markLocator(page.locator("h6:has-text('Directory')"));
-            await expect(page.locator("h6:has-text('Directory')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Directory')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario C.10: Stress Test: Maintenance', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'C_10');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Click Maintenance Menu', async () => {
-            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Maintenance')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator("a.oxd-main-menu-item:has-text('Maintenance')").click({ force: true });
-            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Maintenance')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await test.step('Verify Maintenance Header', async () => {
-            await markLocator(page.locator("h6:has-text('Maintenance')"));
-            await expect(page.locator("h6:has-text('Maintenance')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Maintenance')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario D.1: Quick Check 1', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'D_1');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator("h6:has-text('Dashboard')"));
-            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario D.2: Quick Check 2', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'D_2');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator("h6:has-text('Dashboard')"));
-            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario D.3: Quick Check 3', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'D_3');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator("h6:has-text('Dashboard')"));
-            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario D.4: Quick Check 4', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'D_4');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator("h6:has-text('Dashboard')"));
-            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
-            });
-
-            await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
-        } finally {
-            await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') }).catch(() => {});
-        }
-    });
-
-    test('Scenario D.5: Quick Check 5', async ({ page }) => {
-        const resultsDir = path.join(process.cwd(), 'results', 'D_5');
-        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
-        try {
-            await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
-            await page.waitForLoadState('domcontentloaded');
-            await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
-            });
-
-            await test.step('Input Username', async () => {
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
-            await markLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
-            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
-            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
-            });
-
-            await test.step('Input Password', async () => {
-            await markLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator("input[name='password']").fill("admin123");
-            await unmarkLocator(page.locator("input[name='password']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
-            });
-
-            await test.step('Click Login Button', async () => {
-            await markLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator("button[type='submit']").click({ force: true });
-            await unmarkLocator(page.locator("button[type='submit']"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
-            });
-
-            await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator("h6:has-text('Dashboard')"));
-            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
-            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
-            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
+            await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_3.png`) });
             });
 
             await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png') });
