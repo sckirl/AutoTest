@@ -41,7 +41,7 @@
         .drop-zone.dragover { border-color: var(--primary-action); background: #F0F8FF; }
         .form-label { display: block; font-size: 16px; font-weight: 600; color: var(--muted-text); margin-bottom: 6px; }
         .text-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #D0D5DD; margin-top: 5px; font-family: 'Open Sans', sans-serif; font-size: 14px; color: var(--body-text); box-sizing: border-box; }
-        .small-input { width: 70px; padding: 5px; border: 1px solid #D0D5DD; border-radius: 6px; }
+        .small-input { width: 75px; padding: 5px; border: 1px solid #D0D5DD; border-radius: 6px; }
 
         .btn { padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; justify-content: center; font-family: 'Montserrat', sans-serif; }
         .btn-primary { background: var(--primary-action); color: #FFFFFF; width: 100%; }
@@ -137,7 +137,7 @@
                             <input type="checkbox" id="fully-parallel" checked /> Fully Parallel
                         </label>
                         <label style="font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px;">
-                            Workers: <input type="number" id="worker-count" min="1" value="4" class="small-input" />
+                            Workers: <input type="number" id="worker-count" min="1" max="16" step="1" value="4" class="small-input" />
                         </label>
                     </div>
                 </div>
@@ -152,9 +152,7 @@
         </div>
     </div>
 
-    <style>
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-    </style>
+    <style> @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } } </style>
 
     <script>
         const dropZone = document.getElementById('drop-zone');
@@ -175,16 +173,29 @@
         codeArea.onfocus = () => { isUserInteracting = true; };
         codeArea.oninput = () => { isUserInteracting = true; };
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const savedUrl = localStorage.getItem('autotest_base_url');
             if (savedUrl) document.getElementById('base-url').value = savedUrl;
+            
+            // [DEF-052] Load Run Config
+            document.getElementById('worker-count').value = localStorage.getItem('autotest_workers') || 4;
+            document.getElementById('fully-parallel').checked = localStorage.getItem('autotest_parallel') !== 'false';
+
+            // [DEF-051] Persistence of polling on refresh
+            const res = await fetch('/run-status');
+            const data = await res.json();
+            if (data.phase !== 'idle' && data.ok) {
+                switchTab('execution');
+                runBtn.disabled = true;
+                document.getElementById('cancel-run-btn').style.display = 'inline-flex';
+                pollRunStatus();
+            }
         });
 
         function switchTab(tabId) {
             document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(t => {
-                t.classList.remove('tab-active');
-                t.classList.add('tab-inactive');
+                t.classList.remove('tab-active'); t.classList.add('tab-inactive');
             });
             document.getElementById(`view-${tabId}`).classList.add('active');
             document.getElementById(`tab-${tabId}`).classList.remove('tab-inactive');
@@ -209,8 +220,7 @@
                 await scanSteps();
                 setTimeout(() => switchTab('mappings'), 800);
             } else {
-                const err = await res.json();
-                showStatus(`Upload failed: ${err.error}`, "error");
+                const err = await res.json(); showStatus(`Upload failed: ${err.error}`, "error");
             }
         }
 
@@ -223,23 +233,17 @@
                 if (s.status === 'mapped') mappedCount++;
                 const row = document.createElement('div');
                 row.className = 'step-row';
-
                 const left = document.createElement('div');
                 const labelEl = document.createElement('div');
-                labelEl.className = 'step-label';
-                labelEl.style.cursor = 'pointer';
+                labelEl.className = 'step-label'; labelEl.style.cursor = 'pointer';
                 labelEl.textContent = String(s.label || '');
                 labelEl.onclick = () => viewMapping(String(s.label || ''));
                 const scenEl = document.createElement('div');
-                scenEl.className = 'step-instruction';
-                scenEl.textContent = `Flow: ${String(s.scenarioId || '')}`;
-                left.appendChild(labelEl);
-                left.appendChild(scenEl);
+                scenEl.className = 'step-instruction'; scenEl.textContent = `Flow: ${String(s.scenarioId || '')}`;
+                left.appendChild(labelEl); left.appendChild(scenEl);
 
                 const right = document.createElement('div');
-                right.style.display = 'flex';
-                right.style.alignItems = 'center';
-                right.style.gap = '8px';
+                right.style.display = 'flex'; right.style.alignItems = 'center'; right.style.gap = '8px';
                 const badge = document.createElement('span');
                 badge.className = `badge ${s.status === 'mapped' ? 'badge-mapped' : 'badge-missing'}`;
                 badge.textContent = String(s.status || '');
@@ -250,67 +254,43 @@
                 recordBtn.onclick = () => openRecordModal(String(s.label || ''), String(s.scenarioId || ''));
                 
                 const manualBtn = document.createElement('button');
-                manualBtn.className = 'btn btn-secondary';
-                manualBtn.textContent = 'Manual';
+                manualBtn.className = 'btn btn-secondary'; manualBtn.textContent = 'Manual';
                 manualBtn.onclick = () => openManualModal(String(s.label || ''), String(s.scenarioId || ''));
                 
                 const delBtn = document.createElement('button');
-                delBtn.className = 'btn btn-danger';
-                delBtn.style.padding = '8px';
-                delBtn.innerHTML = '&times;';
-                delBtn.title = 'Delete Mapping';
-                delBtn.onclick = () => deleteMapping(String(s.label || ''));
+                delBtn.className = 'btn btn-danger'; delBtn.style.padding = '8px'; delBtn.innerHTML = '&times;';
+                delBtn.title = 'Delete Mapping'; delBtn.onclick = () => deleteMapping(String(s.label || ''));
 
-                right.appendChild(badge);
-                right.appendChild(recordBtn);
-                right.appendChild(manualBtn);
-                right.appendChild(delBtn);
-                row.appendChild(left);
-                row.appendChild(right);
+                right.appendChild(badge); right.appendChild(recordBtn); right.appendChild(manualBtn); right.appendChild(delBtn);
+                row.appendChild(left); row.appendChild(right);
                 stepListUi.appendChild(row);
             }
-            
             document.getElementById('mapping-stats').innerText = `${mappedCount}/${data.steps.length} Mapped`;
             runBtn.disabled = mappedCount === 0;
             if (mappedCount > 0) showStatus(`${mappedCount}/${data.steps.length} actions mapped.`, "success");
         }
 
         async function openRecordModal(label, scenarioId) {
-            currentLabel = label;
-            currentScenarioId = scenarioId;
+            currentLabel = label; currentScenarioId = scenarioId;
             const baseUrl = document.getElementById('base-url').value;
             if (baseUrl) localStorage.setItem('autotest_base_url', baseUrl);
-
             document.getElementById('modal-title').innerText = `Record: "${label}"`;
-            codeArea.value = '';
-            modal.style.display = 'flex';
-            recIndicator.style.display = 'inline';
-            isUserInteracting = false;
-            
+            codeArea.value = ''; modal.style.display = 'flex'; recIndicator.style.display = 'inline'; isUserInteracting = false;
             showStatus(`Launching replay for context...`, "info");
             try {
                 const res = await fetch('/record', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ label, scenarioId, url: baseUrl })
                 });
                 if (!res.ok) throw new Error((await res.json()).error || 'Record failed');
                 startAutoRecordPolling();
-            } catch (e) {
-                showStatus(`${e.message}`, "error");
-                recIndicator.style.display = 'none';
-            }
+            } catch (e) { showStatus(`${e.message}`, "error"); recIndicator.style.display = 'none'; }
         }
         function openManualModal(label, scenarioId) {
-            currentLabel = label;
-            currentScenarioId = scenarioId;
+            currentLabel = label; currentScenarioId = scenarioId;
             document.getElementById('modal-title').innerText = `Manual Map: "${label}"`;
-            codeArea.value = '';
-            modal.style.display = 'flex';
-            recIndicator.style.display = 'none';
-            isUserInteracting = true; 
+            codeArea.value = ''; modal.style.display = 'flex'; recIndicator.style.display = 'none'; isUserInteracting = true; 
         }
-
         function closeModal() { modal.style.display = 'none'; codeArea.value = ''; recIndicator.style.display = 'none'; isUserInteracting = false; }
 
         async function saveMapping() {
@@ -318,112 +298,86 @@
             if (!code) return alert("No code to save.");
             try {
                 const res = await fetch('/save-mapping', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ label: currentLabel, code })
                 });
                 const data = await res.json();
-                if (!res.ok) {
-                    let msg = data.error;
-                    if (data.ignoredLines) msg += "\n\nBroken lines: " + data.ignoredLines.join(", ");
-                    throw new Error(msg);
-                }
-                closeModal();
-                await scanSteps();
+                if (!res.ok) throw new Error(data.error + (data.ignored ? "\n" + data.ignored.join(", ") : ""));
+                closeModal(); await scanSteps();
                 showStatus(`Successfully saved mapping for "${currentLabel}".`, "success");
-            } catch (e) {
-                alert(`Save failed: ${e.message}`);
-            }
+            } catch (e) { alert(`Save failed: ${e.message}`); }
         }
 
         runBtn.onclick = async () => {
             const workers = Math.max(1, Number(document.getElementById('worker-count').value || 4));
             const fullyParallel = document.getElementById('fully-parallel').checked;
-            runBtn.disabled = true;
-            runBtn.innerText = "Initializing Execution...";
-            switchTab('execution');
-            showStatus("Preparing execution environment...", "info");
             
+            // [DEF-052] Save Config
+            localStorage.setItem('autotest_workers', workers);
+            localStorage.setItem('autotest_parallel', fullyParallel);
+
+            runBtn.disabled = true; runBtn.innerText = "Initializing Execution...";
+            switchTab('execution'); showStatus("Preparing execution environment...", "info");
             const res = await fetch('/run', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ workers, fullyParallel })
             });
             if (res.ok) {
-                document.getElementById('cancel-run-btn').style.display = 'inline-flex';
-                pollRunStatus();
+                document.getElementById('cancel-run-btn').style.display = 'inline-flex'; pollRunStatus();
             } else {
-                showStatus("Execution failed to start.", "error");
-                runBtn.disabled = false;
+                showStatus("Execution failed to start.", "error"); runBtn.disabled = false;
             }
             runBtn.innerText = "Execute Test Scenarios";
         };
 
         function showStatus(msg, type) {
-            statusBox.innerText = msg;
-            statusBox.style.display = 'block';
-            statusBox.className = `status-${type}`;
+            statusBox.innerText = msg; statusBox.style.display = 'block'; statusBox.className = `status-${type}`;
         }
         async function pasteFromClipboard() {
-            try {
-                const text = await navigator.clipboard.readText();
-                if (text) { codeArea.value = text; isUserInteracting = true; }
-            } catch (e) { alert("Clipboard access denied."); }
+            try { const text = await navigator.clipboard.readText(); if (text) { codeArea.value = text; isUserInteracting = true; } }
+            catch (e) { alert("Clipboard access denied."); }
         }
         async function restartSystem() {
-            if (confirm("DANGER: This will wipe all current mappings and results for this project. Continue?")) {
+            if (confirm("DANGER: This will wipe all current mappings and results. Continue?")) {
                 await fetch('/restart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clearMappings: true }) });
                 location.reload();
             }
         }
         async function viewMapping(label) {
             const res = await fetch(`/mapping/${encodeURIComponent(label)}`);
-            const data = await res.json();
-            previewBox.style.display = 'block';
+            const data = await res.json(); previewBox.style.display = 'block';
             previewBox.textContent = data.mapping ? JSON.stringify(data.mapping, null, 2) : `No data for "${label}"`;
             previewBox.scrollIntoView({ behavior: 'smooth' });
         }
         async function deleteMapping(label) {
             if (!confirm(`Permanently delete mapping for "${label}"?`)) return;
-            await fetch(`/mapping/${encodeURIComponent(label)}`, { method: 'DELETE' });
-            await scanSteps();
+            await fetch(`/mapping/${encodeURIComponent(label)}`, { method: 'DELETE' }); await scanSteps();
         }
         async function pollRunStatus() {
             const interval = setInterval(async () => {
-                if (document.getElementById('view-execution').style.display === 'none' && !runBtn.disabled) return;
                 try {
-                    const res = await fetch('/run-status');
-                    const data = await res.json();
+                    const res = await fetch('/run-status'); const data = await res.json();
                     const phase = data.phase.toLowerCase();
+                    // [DEF-044] Failure Type UI differentiation
                     let type = 'info';
-                    if (phase === 'failed') type = 'error';
+                    if (phase === 'failed') type = data.failureType === 'system' ? 'error' : 'info';
                     else if (phase === 'completed') type = 'success';
                     else if (phase === 'cancelled') type = 'error';
                     
                     showStatus(`PHASE [${data.phase.toUpperCase()}]: ${data.message}`, type);
                     if (phase === 'completed' || phase === 'failed' || phase === 'cancelled') {
-                        clearInterval(interval);
-                        document.getElementById('cancel-run-btn').style.display = 'none';
-                        runBtn.disabled = false;
+                        clearInterval(interval); document.getElementById('cancel-run-btn').style.display = 'none'; runBtn.disabled = false;
                     }
                 } catch (e) { clearInterval(interval); }
             }, 1500);
         }
-        async function cancelRun() {
-            await fetch('/run-cancel', { method: 'POST' });
-        }
+        async function cancelRun() { await fetch('/run-cancel', { method: 'POST' }); }
         function startAutoRecordPolling() {
             const interval = setInterval(async () => {
-                if (modal.style.display !== 'flex' || isUserInteracting) {
-                    if (modal.style.display !== 'flex') clearInterval(interval);
-                    return;
-                }
+                if (modal.style.display !== 'flex' || isUserInteracting) { if (modal.style.display !== 'flex') clearInterval(interval); return; }
                 try {
-                    const res = await fetch('/recording-latest');
-                    const data = await res.json();
-                    if (data.code && data.code.trim()) {
-                        codeArea.value = data.code.trim();
-                    }
+                    const res = await fetch('/recording-latest'); const data = await res.json();
+                    if (data.code && data.code.trim()) codeArea.value = data.code.trim();
                 } catch (e) {}
             }, 1200);
         }
