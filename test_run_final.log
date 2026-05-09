@@ -1,0 +1,611 @@
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+Running 29 tests using 1 worker
+
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: A.1 — E2E: Happy Path Upload & Scan
+✅ PASSED: A.1
+  ✓   1 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario A.1: E2E: Happy Path Upload & Scan (1.9s)
+
+▶️  Starting: A.2 — E2E: Direct Recording Workflow
+     ❌ Error in "Click Record Button" action 0: locator.scrollIntoViewIfNeeded: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('button.btn-record').first()[22m
+
+❌ FAILED: A.2 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘   2 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario A.2: E2E: Direct Recording Workflow (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: A.3 — E2E: Full Execution Launch
+✅ PASSED: A.3
+  ✓   3 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario A.3: E2E: Full Execution Launch (1.7s)
+
+▶️  Starting: B.1 — Edge: Upload Non-Excel File
+✅ PASSED: B.1
+  ✓   4 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario B.1: Edge: Upload Non-Excel File (1.0s)
+
+▶️  Starting: B.2 — Edge: Upload Empty Excel
+✅ PASSED: B.2
+  ✓   5 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario B.2: Edge: Upload Empty Excel (1.0s)
+
+▶️  Starting: B.3 — Edge: Large Dataset Stress Test
+✅ PASSED: B.3
+  ✓   6 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario B.3: Edge: Large Dataset Stress Test (1.3s)
+
+▶️  Starting: C.1 — UX: Base URL Persistence
+✅ PASSED: C.1
+  ✓   7 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario C.1: UX: Base URL Persistence (1.3s)
+
+▶️  Starting: C.2 — UX: System Reset Verification
+✅ PASSED: C.2
+  ✓   8 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario C.2: UX: System Reset Verification (4.2s)
+
+▶️  Starting: D.1 — Data: Token Replacement
+     ❌ Error in "Run Tokenized Step" action 0: locator.scrollIntoViewIfNeeded: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('input#base-url').first()[22m
+
+❌ FAILED: D.1 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘   9 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario D.1: Data: Token Replacement (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: E.1 — Function: Re-mapping existing
+     ❌ Error in "Click Re-Map Button" action 0: locator.scrollIntoViewIfNeeded: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('button.btn-record').first()[22m
+
+❌ FAILED: E.1 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘  10 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario E.1: Function: Re-mapping existing (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: F.1 — Security: Malicious Code Input
+     ❌ Error in "Paste Malicious Script" action 0: locator.fill: Error: Element is not an <input>, <textarea>, <select> or [contenteditable] and does not have a role allowing [aria-readonly]
+Call log:
+[2m  - waiting for locator('body').first()[22m
+[2m    - locator resolved to <body></body>[22m
+[2m    - fill("")[22m
+[2m  - attempting fill action[22m
+[2m    - waiting for element to be visible, enabled and editable[22m
+
+❌ FAILED: F.1 — locator.fill: Error: Element is not an <input>, <textarea>, <select> or [contenteditable] and does not have a role allowing [aria-readonly]
+Call log:
+[2m  - waiting for locator('body').first()[22m
+[2m    - locator resolved to <body></body>[22m
+[2m    - fill("")[22m
+[2m  - attempting fill action[22m
+[2m    - waiting for element to be visible, enabled and editable[22m
+
+✅ State persisted to core/state.json
+  ✘  11 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario F.1: Security: Malicious Code Input (757ms)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: G.1 — Vari: Special Chars in Labels
+     ❌ Error in "Upload Special Char Excel" action 0: locator.setInputFiles: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('input#file-input').first()[22m
+
+❌ FAILED: G.1 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘  12 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario G.1: Vari: Special Chars in Labels (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: G.2 — Vari: Multiple Sheets in Excel
+     ❌ Error in "Upload Multi-Sheet Excel" action 0: locator.setInputFiles: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('input#file-input').first()[22m
+
+❌ FAILED: G.2 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘  13 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario G.2: Vari: Multiple Sheets in Excel (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: H.1 — UX: Drag & Drop Area Feedback
+     ❌ Error in "Drag File Over Zone" action 0: locator.scrollIntoViewIfNeeded: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('div#drop-zone').first()[22m
+
+❌ FAILED: H.1 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘  14 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario H.1: UX: Drag & Drop Area Feedback (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: H.2 — UX: Polling for Mapped Status
+     ❌ Error in "Trigger Info Status" action 0: locator.scrollIntoViewIfNeeded: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('div#drop-zone').first()[22m
+
+❌ FAILED: H.2 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘  15 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario H.2: UX: Polling for Mapped Status (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: I.1 — Engine: Scroll into View Check
+✅ PASSED: I.1
+  ✓  16 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario I.1: Engine: Scroll into View Check (18.1s)
+
+▶️  Starting: I.2 — Engine: Multi-step action
+✅ PASSED: I.2
+  ✓  17 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario I.2: Engine: Multi-step action (444ms)
+
+▶️  Starting: I.3 — Engine: Navigation Timeouts
+✅ PASSED: I.3
+  ✓  18 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario I.3: Engine: Navigation Timeouts (895ms)
+
+▶️  Starting: J.1 — Bnd: Max Length Label
+     ❌ Error in "Upload Long Label Excel" action 0: locator.setInputFiles: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('input#file-input').first()[22m
+
+❌ FAILED: J.1 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘  19 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario J.1: Bnd: Max Length Label (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: J.2 — Bnd: Missing Change ID
+     ❌ Error in "Upload No-ID Excel" action 0: locator.setInputFiles: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('input#file-input').first()[22m
+
+❌ FAILED: J.2 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘  20 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario J.2: Bnd: Missing Change ID (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: K.1 — Flow: A.1 and B.1 conflict
+     ❌ Error in "Upload Multi-Flow Excel" action 0: locator.setInputFiles: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('input#file-input').first()[22m
+
+❌ FAILED: K.1 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘  21 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario K.1: Flow: A.1 and B.1 conflict (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: L.1 — Data: JSON in Test Data
+     ❌ Error in "Run JSON Data Step" action 0: locator.scrollIntoViewIfNeeded: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('input#base-url').first()[22m
+
+❌ FAILED: L.1 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘  22 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario L.1: Data: JSON in Test Data (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: M.1 — UX: Error Alert Visibility
+     ❌ Error in "Trigger Studio Error" action 0: locator.setInputFiles: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('input#file-input').first()[22m
+
+❌ FAILED: M.1 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘  23 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario M.1: UX: Error Alert Visibility (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: N.1 — Sys: Directory Cleanup
+     ❌ Error in "Click Reset System" action 0: locator.scrollIntoViewIfNeeded: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('button:has-text(\'Reset System\')').first()[22m
+
+❌ FAILED: N.1 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘  24 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario N.1: Sys: Directory Cleanup (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: N.2 — Sys: Spec File Generation
+     ❌ Error in "Click Execute Scenarios" action 0: page.evaluate: TypeError: Cannot read properties of null (reading 'style')
+    at eval (eval at evaluate (:302:30), <anonymous>:1:47)
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:302:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+❌ FAILED: N.2 — page.evaluate: TypeError: Cannot read properties of null (reading 'style')
+    at eval (eval at evaluate (:302:30), <anonymous>:1:47)
+    at eval (<anonymous>)
+    at UtilityScript.evaluate (<anonymous>:302:30)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+✅ State persisted to core/state.json
+  ✘  25 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario N.2: Sys: Spec File Generation (760ms)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: O.1 — Perf: Concurrent Scan Request
+✅ PASSED: O.1
+  ✓  26 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario O.1: Perf: Concurrent Scan Request (1.2s)
+
+▶️  Starting: O.2 — Perf: Rapid UI Interaction
+     ❌ Error in "Rapidly Click Elements" action 0: locator.scrollIntoViewIfNeeded: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('#drop-zone').first()[22m
+
+❌ FAILED: O.2 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘  27 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario O.2: Perf: Rapid UI Interaction (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: P.1 — Cert: Final Certification Run
+     ❌ Error in "Perform All Steps" action 0: locator.scrollIntoViewIfNeeded: Test timeout of 60000ms exceeded.
+Call log:
+[2m  - waiting for locator('button#run-btn').first()[22m
+
+❌ FAILED: P.1 — page.screenshot: Target page, context or browser has been closed
+✅ State persisted to core/state.json
+  ✘  28 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario P.1: Cert: Final Certification Run (1.0m)
+✅ Loaded state with 3 scope(s)
+✅ Loaded state with 3 scope(s)
+
+▶️  Starting: P.2 — Cert: Regression Check
+✅ PASSED: P.2
+✅ State persisted to core/state.json
+  ✓  29 [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario P.2: Cert: Regression Check (1.2s)
+
+
+  1) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario A.2: E2E: Direct Recording Workflow › Click Record Button 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-8205f-E-Direct-Recording-Workflow-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-8205f-E-Direct-Recording-Workflow-chromium/error-context.md
+
+  2) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario D.1: Data: Token Replacement › Run Tokenized Step 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-449cc--D-1-Data-Token-Replacement-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-449cc--D-1-Data-Token-Replacement-chromium/error-context.md
+
+  3) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario E.1: Function: Re-mapping existing › Click Re-Map Button 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-4c6cb-unction-Re-mapping-existing-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-4c6cb-unction-Re-mapping-existing-chromium/error-context.md
+
+  4) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario F.1: Security: Malicious Code Input › Paste Malicious Script 
+
+    Error: locator.fill: Error: Element is not an <input>, <textarea>, <select> or [contenteditable] and does not have a role allowing [aria-readonly]
+    Call log:
+    [2m  - waiting for locator('body').first()[22m
+    [2m    - locator resolved to <body></body>[22m
+    [2m    - fill("")[22m
+    [2m  - attempting fill action[22m
+    [2m    - waiting for element to be visible, enabled and editable[22m
+
+
+       at engine.ts:38
+
+      36 |                     await locator.scrollIntoViewIfNeeded();
+      37 |                     await locator.waitFor({ state: 'visible', timeout: 10000 });
+    > 38 |                     await locator.fill(value, { timeout: 10000 });
+         |                                   ^
+      39 |                 } else if (step.type === 'upload') {
+      40 |                     const locator = this.resolveLocator(page, step.target).first();
+      41 |                     await locator.setInputFiles(value);
+        at AutomationEngine.runStep (/Users/alvin/CodeProjects/AutoTest/core/engine.ts:38:35)
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:47:25
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:46:21
+
+    Error Context: test-results/runner-Automated-UAT-Suite-0e5be-curity-Malicious-Code-Input-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-0e5be-curity-Malicious-Code-Input-chromium/error-context.md
+
+  5) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario G.1: Vari: Special Chars in Labels › Upload Special Char Excel 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-1fd0e-ari-Special-Chars-in-Labels-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-1fd0e-ari-Special-Chars-in-Labels-chromium/error-context.md
+
+  6) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario G.2: Vari: Multiple Sheets in Excel › Upload Multi-Sheet Excel 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-258a3-ri-Multiple-Sheets-in-Excel-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-258a3-ri-Multiple-Sheets-in-Excel-chromium/error-context.md
+
+  7) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario H.1: UX: Drag & Drop Area Feedback › Drag File Over Zone 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-c938e--UX-Drag-Drop-Area-Feedback-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-c938e--UX-Drag-Drop-Area-Feedback-chromium/error-context.md
+
+  8) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario H.2: UX: Polling for Mapped Status › Trigger Info Status 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-33b74-X-Polling-for-Mapped-Status-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-33b74-X-Polling-for-Mapped-Status-chromium/error-context.md
+
+  9) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario J.1: Bnd: Max Length Label › Upload Long Label Excel 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-Scenario-J-1-Bnd-Max-Length-Label-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-Scenario-J-1-Bnd-Max-Length-Label-chromium/error-context.md
+
+  10) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario J.2: Bnd: Missing Change ID › Upload No-ID Excel 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-55d79-o-J-2-Bnd-Missing-Change-ID-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-55d79-o-J-2-Bnd-Missing-Change-ID-chromium/error-context.md
+
+  11) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario K.1: Flow: A.1 and B.1 conflict › Upload Multi-Flow Excel 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-2bad3-1-Flow-A-1-and-B-1-conflict-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-2bad3-1-Flow-A-1-and-B-1-conflict-chromium/error-context.md
+
+  12) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario L.1: Data: JSON in Test Data › Run JSON Data Step 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-a1357--L-1-Data-JSON-in-Test-Data-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-a1357--L-1-Data-JSON-in-Test-Data-chromium/error-context.md
+
+  13) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario M.1: UX: Error Alert Visibility › Trigger Studio Error 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-869de-1-UX-Error-Alert-Visibility-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-869de-1-UX-Error-Alert-Visibility-chromium/error-context.md
+
+  14) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario N.1: Sys: Directory Cleanup › Click Reset System 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-aec0b-o-N-1-Sys-Directory-Cleanup-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-aec0b-o-N-1-Sys-Directory-Cleanup-chromium/error-context.md
+
+  15) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario N.2: Sys: Spec File Generation › Click Execute Scenarios 
+
+    Error: page.evaluate: TypeError: Cannot read properties of null (reading 'style')
+        at eval (eval at evaluate (:302:30), <anonymous>:1:47)
+        at eval (<anonymous>)
+        at UtilityScript.evaluate (<anonymous>:302:30)
+        at UtilityScript.<anonymous> (<anonymous>:1:44)
+        at eval (eval at evaluate (:302:30), <anonymous>:1:47)
+        at UtilityScript.evaluate (<anonymous>:302:30)
+        at UtilityScript.<anonymous> (<anonymous>:1:44)
+        at AutomationEngine.runStep (/Users/alvin/CodeProjects/AutoTest/core/engine.ts:54:32)
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:47:38
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:46:21
+
+    Error Context: test-results/runner-Automated-UAT-Suite-6bdea--2-Sys-Spec-File-Generation-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-6bdea--2-Sys-Spec-File-Generation-chromium/error-context.md
+
+  16) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario O.2: Perf: Rapid UI Interaction › Rapidly Click Elements 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-573d9-2-Perf-Rapid-UI-Interaction-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-573d9-2-Perf-Rapid-UI-Interaction-chromium/error-context.md
+
+  17) [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario P.1: Cert: Final Certification Run › Perform All Steps 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: page.screenshot: Target page, context or browser has been closed
+
+      54 |                 throw error;
+      55 |             } finally {
+    > 56 |                 await page.screenshot({ path: path.join(resultsDir, 'FINAL_STATE.png'), fullPage: true });
+         |                            ^
+      57 |             }
+      58 |         });
+      59 |     }
+        at /Users/alvin/CodeProjects/AutoTest/core/runner.spec.ts:56:28
+
+    Error Context: test-results/runner-Automated-UAT-Suite-99ec6-ert-Final-Certification-Run-chromium/error-context.md
+
+    Error Context: test-results/runner-Automated-UAT-Suite-99ec6-ert-Final-Certification-Run-chromium/error-context.md
+
+  17 failed
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario A.2: E2E: Direct Recording Workflow 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario D.1: Data: Token Replacement 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario E.1: Function: Re-mapping existing 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario F.1: Security: Malicious Code Input 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario G.1: Vari: Special Chars in Labels 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario G.2: Vari: Multiple Sheets in Excel 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario H.1: UX: Drag & Drop Area Feedback 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario H.2: UX: Polling for Mapped Status 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario J.1: Bnd: Max Length Label 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario J.2: Bnd: Missing Change ID 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario K.1: Flow: A.1 and B.1 conflict 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario L.1: Data: JSON in Test Data 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario M.1: UX: Error Alert Visibility 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario N.1: Sys: Directory Cleanup 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario N.2: Sys: Spec File Generation 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario O.2: Perf: Rapid UI Interaction 
+    [chromium] › core/runner.spec.ts:33:13 › Automated UAT Suite › Scenario P.1: Cert: Final Certification Run 
+  12 passed (16.2m)

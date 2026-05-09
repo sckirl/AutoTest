@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2026-05-08T01:58:29.262Z",
+  "scopes": {
+    "0001": {
+      "id": "Test_1778205509261_1",
+      "createdAt": "2026-05-08T01:58:29.261Z",
+      "usedInScenarios": []
+    },
+    "0002": {
+      "id": "Test_1778205509261_2",
+      "createdAt": "2026-05-08T01:58:29.261Z",
+      "usedInScenarios": []
+    },
+    "0003": {
+      "id": "Test_1778205509262_3",
+      "createdAt": "2026-05-08T01:58:29.262Z",
+      "usedInScenarios": []
+    }
+  },
+  "globalCounter": 3,
+  "metadata": {
+    "framework": "AutoTest",
+    "testRunCount": 1,
+    "lastTestRun": "2026-05-08T01:58:29.262Z"
+  }
+}

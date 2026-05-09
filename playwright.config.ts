@@ -11,7 +11,7 @@ export default defineConfig({
     use: {
         headless: process.env.PW_HEADLESS !== '0',
         screenshot: 'off', // Engine handles screenshots itself
-        trace: 'on',       // Enables Trace Viewer for debugging
+        trace: 'off',      // Disabled - Engine handles screenshots
     },
     projects: [
         {

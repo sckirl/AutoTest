@@ -1,330 +1,1134 @@
 [
   {
     "Scenario_ID": "A.1",
-    "Role": "E2E: Happy Path Upload & Scan",
+    "Role": "Valid Admin Login",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to Studio",
+        "Mapping_Key": "Navigate to OrangeHRM",
         "Data": {}
       },
       {
-        "Mapping_Key": "Upload Valid Excel",
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "{{username}}"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "{{password}}"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Dashboard Header",
         "Data": {}
       }
     ]
   },
   {
     "Scenario_ID": "A.2",
-    "Role": "E2E: Direct Recording Workflow",
+    "Role": "Invalid Username",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to Studio",
+        "Mapping_Key": "Navigate to OrangeHRM",
         "Data": {}
       },
       {
-        "Mapping_Key": "Click Record Button",
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "{{username}}"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "{{password}}"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
         "Data": {}
       },
       {
-        "Mapping_Key": "Perform Direct Action",
+        "Mapping_Key": "Verify Login Error Message",
         "Data": {}
       }
     ]
   },
   {
     "Scenario_ID": "A.3",
-    "Role": "E2E: Full Execution Launch",
+    "Role": "Invalid Password",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to Studio",
+        "Mapping_Key": "Navigate to OrangeHRM",
         "Data": {}
       },
       {
-        "Mapping_Key": "Click Execute Scenarios",
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "{{username}}"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "{{password}}"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Login Error Message",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "A.4",
+    "Role": "Empty Credentials",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "{{username}}"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "{{password}}"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Login Error Message",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "A.5",
+    "Role": "Logout Flow",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "{{username}}"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "{{password}}"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click User Dropdown",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Logout",
         "Data": {}
       }
     ]
   },
   {
     "Scenario_ID": "B.1",
-    "Role": "Edge: Upload Non-Excel File",
+    "Role": "Navigate to Admin",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to Studio",
+        "Mapping_Key": "Navigate to OrangeHRM",
         "Data": {}
       },
       {
-        "Mapping_Key": "Upload Invalid File",
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Admin Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Admin Header",
         "Data": {}
       }
     ]
   },
   {
     "Scenario_ID": "B.2",
-    "Role": "Edge: Upload Empty Excel",
+    "Role": "Navigate to PIM",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to Studio",
+        "Mapping_Key": "Navigate to OrangeHRM",
         "Data": {}
       },
       {
-        "Mapping_Key": "Upload Empty Excel",
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click PIM Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify PIM Header",
         "Data": {}
       }
     ]
   },
   {
     "Scenario_ID": "B.3",
-    "Role": "Edge: Large Dataset Stress Test",
+    "Role": "Navigate to Leave",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to Studio",
+        "Mapping_Key": "Navigate to OrangeHRM",
         "Data": {}
       },
       {
-        "Mapping_Key": "Upload Large Excel",
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Leave Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Leave Header",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "B.4",
+    "Role": "Navigate to Time",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Time Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Time Header",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "B.5",
+    "Role": "Navigate to Recruitment",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Recruitment Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Recruitment Header",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "B.6",
+    "Role": "Navigate to My Info",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click My Info Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify My Info Header",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "B.7",
+    "Role": "Navigate to Performance",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Performance Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Performance Header",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "B.8",
+    "Role": "Navigate to Dashboard",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Dashboard Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Dashboard Header",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "B.9",
+    "Role": "Navigate to Directory",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Directory Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Directory Header",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "B.10",
+    "Role": "Navigate to Maintenance",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Maintenance Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Maintenance Header",
         "Data": {}
       }
     ]
   },
   {
     "Scenario_ID": "C.1",
-    "Role": "UX: Base URL Persistence",
+    "Role": "Add Employee 1",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to Studio",
+        "Mapping_Key": "Navigate to OrangeHRM",
         "Data": {}
       },
       {
-        "Mapping_Key": "Input Base URL",
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click PIM Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Add Employee Tab",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input First Name",
+        "Data": {
+          "fname": "Test1"
+        }
+      },
+      {
+        "Mapping_Key": "Input Last Name",
+        "Data": {
+          "lname": "User1"
+        }
+      },
+      {
+        "Mapping_Key": "Click Save Button",
         "Data": {}
       }
     ]
   },
   {
     "Scenario_ID": "C.2",
-    "Role": "UX: System Reset Verification",
+    "Role": "Add Employee 2",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to Studio",
+        "Mapping_Key": "Navigate to OrangeHRM",
         "Data": {}
       },
       {
-        "Mapping_Key": "Click Reset System",
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click PIM Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Add Employee Tab",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input First Name",
+        "Data": {
+          "fname": "Test2"
+        }
+      },
+      {
+        "Mapping_Key": "Input Last Name",
+        "Data": {
+          "lname": "User2"
+        }
+      },
+      {
+        "Mapping_Key": "Click Save Button",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "C.3",
+    "Role": "Add Employee 3",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click PIM Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Add Employee Tab",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input First Name",
+        "Data": {
+          "fname": "Test3"
+        }
+      },
+      {
+        "Mapping_Key": "Input Last Name",
+        "Data": {
+          "lname": "User3"
+        }
+      },
+      {
+        "Mapping_Key": "Click Save Button",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "C.4",
+    "Role": "Add Employee 4",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click PIM Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Add Employee Tab",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input First Name",
+        "Data": {
+          "fname": "Test4"
+        }
+      },
+      {
+        "Mapping_Key": "Input Last Name",
+        "Data": {
+          "lname": "User4"
+        }
+      },
+      {
+        "Mapping_Key": "Click Save Button",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "C.5",
+    "Role": "Add Employee 5",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click PIM Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Add Employee Tab",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input First Name",
+        "Data": {
+          "fname": "Test5"
+        }
+      },
+      {
+        "Mapping_Key": "Input Last Name",
+        "Data": {
+          "lname": "User5"
+        }
+      },
+      {
+        "Mapping_Key": "Click Save Button",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "C.6",
+    "Role": "Search Employee 1",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click PIM Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Employee Name Search",
+        "Data": {
+          "search": "Test1"
+        }
+      },
+      {
+        "Mapping_Key": "Click Search Button",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "C.7",
+    "Role": "Search Employee 2",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click PIM Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Employee Name Search",
+        "Data": {
+          "search": "Test2"
+        }
+      },
+      {
+        "Mapping_Key": "Click Search Button",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "C.8",
+    "Role": "Search Employee 3",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click PIM Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Employee Name Search",
+        "Data": {
+          "search": "Test3"
+        }
+      },
+      {
+        "Mapping_Key": "Click Search Button",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "C.9",
+    "Role": "Search Employee 4",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click PIM Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Employee Name Search",
+        "Data": {
+          "search": "Test4"
+        }
+      },
+      {
+        "Mapping_Key": "Click Search Button",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "C.10",
+    "Role": "Search Employee 5",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click PIM Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Employee Name Search",
+        "Data": {
+          "search": "Test5"
+        }
+      },
+      {
+        "Mapping_Key": "Click Search Button",
         "Data": {}
       }
     ]
   },
   {
     "Scenario_ID": "D.1",
-    "Role": "Data: Token Replacement",
+    "Role": "Review Performance",
     "Flow": [
       {
-        "Mapping_Key": "Run Tokenized Step",
-        "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "E.1",
-    "Role": "Function: Re-mapping existing",
-    "Flow": [
-      {
-        "Mapping_Key": "Navigate to Studio",
+        "Mapping_Key": "Navigate to OrangeHRM",
         "Data": {}
       },
       {
-        "Mapping_Key": "Click Re-Map Button",
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click My Info Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Review Performance Section",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Content Visibility",
         "Data": {}
       }
     ]
   },
   {
-    "Scenario_ID": "F.1",
-    "Role": "Security: Malicious Code Input",
+    "Scenario_ID": "D.2",
+    "Role": "Update Contact Details",
     "Flow": [
       {
-        "Mapping_Key": "Paste Malicious Script",
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click My Info Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Update Contact Details Section",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Content Visibility",
         "Data": {}
       }
     ]
   },
   {
-    "Scenario_ID": "G.1",
-    "Role": "Vari: Special Chars in Labels",
+    "Scenario_ID": "D.3",
+    "Role": "View Job Info",
     "Flow": [
       {
-        "Mapping_Key": "Upload Special Char Excel",
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click My Info Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click View Job Info Section",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Content Visibility",
         "Data": {}
       }
     ]
   },
   {
-    "Scenario_ID": "G.2",
-    "Role": "Vari: Multiple Sheets in Excel",
+    "Scenario_ID": "D.4",
+    "Role": "Check Salary Details",
     "Flow": [
       {
-        "Mapping_Key": "Upload Multi-Sheet Excel",
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click My Info Menu",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Click Check Salary Details Section",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Content Visibility",
         "Data": {}
       }
     ]
   },
   {
-    "Scenario_ID": "H.1",
-    "Role": "UX: Drag & Drop Area Feedback",
+    "Scenario_ID": "D.5",
+    "Role": "Emergency Contacts",
     "Flow": [
       {
-        "Mapping_Key": "Drag File Over Zone",
+        "Mapping_Key": "Navigate to OrangeHRM",
         "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "H.2",
-    "Role": "UX: Polling for Mapped Status",
-    "Flow": [
+      },
       {
-        "Mapping_Key": "Trigger Info Status",
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
         "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "I.1",
-    "Role": "Engine: Scroll into View Check",
-    "Flow": [
+      },
       {
-        "Mapping_Key": "Run Step for Hidden Element",
+        "Mapping_Key": "Click My Info Menu",
         "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "I.2",
-    "Role": "Engine: Multi-step action",
-    "Flow": [
+      },
       {
-        "Mapping_Key": "Perform Multi-Step Action",
+        "Mapping_Key": "Click Emergency Contacts Section",
         "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "I.3",
-    "Role": "Engine: Navigation Timeouts",
-    "Flow": [
+      },
       {
-        "Mapping_Key": "Run Long Goto Step",
-        "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "J.1",
-    "Role": "Bnd: Max Length Label",
-    "Flow": [
-      {
-        "Mapping_Key": "Upload Long Label Excel",
-        "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "J.2",
-    "Role": "Bnd: Missing Change ID",
-    "Flow": [
-      {
-        "Mapping_Key": "Upload No-ID Excel",
-        "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "K.1",
-    "Role": "Flow: A.1 and B.1 conflict",
-    "Flow": [
-      {
-        "Mapping_Key": "Upload Multi-Flow Excel",
-        "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "L.1",
-    "Role": "Data: JSON in Test Data",
-    "Flow": [
-      {
-        "Mapping_Key": "Run JSON Data Step",
-        "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "M.1",
-    "Role": "UX: Error Alert Visibility",
-    "Flow": [
-      {
-        "Mapping_Key": "Trigger Studio Error",
-        "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "N.1",
-    "Role": "Sys: Directory Cleanup",
-    "Flow": [
-      {
-        "Mapping_Key": "Click Reset System",
-        "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "N.2",
-    "Role": "Sys: Spec File Generation",
-    "Flow": [
-      {
-        "Mapping_Key": "Click Execute Scenarios",
-        "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "O.1",
-    "Role": "Perf: Concurrent Scan Request",
-    "Flow": [
-      {
-        "Mapping_Key": "Navigate to Studio",
-        "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "O.2",
-    "Role": "Perf: Rapid UI Interaction",
-    "Flow": [
-      {
-        "Mapping_Key": "Rapidly Click Elements",
-        "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "P.1",
-    "Role": "Cert: Final Certification Run",
-    "Flow": [
-      {
-        "Mapping_Key": "Perform All Steps",
-        "Data": {}
-      }
-    ]
-  },
-  {
-    "Scenario_ID": "P.2",
-    "Role": "Cert: Regression Check",
-    "Flow": [
-      {
-        "Mapping_Key": "Navigate to Studio",
+        "Mapping_Key": "Verify Content Visibility",
         "Data": {}
       }
     ]

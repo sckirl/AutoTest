@@ -47,7 +47,7 @@
 
             <div id="url-config" style="margin-bottom: 20px;">
                 <label style="font-size: 13px; font-weight: 600; color: #65676b;">Base URL for Recording:</label>
-                <input type="text" id="base-url" placeholder="https://youtube.com" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 5px;" />
+                <input type="text" id="base-url" placeholder="https://opensource-demo.orangehrmlive.com/web/index.php/auth/login" value="https://opensource-demo.orangehrmlive.com/web/index.php/auth/login" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 5px;" />
             </div>
 
             <div id="status-box"></div>
@@ -108,7 +108,7 @@
             stepListUi.innerHTML = data.steps.map(s => {
                 if (s.status === 'missing') allMapped = false;
                 return `
-                <div class="step-row" id="row-${s.label.replace(/\s+/g, '-')}">
+                <div class="step-row" id="row-${(s.scenarioId + '-' + s.label).toLowerCase().replace(/[^a-z0-9]/gi, '-')}">
                     <div>
                         <div class="step-label">${s.label}</div>
                         <div class="step-instruction">Scenario Context: ${s.scenarioId}</div>
@@ -140,34 +140,56 @@
             });
 
             if (res.ok) {
-                // Poll aggressively for status changes
+                // Poll aggressively for status changes and recording session life
                 const poller = setInterval(async () => {
-                    const scanRes = await fetch('/scan');
+                    const [scanRes, statusRes] = await Promise.all([fetch('/scan'), fetch('/status')]);
                     const scanData = await scanRes.json();
+                    const statusData = await statusRes.json();
                     
+                    let mappedCount = 0;
                     let missingFound = false;
                     scanData.steps.forEach(s => {
-                        const row = document.getElementById(`row-${s.label.replace(/\s+/g, '-')}`);
+                        const row = document.getElementById(`row-${(s.scenarioId + '-' + s.label).toLowerCase().replace(/[^a-z0-9]/gi, '-')}`);
                         if (row) {
                             const badge = row.querySelector('.badge');
+                            const btn = row.querySelector('.btn-record');
                             const wasMissing = badge.classList.contains('badge-missing');
-                            if (s.status === 'mapped' && wasMissing) {
-                                badge.className = 'badge badge-mapped';
-                                badge.innerText = 'mapped';
-                                row.classList.add('just-mapped');
-                                setTimeout(() => row.classList.remove('just-mapped'), 2000);
+                            if (s.status === 'mapped') {
+                                mappedCount++;
+                                if (wasMissing) {
+                                    badge.className = 'badge badge-mapped';
+                                    badge.innerText = 'mapped';
+                                    if (btn) btn.innerText = '🔄 Re-Map';
+                                    row.classList.add('just-mapped');
+                                    setTimeout(() => row.classList.remove('just-mapped'), 2000);
+                                }
+                            } else {
+                                missingFound = true;
                             }
                         }
-                        if (s.status === 'missing') missingFound = true;
                     });
+
+                    if (isRecording) {
+                        showStatus(`🎬 Recording Active. Mapped ${mappedCount}/${scanData.steps.length} actions. Perform your actions in the new browser window.`, "info");
+                    }
+
+                    if (!statusData.recordingActive && isRecording) {
+                        isRecording = false;
+                        clearInterval(poller);
+                        if (!missingFound) {
+                            runBtn.disabled = false;
+                            showStatus("✨ All steps mapped! You can now execute the scenarios.", "success");
+                        } else {
+                            showStatus(`⏹ Recording stopped. ${mappedCount}/${scanData.steps.length} steps mapped.`, mappedCount > 0 ? "success" : "info");
+                        }
+                    }
 
                     if (!missingFound) {
                         runBtn.disabled = false;
-                        showStatus("✨ All steps mapped! You can close the browser or keep recording.", "success");
                     }
                 }, 1000);
 
-                // Stop polling if recording flag is cleared or after a long timeout
+                // Stop polling after a long timeout just in case
                 setTimeout(() => clearInterval(poller), 600000); 
             }
         }

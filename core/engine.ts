@@ -1,9 +1,11 @@
-import { Page } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { StateManager } from './state-manager';
 
 export class AutomationEngine {
     private mappings: Record<string, any>;
+    private stateManager: StateManager;
 
     constructor(mappingPath: string) {
         if (fs.existsSync(mappingPath)) {
@@ -11,6 +13,7 @@ export class AutomationEngine {
         } else {
             this.mappings = {};
         }
+        this.stateManager = new StateManager(path.join(__dirname, 'state.json'));
     }
 
     public async runStep(page: Page, stepLabel: string, data: Record<string, string>, resultsDir: string, stepIdx: number) {
@@ -26,7 +29,6 @@ export class AutomationEngine {
             try {
                 if (step.type === 'goto') {
                     await page.goto(step.target, { waitUntil: 'domcontentloaded', timeout: 30000 });
-                    // After navigation, wait for network to settle
                     await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
                 } else if (step.type === 'fill') {
                     const locator = this.resolveLocator(page, step.target).first();
@@ -41,15 +43,23 @@ export class AutomationEngine {
                     await locator.scrollIntoViewIfNeeded();
                     await locator.waitFor({ state: 'visible', timeout: 10000 });
                     await locator.click({ timeout: 10000, force: true });
-                    // Wait for any navigation or DOM update triggered by the click
                     await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {});
                 } else if (step.type === 'press') {
                     const locator = this.resolveLocator(page, step.target).first();
                     await locator.press(step.value || 'Enter');
                     await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {});
+                } else if (step.type === 'assertVisible') {
+                    const locator = this.resolveLocator(page, step.target).first();
+                    await locator.scrollIntoViewIfNeeded();
+                    await expect(locator).toBeVisible({ timeout: 10000 });
+                } else if (step.type === 'assertText') {
+                    const locator = this.resolveLocator(page, step.target).first();
+                    await locator.scrollIntoViewIfNeeded();
+                    await expect(locator).toContainText(value, { timeout: 10000 });
+                } else if (step.type === 'eval') {
+                    await page.evaluate(step.value || step.target);
                 }
 
-                // Capture screenshot after each action
                 const screenshotName = `STEP_${stepIdx}_ACT_${i}_${stepLabel.replace(/[^a-z0-9]/gi, '_')}.png`;
                 await page.screenshot({ path: path.join(resultsDir, screenshotName), fullPage: true });
 
@@ -68,13 +78,10 @@ export class AutomationEngine {
         if (!target.includes('(')) {
             return page.locator(target);
         }
-
         const match = target.match(/^(.*?)\((.*)\)$/s);
         if (!match) return page.locator(target);
-
         const method = match[1];
         const rawArgs = match[2];
-
         try {
             if (method === 'locator') {
                 return page.locator(this.stripQuotes(rawArgs));
@@ -105,6 +112,10 @@ export class AutomationEngine {
 
     private tokenize(value: string, data: Record<string, string>): string {
         if (!value) return '';
+        value = value.replace(/\{Unique_(\d+)\}/g, (match, num) => {
+            const scope = num.padStart(4, '0');
+            return this.stateManager.resolveOrGenerateId(scope);
+        });
         return value.replace(/\{\{(.*?)\}\}/g, (_, key) => data[key.trim()] ?? '');
     }
 }

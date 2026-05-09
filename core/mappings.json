@@ -1,267 +1,327 @@
 {
-  "Navigate to Studio": {
-    "steps": [
-      {
-        "type": "goto",
-        "target": "http://localhost:3000"
-      }
-    ]
-  },
-  "Upload Valid Excel": {
-    "steps": [
-      {
-        "type": "upload",
-        "target": "input#file-input",
-        "value": "scenario.xlsx"
-      }
-    ]
-  },
-  "Click Record Button": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "button.btn-record"
-      }
-    ]
-  },
-  "Perform Direct Action": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "body"
-      }
-    ]
-  },
-  "Click Execute Scenarios": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "button#run-btn"
-      }
-    ]
-  },
-  "Upload Invalid File": {
-    "steps": [
-      {
-        "type": "upload",
-        "target": "input#file-input",
-        "value": "image.png"
-      }
-    ]
-  },
-  "Upload Empty Excel": {
-    "steps": [
-      {
-        "type": "upload",
-        "target": "input#file-input",
-        "value": "empty.xlsx"
-      }
-    ]
-  },
-  "Upload Large Excel": {
-    "steps": [
-      {
-        "type": "upload",
-        "target": "input#file-input",
-        "value": "large.xlsx"
-      }
-    ]
-  },
-  "Input Base URL": {
-    "steps": [
-      {
-        "type": "fill",
-        "target": "input#base-url",
-        "value": "{{url}}"
-      }
-    ]
-  },
-  "Click Reset System": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "button:has-text('Reset System')"
-      }
-    ]
-  },
-  "Run Tokenized Step": {
-    "steps": [
-      {
-        "type": "fill",
-        "target": "input#base-url",
-        "value": "{{user}}"
-      }
-    ]
-  },
-  "Click Re-Map Button": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "button.btn-record"
-      }
-    ]
-  },
-  "Paste Malicious Script": {
-    "steps": [
-      {
-        "type": "fill",
-        "target": "body",
-        "value": "{{code}}"
-      }
-    ]
-  },
-  "Upload Special Char Excel": {
-    "steps": [
-      {
-        "type": "upload",
-        "target": "input#file-input",
-        "value": "special_char.xlsx"
-      }
-    ]
-  },
-  "Upload Multi-Sheet Excel": {
-    "steps": [
-      {
-        "type": "upload",
-        "target": "input#file-input",
-        "value": "multi_sheet.xlsx"
-      }
-    ]
-  },
-  "Drag File Over Zone": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "div#drop-zone"
-      }
-    ]
-  },
-  "Trigger Info Status": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "div#drop-zone"
-      }
-    ]
-  },
-  "Run Step for Hidden Element": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "button.btn-danger"
-      }
-    ]
-  },
-  "Perform Multi-Step Action": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "body"
-      },
-      {
-        "type": "click",
-        "target": "body"
-      }
-    ]
-  },
-  "Run Long Goto Step": {
-    "steps": [
-      {
-        "type": "goto",
-        "target": "http://localhost:3000"
-      }
-    ]
-  },
-  "Upload Long Label Excel": {
-    "steps": [
-      {
-        "type": "upload",
-        "target": "input#file-input",
-        "value": "long_label.xlsx"
-      }
-    ]
-  },
-  "Upload No-ID Excel": {
-    "steps": [
-      {
-        "type": "upload",
-        "target": "input#file-input",
-        "value": "no_id.xlsx"
-      }
-    ]
-  },
-  "Upload Multi-Flow Excel": {
-    "steps": [
-      {
-        "type": "upload",
-        "target": "input#file-input",
-        "value": "autotest_self_scenario.xlsx"
-      }
-    ]
-  },
-  "Run JSON Data Step": {
-    "steps": [
-      {
-        "type": "fill",
-        "target": "input#base-url",
-        "value": "{{data}}"
-      }
-    ]
-  },
-  "Trigger Studio Error": {
-    "steps": [
-      {
-        "type": "upload",
-        "target": "input#file-input",
-        "value": "image.png"
-      }
-    ]
-  },
-  "Run Any Scenario": {
-    "steps": [
-      {
-        "type": "goto",
-        "target": "http://localhost:3000"
-      }
-    ]
-  },
-  "Perform All Steps": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "button#run-btn"
-      }
-    ]
-  },
-  "Verified": {
-    "steps": [
-      {
-        "type": "goto",
-        "target": "http://localhost:3000"
-      }
-    ]
-  },
-  "Rapidly Click Elements": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "#drop-zone"
-      }
-    ]
-  },
   "Navigate to OrangeHRM": {
     "steps": [
       {
-        "type": "click",
-        "target": "div"
+        "type": "goto",
+        "target": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login"
       }
     ]
   },
-  "Navigate to YouTube": {
+  "Input Username": {
+    "steps": [
+      {
+        "type": "fill",
+        "target": "input[name=\"username\"]",
+        "value": "{{username}}"
+      }
+    ]
+  },
+  "Input Password": {
+    "steps": [
+      {
+        "type": "fill",
+        "target": "input[name=\"password\"]",
+        "value": "{{password}}"
+      }
+    ]
+  },
+  "Click Login Button": {
     "steps": [
       {
         "type": "click",
-        "target": "div"
+        "target": "button[type=\"submit\"]"
+      }
+    ]
+  },
+  "Verify Dashboard Header": {
+    "steps": [
+      {
+        "type": "assertVisible",
+        "target": "h6.oxd-topbar-header-breadcrumb-module"
+      }
+    ]
+  },
+  "Verify Login Error Message": {
+    "steps": [
+      {
+        "type": "assertVisible",
+        "target": ".oxd-alert--error"
+      }
+    ]
+  },
+  "Click User Dropdown": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "span.oxd-userdropdown-tab"
+      }
+    ]
+  },
+  "Click Logout": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-userdropdown-link:has-text(\"Logout\")"
+      }
+    ]
+  },
+  "Click Admin Menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-main-menu-item:has-text(\"Admin\")"
+      }
+    ]
+  },
+  "Verify Admin Header": {
+    "steps": [
+      {
+        "type": "assertText",
+        "target": "h6.oxd-topbar-header-breadcrumb-module",
+        "value": "Admin"
+      }
+    ]
+  },
+  "Click PIM Menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-main-menu-item:has-text(\"PIM\")"
+      }
+    ]
+  },
+  "Verify PIM Header": {
+    "steps": [
+      {
+        "type": "assertText",
+        "target": "h6.oxd-topbar-header-breadcrumb-module",
+        "value": "PIM"
+      }
+    ]
+  },
+  "Click Leave Menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-main-menu-item:has-text(\"Leave\")"
+      }
+    ]
+  },
+  "Verify Leave Header": {
+    "steps": [
+      {
+        "type": "assertText",
+        "target": "h6.oxd-topbar-header-breadcrumb-module",
+        "value": "Leave"
+      }
+    ]
+  },
+  "Click Time Menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-main-menu-item:has-text(\"Time\")"
+      }
+    ]
+  },
+  "Verify Time Header": {
+    "steps": [
+      {
+        "type": "assertText",
+        "target": "h6.oxd-topbar-header-breadcrumb-module",
+        "value": "Time"
+      }
+    ]
+  },
+  "Click Recruitment Menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-main-menu-item:has-text(\"Recruitment\")"
+      }
+    ]
+  },
+  "Verify Recruitment Header": {
+    "steps": [
+      {
+        "type": "assertText",
+        "target": "h6.oxd-topbar-header-breadcrumb-module",
+        "value": "Recruitment"
+      }
+    ]
+  },
+  "Click My Info Menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-main-menu-item:has-text(\"My Info\")"
+      }
+    ]
+  },
+  "Verify My Info Header": {
+    "steps": [
+      {
+        "type": "assertText",
+        "target": "h6.oxd-topbar-header-breadcrumb-module",
+        "value": "PIM"
+      }
+    ]
+  },
+  "Click Performance Menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-main-menu-item:has-text(\"Performance\")"
+      }
+    ]
+  },
+  "Verify Performance Header": {
+    "steps": [
+      {
+        "type": "assertText",
+        "target": "h6.oxd-topbar-header-breadcrumb-module",
+        "value": "Performance"
+      }
+    ]
+  },
+  "Click Dashboard Menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-main-menu-item:has-text(\"Dashboard\")"
+      }
+    ]
+  },
+  "Click Directory Menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-main-menu-item:has-text(\"Directory\")"
+      }
+    ]
+  },
+  "Verify Directory Header": {
+    "steps": [
+      {
+        "type": "assertText",
+        "target": "h6.oxd-topbar-header-breadcrumb-module",
+        "value": "Directory"
+      }
+    ]
+  },
+  "Click Maintenance Menu": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.oxd-main-menu-item:has-text(\"Maintenance\")"
+      }
+    ]
+  },
+  "Verify Maintenance Header": {
+    "steps": [
+      {
+        "type": "assertText",
+        "target": "h6.oxd-topbar-header-breadcrumb-module",
+        "value": "Maintenance"
+      }
+    ]
+  },
+  "Click Add Employee Tab": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "li.oxd-topbar-body-nav-tab:has-text(\"Add Employee\")"
+      }
+    ]
+  },
+  "Input First Name": {
+    "steps": [
+      {
+        "type": "fill",
+        "target": "input[name=\"firstName\"]",
+        "value": "{{fname}}"
+      }
+    ]
+  },
+  "Input Last Name": {
+    "steps": [
+      {
+        "type": "fill",
+        "target": "input[name=\"lastName\"]",
+        "value": "{{lname}}"
+      }
+    ]
+  },
+  "Click Save Button": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "button[type=\"submit\"]"
+      }
+    ]
+  },
+  "Input Employee Name Search": {
+    "steps": [
+      {
+        "type": "fill",
+        "target": "div.oxd-input-group:has(label:has-text(\"Employee Name\")) input",
+        "value": "{{search}}"
+      }
+    ]
+  },
+  "Click Search Button": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "button[type=\"submit\"]"
+      }
+    ]
+  },
+  "Click Review Performance Section": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.orangehrm-tabs-item:has-text(\"Performance\")"
+      }
+    ]
+  },
+  "Click Update Contact Details Section": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.orangehrm-tabs-item:has-text(\"Contact Details\")"
+      }
+    ]
+  },
+  "Click View Job Info Section": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.orangehrm-tabs-item:has-text(\"Job\")"
+      }
+    ]
+  },
+  "Click Check Salary Details Section": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.orangehrm-tabs-item:has-text(\"Salary\")"
+      }
+    ]
+  },
+  "Click Emergency Contacts Section": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "a.orangehrm-tabs-item:has-text(\"Emergency Contacts\")"
+      }
+    ]
+  },
+  "Verify Content Visibility": {
+    "steps": [
+      {
+        "type": "assertVisible",
+        "target": ".orangehrm-edit-employee-content"
       }
     ]
   }

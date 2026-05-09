@@ -5,10 +5,10 @@ const { execSync } = require('child_process');
 const ROOT = process.cwd();
 const MAPPINGS_PATH = path.join(ROOT, 'core/mappings.json');
 const BLUEPRINT_PATH = path.join(ROOT, 'core/blueprint.json');
-const EXCEL_PATH = path.join(ROOT, 'scenario_pukat.xlsx');
+const EXCEL_PATH = process.argv[2] ? path.resolve(ROOT, process.argv[2]) : path.join(ROOT, 'orangehrm_30_scenarios.xlsx');
 
 function runSIT() {
-    console.log('🧪 Starting SIT: Logic Pipeline...');
+    console.log(`🧪 Starting SIT for: ${path.basename(EXCEL_PATH)}`);
 
     // 1. Run Parser
     console.log('   Step 1: Running Scenario Parser...');
