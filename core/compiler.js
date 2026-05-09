@@ -15,6 +15,13 @@ function compile() {
     const mappings = JSON.parse(fs.readFileSync(mappingsPath, 'utf8'));
 
     const q = (v) => JSON.stringify(String(v ?? ''));
+    const safeGetBy = (target) => {
+        if (typeof target !== 'string') return null;
+        if (!target.startsWith('getBy')) return null;
+        if (!/^getBy(Role|Label|Placeholder|Text|AltText|Title|TestId|DisplayValue)\([\s\S]*\)$/.test(target)) return null;
+        if (/[;\n\r`]/.test(target)) return null;
+        return target;
+    };
     let code = `import { test, expect } from '@playwright/test';\nimport * as path from 'path';\nimport * as fs from 'fs';\n\n`;
     code += `async function markLocator(locator: any) {\n`;
     code += `    try {\n`;
@@ -73,7 +80,8 @@ function compile() {
                     // Token replacement
                     const finalValue = value.replace(/\{\{(.*?)\}\}/g, (_, key) => step.Data[key] || "");
                     
-                    let locator = target.startsWith('getBy') ? `page.${target}` : `page.locator(${q(target)})`;
+                    const getByTarget = safeGetBy(target);
+                    let locator = getByTarget ? `page.${getByTarget}` : `page.locator(${q(target)})`;
 
                     if (action.type === 'goto') {
                         code += `            await page.goto(${q(target)}, { waitUntil: 'domcontentloaded' });\n`;
@@ -83,7 +91,6 @@ function compile() {
                         code += `            await markLocator(${locator});\n`;
                         code += `            await page.screenshot({ path: path.join(resultsDir, \`STEP_${i}_ACT_${j}_MARK.png\`) });\n`;
                         code += `            await ${locator}.click({ force: true });\n`;
-                        code += `            await unmarkLocator(${locator});\n`;
                     }
                     else if (action.type === 'fill') {
                         code += `            await markLocator(${locator});\n`;

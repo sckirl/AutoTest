@@ -50,11 +50,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -99,11 +114,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("WrongUser");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -148,11 +178,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -197,11 +242,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -246,11 +306,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -295,11 +370,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -352,11 +442,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -409,11 +514,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -466,11 +586,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -523,11 +658,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -580,11 +730,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -637,11 +802,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -694,11 +874,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -751,11 +946,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -808,11 +1018,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -865,11 +1090,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -922,11 +1162,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -979,11 +1234,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -1036,11 +1306,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -1093,11 +1378,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -1150,11 +1450,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -1207,11 +1522,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -1264,11 +1594,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -1321,11 +1666,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -1378,11 +1738,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -1435,11 +1810,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -1484,11 +1874,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -1533,11 +1938,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -1582,11 +2002,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {
@@ -1631,11 +2066,26 @@ test.describe('Automated UAT Execution', () => {
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator("input[name='username']"));
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator("input[name='username']").fill("Admin");
-            await unmarkLocator(page.locator("input[name='username']"));
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Password' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Password' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_1.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).click({ force: true });
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_2.png`) });
+            await markLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3_MARK.png`) });
+            await page.getByRole('textbox', { name: 'Username' }).fill("Admin");
+            await unmarkLocator(page.getByRole('textbox', { name: 'Username' }));
+            await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_3.png`) });
             });
 
             await test.step('Input Password', async () => {

@@ -24,6 +24,8 @@ const RUN_STATUS = {
     updatedAt: new Date().toISOString()
 };
 let activeRecord = null;
+let latestAutoRecordedCode = '';
+let activeRun = null;
 
 function setRunStatus(phase, message, ok = true) {
     RUN_STATUS.phase = phase;
@@ -68,6 +70,14 @@ function safeJsString(value) {
     return JSON.stringify(String(value || ''));
 }
 
+function safeGetBy(target) {
+    if (typeof target !== 'string') return null;
+    if (!target.startsWith('getBy')) return null;
+    if (!/^getBy(Role|Label|Placeholder|Text|AltText|Title|TestId|DisplayValue)\([\s\S]*\)$/.test(target)) return null;
+    if (/[;\n\r`]/.test(target)) return null;
+    return target;
+}
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, ROOT_DIR),
     filename: (req, file, cb) => cb(null, `scenario_uploaded_${Date.now()}.xlsx`)
@@ -81,6 +91,9 @@ app.post('/upload', upload.single('excel'), (req, res) => {
     res.json({ message: "Uploaded.", fileName: path.basename(req.file.path) });
 });
 app.get('/run-status', (req, res) => res.json(RUN_STATUS));
+app.get('/recording-latest', (req, res) => {
+    res.json({ code: latestAutoRecordedCode || '' });
+});
 
 app.get('/scan', (req, res) => {
     try {
@@ -138,6 +151,7 @@ app.post('/record', async (req, res) => {
     }
     
     try {
+        latestAutoRecordedCode = '';
         const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
         const excelPath = getCurrentExcelPath();
         const workbook = XLSX.readFile(excelPath);
@@ -178,10 +192,11 @@ app.post('/record', async (req, res) => {
                         
                         // Intelligent Locator String Generation
                         let locatorStr = "";
-                        if (target.startsWith('getBy')) {
-                            locatorStr = `page.${target}`;
+                        const safeTarget = safeGetBy(target);
+                        if (safeTarget) {
+                            locatorStr = `page.${safeTarget}`;
                         } else {
-                            locatorStr = `page.locator(\`${target}\`)`;
+                            locatorStr = `page.locator(${safeJsString(target)})`;
                         }
 
                         if (action.type === 'goto') scriptContent += `    await page.goto(${safeJsString(action.target)});\n`;
@@ -195,7 +210,42 @@ app.post('/record', async (req, res) => {
             }
         }
         
-        scriptContent += `  console.log('--- REPLAY COMPLETE. INSPECTOR OPENING FOR: ${label} ---');\n`;
+        scriptContent += `  await page.exposeBinding('__autotestRecord', async (_, line) => {\n`;
+        scriptContent += `    console.log('AUTOTEST_REC:' + line);\n`;
+        scriptContent += `  });\n`;
+        scriptContent += `  await page.evaluate(() => {\n`;
+        scriptContent += `    const cssPath = (el) => {\n`;
+        scriptContent += `      if (!(el instanceof Element)) return '';\n`;
+        scriptContent += `      const parts = [];\n`;
+        scriptContent += `      let node = el;\n`;
+        scriptContent += `      while (node && node.nodeType === 1 && parts.length < 5) {\n`;
+        scriptContent += `        let sel = node.nodeName.toLowerCase();\n`;
+        scriptContent += `        if (node.id) { sel += '#' + node.id; parts.unshift(sel); break; }\n`;
+        scriptContent += `        if (node.className && typeof node.className === 'string') sel += '.' + node.className.trim().split(/\\s+/).slice(0,2).join('.');\n`;
+        scriptContent += `        parts.unshift(sel);\n`;
+        scriptContent += `        node = node.parentElement;\n`;
+        scriptContent += `      }\n`;
+        scriptContent += `      return parts.join(' > ');\n`;
+        scriptContent += `    };\n`;
+        scriptContent += `    const rec = (line) => window.__autotestRecord(line).catch(() => {});\n`;
+        scriptContent += `    document.addEventListener('click', (e) => {\n`;
+        scriptContent += `      const p = cssPath(e.target);\n`;
+        scriptContent += `      if (p) rec('await page.locator(' + JSON.stringify(p) + ').click();');\n`;
+        scriptContent += `      if (p && e.altKey) rec('await expect(page.locator(' + JSON.stringify(p) + ')).toBeVisible();');\n`;
+        scriptContent += `      if (p && e.shiftKey) {\n`;
+        scriptContent += `        const expected = window.prompt('Expected text for assertion:', '');\n`;
+        scriptContent += `        if (expected && expected.trim()) rec('await expect(page.locator(' + JSON.stringify(p) + ')).toContainText(' + JSON.stringify(expected.trim()) + ');');\n`;
+        scriptContent += `      }\n`;
+        scriptContent += `    }, true);\n`;
+        scriptContent += `    document.addEventListener('change', (e) => {\n`;
+        scriptContent += `      const t = e.target;\n`;
+        scriptContent += `      if (!t || !('value' in t)) return;\n`;
+        scriptContent += `      const p = cssPath(t);\n`;
+        scriptContent += `      if (!p) return;\n`;
+        scriptContent += `      rec('await page.locator(' + JSON.stringify(p) + ').fill(' + JSON.stringify(String(t.value || '')) + ');');\n`;
+        scriptContent += `    }, true);\n`;
+        scriptContent += `  });\n`;
+        scriptContent += `  console.log('--- REPLAY COMPLETE. AUTO-RECORDING IS ACTIVE. INSPECTOR OPENING FOR: ${label} ---');\n`;
         scriptContent += `  await page.pause();\n`; 
         scriptContent += `  await browser.close();\n})();`;
         
@@ -203,7 +253,16 @@ app.post('/record', async (req, res) => {
 
         // 2. Execute the script with better logging
         const child = spawn('node', [replayScriptPath], { cwd: ROOT_DIR });
-        child.stdout.on('data', (d) => console.log(`ℹ️ ${String(d)}`));
+        child.stdout.on('data', (d) => {
+            const text = String(d);
+            for (const line of text.split('\n')) {
+                if (line.startsWith('AUTOTEST_REC:')) {
+                    const snippet = line.replace('AUTOTEST_REC:', '').trim();
+                    if (snippet) latestAutoRecordedCode += `${snippet}\n`;
+                }
+            }
+            console.log(`ℹ️ ${text}`);
+        });
         child.stderr.on('data', (d) => console.error(`⚠️ ${String(d)}`));
         child.on('close', () => {
             if (fs.existsSync(replayScriptPath)) fs.unlinkSync(replayScriptPath);
@@ -211,7 +270,7 @@ app.post('/record', async (req, res) => {
         });
         activeRecord = child;
 
-        res.json({ message: "Replay started. Look for the browser window." });
+        res.json({ message: "Replay started. Auto-record is enabled by default after replay completes." });
     } catch (err) {
         console.error("Record Error:", err);
         res.status(500).json({ error: err.message });
@@ -263,6 +322,11 @@ app.delete('/mapping/:label', (req, res) => {
 // ... existing code ...
 
 app.post('/run', (req, res) => {
+    if (activeRun) {
+        return res.status(409).json({
+            error: 'A run is already in progress. Cancel it or wait until completion.'
+        });
+    }
     const rawWorkers = Number(req.body?.workers);
     const workers = Number.isInteger(rawWorkers) && rawWorkers > 0 ? rawWorkers : 2;
     const fullyParallel = req.body?.fullyParallel === true;
@@ -275,6 +339,7 @@ app.post('/run', (req, res) => {
 
     (async () => {
         try {
+            activeRun = { startedAt: Date.now() };
             setRunStatus('blueprint', 'Generating blueprint...');
             await runCommand('node', ['core/scenario_parser.js', getCurrentExcelPath()], { cwd: ROOT_DIR });
 
@@ -295,12 +360,27 @@ app.post('/run', (req, res) => {
             pw.stderr.on('data', (data) => console.error(`[PW ERROR] ${data}`));
             pw.on('close', (code) => {
                 setRunStatus(code === 0 ? 'completed' : 'failed', `Playwright UI process closed with code ${code}`, code === 0);
+                activeRun = null;
             });
+            activeRun.process = pw;
         } catch (err) {
             console.error("Run Error:", err);
             setRunStatus('failed', `Run failed: ${err.message}`, false);
+            activeRun = null;
         }
     })();
+});
+
+app.post('/run-cancel', (req, res) => {
+    if (!activeRun?.process) return res.status(404).json({ error: 'No running Playwright process found.' });
+    try {
+        activeRun.process.kill('SIGTERM');
+        setRunStatus('cancelled', 'Run cancelled by user.', false);
+        activeRun = null;
+        return res.json({ message: 'Run cancelled.' });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
 });
 
 app.post('/restart', (req, res) => {
@@ -329,6 +409,19 @@ function parseRecordedCode(code) {
             const m = line.match(/goto\(['"](.*?)['"]\)/);
             if (m) steps.push({ type: 'goto', target: m[1] });
             continue;
+        }
+
+        const expectLocator = extractExpectLocator(line);
+        if (expectLocator) {
+            if (line.includes('.toBeVisible(')) {
+                steps.push({ type: 'verifyVisible', target: expectLocator });
+                continue;
+            }
+            if (line.includes('.toContainText(') || line.includes('.toHaveText(')) {
+                const t = line.match(/to(?:ContainText|HaveText)\((['"`])([\s\S]*?)\1\)/);
+                steps.push({ type: 'verifyText', target: expectLocator, value: t ? t[2] : '' });
+                continue;
+            }
         }
 
         const locator = extractLocator(line);
@@ -360,6 +453,18 @@ function parseRecordedCode(code) {
         }
     }
     return steps;
+}
+
+function extractExpectLocator(line) {
+    const m = line.match(/expect\((page\..*?)\)\.to(?:BeVisible|ContainText|HaveText)\(/);
+    if (!m) return null;
+    const locatorExpr = m[1];
+    if (locatorExpr.startsWith('page.locator(')) {
+        const m2 = locatorExpr.match(/^page\.locator\((['"`])([\s\S]*)\1\)$/);
+        if (m2) return m2[2];
+    }
+    if (locatorExpr.startsWith('page.')) return locatorExpr.slice(5);
+    return null;
 }
 
 function extractLocator(line) {

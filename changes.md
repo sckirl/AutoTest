@@ -117,6 +117,58 @@
 - `node core/compiler.js` passed
 - `node internal_sit.js` passed `6/6`
 
+## Cleanup Validation (Intentional File Deletions)
+- Restored `internal_sit.js` to preserve reproducible SIT evidence for QA audit.
+- Updated stale fixture reference in `core/studio_audit.spec.ts`:
+  - from `scenario_pukat.xlsx` to `scenario_uploaded.xlsx`.
+- Updated upload helper text in `studio/studio-ui.html`:
+  - from `scenario.xlsx` to generic `.xlsx`.
+- Verification:
+  - `node internal_sit.js` passed `6/6`.
+  - Static reference sweep found no remaining `scenario_pukat.xlsx` or `scenario.xlsx` dependencies in active `core/` and `studio/` sources.
+
 ## Notes for QA
 - Pre-existing working tree deletions/untracked artifacts were already present before this work started.
 - This log lists changes made during this Codex session on branch `codex`.
+
+## Reset Behavior Update
+- Updated Studio UX to make `Reset All (Wipe All)` truly destructive for the active uploaded project session.
+- UI now sends `clearMappings: true` to `/restart`, so mappings are wiped along with results.
+- Updated confirmation text to explicitly warn users that both mappings and results will be removed.
+
+## Requirement Update: Default Auto-Recording After Replay
+- Added requirement implementation: when user clicks `Record`, replay runs first and auto-recording is enabled by default once replay finishes.
+- Backend changes in `studio/server.js`:
+  - Added `GET /recording-latest` endpoint to expose captured auto-recorded lines.
+  - Replay script now injects action listeners (click/change) after replay and before `page.pause()`, emitting generated Playwright lines with `AUTOTEST_REC:` prefix.
+  - Server captures emitted lines and stores them in a rolling buffer for UI consumption.
+- Frontend changes in `studio/studio-ui.html`:
+  - Updated modal instructions to state auto-record behavior.
+  - On successful `/record`, UI starts polling `/recording-latest` and auto-fills textarea with captured actions.
+
+## SIT for Auto-Recording Change
+- `node -c studio/server.js` passed.
+- Static verification passed for:
+  - `/recording-latest` route
+  - Replay log marker: `AUTO-RECORDING IS ACTIVE`
+  - UI polling hook: `startAutoRecordPolling()`
+- `node internal_sit.js` passed `6/6` endpoint checks after this change.
+
+## QA Round 3 Defect Closure
+- Fixed DEF-021: Added assertion parsing for `expect(page....).toBeVisible/toContainText/toHaveText` in backend parser.
+- Fixed DEF-022: Added strict `safeGetBy` validation and blocked unsafe expression injection paths.
+- Fixed DEF-023: Added run concurrency guard (`activeRun`) and `POST /run-cancel`.
+- Fixed DEF-025: Removed post-click unmark to avoid detached-element race after navigation clicks.
+- Fixed DEF-029: Partial execution enabled (run button now activates when at least one action is mapped).
+- Fixed DEF-030: Visual differentiation added for `Record` vs `Re-Map` buttons.
+- Fixed DEF-031: Auto-recorder now supports assertion capture shortcuts (`Alt+Click` visible, `Shift+Click` contains-text).
+
+## SIT Evidence (Round 3)
+- `node -c studio/server.js` passed.
+- `node -c core/compiler.js` passed.
+- `node internal_sit.js` passed `6/6` after fixes.
+- Static verification confirms:
+  - `/run-cancel` endpoint exists
+  - `activeRun` guard exists on `/run`
+  - `extractExpectLocator` integrated in parser
+  - UI partial-run gate enabled via `mappedCount` logic

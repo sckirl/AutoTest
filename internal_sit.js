@@ -1,10 +1,10 @@
 const { spawn } = require('child_process');
 
-async function wait(ms) {
+const PORT = 3100;
+
+function wait(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
-
-const PORT = 3100;
 
 async function request(path, options = {}) {
   const res = await fetch(`http://127.0.0.1:${PORT}${path}`, options);
@@ -12,23 +12,22 @@ async function request(path, options = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
-async function run() {
+async function main() {
   const server = spawn('node', ['studio/server.js'], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, PORT: String(PORT) }
+    env: { ...process.env, PORT: String(PORT) },
+    stdio: ['ignore', 'pipe', 'pipe']
   });
-  let booted = false;
 
+  let ready = false;
   server.stdout.on('data', (d) => {
-    if (String(d).includes(`Studio Live on ${PORT}`)) booted = true;
+    if (String(d).includes(`Studio Live on ${PORT}`)) ready = true;
   });
-  server.stderr.on('data', (d) => process.stderr.write(String(d)));
+  server.stderr.on('data', () => {});
 
-  for (let i = 0; i < 20 && !booted; i++) await wait(300);
-  if (!booted) throw new Error('Server did not boot');
+  for (let i = 0; i < 30 && !ready; i++) await wait(200);
+  if (!ready) throw new Error('Studio server did not boot for SIT');
 
   const checks = [];
-
   checks.push(await request('/run-status'));
   checks.push(await request('/save-mapping', {
     method: 'POST',
@@ -56,7 +55,7 @@ async function run() {
     checks[1].status === 400,
     checks[2].ok,
     checks[3].ok,
-    ['blueprint', 'compile', 'playwright', 'failed', 'queued'].includes(checks[4].data.phase),
+    ['queued', 'blueprint', 'compile', 'playwright', 'completed', 'failed'].includes(checks[4].data.phase),
     checks[5].ok
   ];
 
@@ -66,7 +65,7 @@ async function run() {
   process.exit(passed === total ? 0 : 1);
 }
 
-run().catch((e) => {
-  console.error(e);
+main().catch((err) => {
+  console.error(err);
   process.exit(1);
 });

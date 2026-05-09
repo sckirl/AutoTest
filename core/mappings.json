@@ -4,19 +4,28 @@
       {
         "type": "goto",
         "target": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByText('Username : AdminPassword :')"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByRole('textbox', { name: 'Username' })"
+      },
+      {
+        "type": "verifyVisible",
+        "target": "getByRole('textbox', { name: 'Password' })"
+      },
+      {
+        "type": "verifyText",
+        "target": "getByRole('heading')",
+        "value": "Login"
       }
     ]
   },
   "Input Username": {
     "steps": [
-      {
-        "type": "click",
-        "target": "getByRole('textbox', { name: 'Password' })"
-      },
-      {
-        "type": "click",
-        "target": "getByRole('textbox', { name: 'Password' })"
-      },
       {
         "type": "click",
         "target": "getByRole('textbox', { name: 'Username' })"
@@ -31,185 +40,30 @@
   "Input Password": {
     "steps": [
       {
+        "type": "click",
+        "target": "form.oxd-form > div.oxd-form-row > div.oxd-input-group.oxd-input-field-bottom-space > div > input.oxd-input.oxd-input--active"
+      },
+      {
         "type": "fill",
-        "target": "input[name='password']",
-        "value": "{{password}}"
-      }
-    ]
-  },
-  "Click Login Button": {
-    "steps": [
+        "target": "form.oxd-form > div.oxd-form-row > div.oxd-input-group.oxd-input-field-bottom-space > div > input.oxd-input.oxd-input--focus",
+        "value": "Admin"
+      },
       {
         "type": "click",
-        "target": "button[type='submit']"
-      }
-    ]
-  },
-  "Verify Dashboard Header": {
-    "steps": [
+        "target": "form.oxd-form > div.oxd-form-row > div.oxd-input-group.oxd-input-field-bottom-space > div > input.oxd-input.oxd-input--focus"
+      },
       {
-        "type": "verifyVisible",
-        "target": "h6:has-text('Dashboard')"
-      }
-    ]
-  },
-  "Verify Login Error Message": {
-    "steps": [
-      {
-        "type": "verifyVisible",
-        "target": "p.oxd-alert-content-text"
-      }
-    ]
-  },
-  "Click Admin Menu": {
-    "steps": [
+        "type": "fill",
+        "target": "form.oxd-form > div.oxd-form-row > div.oxd-input-group.oxd-input-field-bottom-space > div > input.oxd-input.oxd-input--focus",
+        "value": "admin123"
+      },
       {
         "type": "click",
-        "target": "a.oxd-main-menu-item:has-text('Admin')"
-      }
-    ]
-  },
-  "Verify Admin Header": {
-    "steps": [
-      {
-        "type": "verifyVisible",
-        "target": "h6:has-text('Admin')"
-      }
-    ]
-  },
-  "Click PIM Menu": {
-    "steps": [
+        "target": "html > x-pw-glass"
+      },
       {
         "type": "click",
-        "target": "a.oxd-main-menu-item:has-text('PIM')"
-      }
-    ]
-  },
-  "Verify PIM Header": {
-    "steps": [
-      {
-        "type": "verifyVisible",
-        "target": "h6:has-text('PIM')"
-      }
-    ]
-  },
-  "Click Leave Menu": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "a.oxd-main-menu-item:has-text('Leave')"
-      }
-    ]
-  },
-  "Verify Leave Header": {
-    "steps": [
-      {
-        "type": "verifyVisible",
-        "target": "h6:has-text('Leave')"
-      }
-    ]
-  },
-  "Click Time Menu": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "a.oxd-main-menu-item:has-text('Time')"
-      }
-    ]
-  },
-  "Verify Time Header": {
-    "steps": [
-      {
-        "type": "verifyVisible",
-        "target": "h6:has-text('Time')"
-      }
-    ]
-  },
-  "Click Recruitment Menu": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "a.oxd-main-menu-item:has-text('Recruitment')"
-      }
-    ]
-  },
-  "Verify Recruitment Header": {
-    "steps": [
-      {
-        "type": "verifyVisible",
-        "target": "h6:has-text('Recruitment')"
-      }
-    ]
-  },
-  "Click My Info Menu": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "a.oxd-main-menu-item:has-text('My Info')"
-      }
-    ]
-  },
-  "Verify Personal Details Header": {
-    "steps": [
-      {
-        "type": "verifyVisible",
-        "target": "h6:has-text('Personal Details')"
-      }
-    ]
-  },
-  "Click Performance Menu": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "a.oxd-main-menu-item:has-text('Performance')"
-      }
-    ]
-  },
-  "Verify Performance Header": {
-    "steps": [
-      {
-        "type": "verifyVisible",
-        "target": "h6:has-text('Performance')"
-      }
-    ]
-  },
-  "Click Dashboard Menu": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "a.oxd-main-menu-item:has-text('Dashboard')"
-      }
-    ]
-  },
-  "Click Directory Menu": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "a.oxd-main-menu-item:has-text('Directory')"
-      }
-    ]
-  },
-  "Verify Directory Header": {
-    "steps": [
-      {
-        "type": "verifyVisible",
-        "target": "h6:has-text('Directory')"
-      }
-    ]
-  },
-  "Click Maintenance Menu": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "a.oxd-main-menu-item:has-text('Maintenance')"
-      }
-    ]
-  },
-  "Verify Maintenance Header": {
-    "steps": [
-      {
-        "type": "verifyVisible",
-        "target": "h6:has-text('Maintenance')"
+        "target": "div.orangehrm-login-slot > div.orangehrm-login-form > form.oxd-form > div.oxd-form-row > div.oxd-input-group.oxd-input-field-bottom-space"
       }
     ]
   }
