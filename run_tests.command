@@ -3,12 +3,13 @@ cd "$(dirname "$0")"
 echo "---------------------------------------"
 echo "🚀 STEP 1: Generate Blueprint + Compile Spec..."
 echo "---------------------------------------"
-if [ ! -f "scenario_uploaded.xlsx" ]; then
-  echo "❌ scenario_uploaded.xlsx not found in project root."
-  echo "   Upload through Studio first, or place scenario file as scenario_uploaded.xlsx."
+SCENARIO_FILE=$(ls -t scenario_uploaded*.xlsx 2>/dev/null | head -n 1)
+if [ -z "$SCENARIO_FILE" ]; then
+  echo "❌ no scenario_uploaded*.xlsx found in project root."
+  echo "   Upload through Studio first."
   exit 1
 fi
-node core/scenario_parser.js scenario_uploaded.xlsx || exit 1
+node core/scenario_parser.js "$SCENARIO_FILE" || exit 1
 node core/compiler.js || exit 1
 
 echo ""

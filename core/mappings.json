@@ -10,9 +10,21 @@
   "Input Username": {
     "steps": [
       {
+        "type": "click",
+        "target": "getByRole('textbox', { name: 'Password' })"
+      },
+      {
+        "type": "click",
+        "target": "getByRole('textbox', { name: 'Password' })"
+      },
+      {
+        "type": "click",
+        "target": "getByRole('textbox', { name: 'Username' })"
+      },
+      {
         "type": "fill",
-        "target": "input[name='username']",
-        "value": "{{username}}"
+        "target": "getByRole('textbox', { name: 'Username' })",
+        "value": "Admin"
       }
     ]
   },

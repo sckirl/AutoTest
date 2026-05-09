@@ -134,6 +134,8 @@
             showStatus("⏳ Processing scenarios...", "info");
             const res = await fetch('/upload', { method: 'POST', body: formData });
             if (res.ok) {
+                const payload = await res.json();
+                dropText.textContent = `✅ Active file: ${payload.fileName || file.name}`;
                 showStatus("✅ Excel Loaded.", "success");
                 await scanSteps();
             }
@@ -144,24 +146,52 @@
             const data = await res.json();
             document.getElementById('step-scan-container').style.display = 'block';
             let allMapped = true;
-            
-            stepListUi.innerHTML = data.steps.map(s => {
+            stepListUi.innerHTML = '';
+            for (const s of data.steps) {
                 if (s.status === 'missing') allMapped = false;
-                return `
-                <div class="step-row">
-                    <div>
-                        <div class="step-label" style="cursor:pointer;" onclick="viewMapping('${s.label.replace(/'/g, "\\'")}')">${s.label}</div>
-                        <div class="step-instruction">Scenario: ${s.scenarioId}</div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span class="badge ${s.status === 'mapped' ? 'badge-mapped' : 'badge-missing'}">${s.status}</span>
-                        <button class="btn btn-record" onclick="openRecordModal('${s.label}', '${s.scenarioId}')">
-                            ${s.status === 'missing' ? '⏺ Record' : '🔄 Re-Map'}
-                        </button>
-                        <button class="btn" onclick="openManualModal('${s.label}', '${s.scenarioId}')">⌨️ Manual</button>
-                    </div>
-                </div>`;
-            }).join('');
+                const row = document.createElement('div');
+                row.className = 'step-row';
+
+                const left = document.createElement('div');
+                const labelEl = document.createElement('div');
+                labelEl.className = 'step-label';
+                labelEl.style.cursor = 'pointer';
+                labelEl.textContent = String(s.label || '');
+                labelEl.onclick = () => viewMapping(String(s.label || ''));
+                const scenEl = document.createElement('div');
+                scenEl.className = 'step-instruction';
+                scenEl.textContent = `Scenario: ${String(s.scenarioId || '')}`;
+                left.appendChild(labelEl);
+                left.appendChild(scenEl);
+
+                const right = document.createElement('div');
+                right.style.display = 'flex';
+                right.style.alignItems = 'center';
+                right.style.gap = '12px';
+                const badge = document.createElement('span');
+                badge.className = `badge ${s.status === 'mapped' ? 'badge-mapped' : 'badge-missing'}`;
+                badge.textContent = String(s.status || '');
+                const recordBtn = document.createElement('button');
+                recordBtn.className = 'btn btn-record';
+                recordBtn.textContent = s.status === 'missing' ? '⏺ Record' : '🔄 Re-Map';
+                recordBtn.onclick = () => openRecordModal(String(s.label || ''), String(s.scenarioId || ''));
+                const manualBtn = document.createElement('button');
+                manualBtn.className = 'btn';
+                manualBtn.textContent = '⌨️ Manual';
+                manualBtn.onclick = () => openManualModal(String(s.label || ''), String(s.scenarioId || ''));
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn';
+                delBtn.textContent = '🗑 Delete';
+                delBtn.onclick = () => deleteMapping(String(s.label || ''));
+
+                right.appendChild(badge);
+                right.appendChild(recordBtn);
+                right.appendChild(manualBtn);
+                right.appendChild(delBtn);
+                row.appendChild(left);
+                row.appendChild(right);
+                stepListUi.appendChild(row);
+            }
             
             runBtn.disabled = !allMapped;
             if (allMapped && data.steps.length > 0) {
@@ -206,6 +236,9 @@
         async function saveMapping() {
             const code = codeArea.value.trim();
             if (!code) return alert("Please paste the recorded code.");
+            if (!/await\s+page\./.test(code) && !/expect\(/.test(code)) {
+                return showStatus("❌ Invalid mapping code. Paste Playwright await/expect lines only.", "error");
+            }
             try {
                 const res = await fetch('/save-mapping', {
                     method: 'POST',
@@ -278,6 +311,18 @@
                 previewBox.textContent = data.mapping ? JSON.stringify(data.mapping, null, 2) : `No mapping found for "${label}"`;
             } catch (e) {
                 showStatus(`❌ Failed to load mapping preview: ${e.message}`, "error");
+            }
+        }
+        async function deleteMapping(label) {
+            if (!confirm(`Delete mapping "${label}"?`)) return;
+            try {
+                const res = await fetch(`/mapping/${encodeURIComponent(label)}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Delete failed');
+                showStatus(`✅ ${data.message}`, "success");
+                await scanSteps();
+            } catch (e) {
+                showStatus(`❌ Failed to delete mapping: ${e.message}`, "error");
             }
         }
         async function pollRunStatus() {

@@ -6,6 +6,11 @@ results/
 playwright-report/
 test-results/
 blob-report/
+scenario_uploaded*.xlsx
+replay_*.js
+core/blueprint.json
+core/executed.spec.ts
+.current_upload
 
 # Logs
 *.log

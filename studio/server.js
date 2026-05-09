@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
-const { exec, spawn } = require('child_process');
+const { spawn } = require('child_process');
 const multer = require('multer');
 const XLSX = require('xlsx');
 
@@ -15,7 +15,8 @@ const CORE_DIR = path.join(__dirname, '../core');
 const RESULTS_DIR = path.join(__dirname, '../results');
 const ROOT_DIR = path.join(__dirname, '../');
 const MAPPINGS_PATH = path.join(CORE_DIR, 'mappings.json');
-const UPLOADED_EXCEL = path.join(ROOT_DIR, 'scenario_uploaded.xlsx');
+const UPLOAD_POINTER = path.join(ROOT_DIR, '.current_upload');
+let currentExcelPath = path.join(ROOT_DIR, 'scenario_uploaded.xlsx');
 const RUN_STATUS = {
     phase: 'idle',
     ok: true,
@@ -50,23 +51,45 @@ function runCommand(cmd, args, options = {}) {
     });
 }
 
+function setCurrentExcelPath(p) {
+    currentExcelPath = p;
+    fs.writeFileSync(UPLOAD_POINTER, p, 'utf8');
+}
+
+function getCurrentExcelPath() {
+    if (fs.existsSync(UPLOAD_POINTER)) {
+        const p = fs.readFileSync(UPLOAD_POINTER, 'utf8').trim();
+        if (p) currentExcelPath = p;
+    }
+    return currentExcelPath;
+}
+
+function safeJsString(value) {
+    return JSON.stringify(String(value || ''));
+}
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, ROOT_DIR),
-    filename: (req, file, cb) => cb(null, 'scenario_uploaded.xlsx')
+    filename: (req, file, cb) => cb(null, `scenario_uploaded_${Date.now()}.xlsx`)
 });
 const upload = multer({ storage: storage });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'studio-ui.html')));
-app.post('/upload', upload.single('excel'), (req, res) => res.json({ message: "Uploaded." }));
+app.post('/upload', upload.single('excel'), (req, res) => {
+    if (!req.file?.path) return res.status(400).json({ error: 'No upload file found' });
+    setCurrentExcelPath(req.file.path);
+    res.json({ message: "Uploaded.", fileName: path.basename(req.file.path) });
+});
 app.get('/run-status', (req, res) => res.json(RUN_STATUS));
 
 app.get('/scan', (req, res) => {
     try {
         if (!fs.existsSync(MAPPINGS_PATH)) fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
         const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
-        if (!fs.existsSync(UPLOADED_EXCEL)) return res.json({ steps: [] });
+        const excelPath = getCurrentExcelPath();
+        if (!fs.existsSync(excelPath)) return res.json({ steps: [] });
         
-        const workbook = XLSX.readFile(UPLOADED_EXCEL);
+        const workbook = XLSX.readFile(excelPath);
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
         
@@ -116,7 +139,8 @@ app.post('/record', async (req, res) => {
     
     try {
         const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
-        const workbook = XLSX.readFile(UPLOADED_EXCEL);
+        const excelPath = getCurrentExcelPath();
+        const workbook = XLSX.readFile(excelPath);
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
@@ -129,7 +153,10 @@ app.post('/record', async (req, res) => {
         scriptContent += `  const page = await context.newPage();\n`;
         
         if (url) {
-            scriptContent += `  await page.goto('${url}');\n`;
+            try { new URL(String(url)); } catch {
+                return res.status(400).json({ error: "Invalid URL format." });
+            }
+            scriptContent += `  await page.goto(${safeJsString(url)});\n`;
         }
 
         // Find steps for this scenario up to the current label
@@ -157,10 +184,12 @@ app.post('/record', async (req, res) => {
                             locatorStr = `page.locator(\`${target}\`)`;
                         }
 
-                        if (action.type === 'goto') scriptContent += `    await page.goto('${action.target}');\n`;
+                        if (action.type === 'goto') scriptContent += `    await page.goto(${safeJsString(action.target)});\n`;
                         else if (action.type === 'click') scriptContent += `    await ${locatorStr}.click();\n`;
-                        else if (action.type === 'fill') scriptContent += `    await ${locatorStr}.fill(\`${val}\`);\n`;
-                        else if (action.type === 'press') scriptContent += `    await ${locatorStr}.press(\`${val || 'Enter'}\`);\n`;
+                        else if (action.type === 'fill') scriptContent += `    await ${locatorStr}.fill(${safeJsString(val)});\n`;
+                        else if (action.type === 'press') scriptContent += `    await ${locatorStr}.press(${safeJsString(val || 'Enter')});\n`;
+                        else if (action.type === 'verifyVisible') scriptContent += `    await ${locatorStr}.waitFor({ state: 'visible', timeout: 5000 });\n`;
+                        else if (action.type === 'verifyText') scriptContent += `    await ${locatorStr}.waitFor({ state: 'visible', timeout: 5000 });\n`;
                     }
                 }
             }
@@ -173,10 +202,10 @@ app.post('/record', async (req, res) => {
         fs.writeFileSync(replayScriptPath, scriptContent);
 
         // 2. Execute the script with better logging
-        const child = exec(`node ${replayScriptPath}`, (err, stdout, stderr) => {
-            if (err) console.error(`❌ Execution Error: ${err.message}`);
-            if (stderr) console.error(`⚠️ Stderr: ${stderr}`);
-            console.log(`ℹ️ Stdout: ${stdout}`);
+        const child = spawn('node', [replayScriptPath], { cwd: ROOT_DIR });
+        child.stdout.on('data', (d) => console.log(`ℹ️ ${String(d)}`));
+        child.stderr.on('data', (d) => console.error(`⚠️ ${String(d)}`));
+        child.on('close', () => {
             if (fs.existsSync(replayScriptPath)) fs.unlinkSync(replayScriptPath);
             activeRecord = null;
         });
@@ -218,6 +247,19 @@ app.get('/mapping/:label', (req, res) => {
     }
 });
 
+app.delete('/mapping/:label', (req, res) => {
+    try {
+        const label = req.params.label;
+        const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
+        if (!mappings[label]) return res.status(404).json({ error: 'Mapping not found' });
+        delete mappings[label];
+        fs.writeFileSync(MAPPINGS_PATH, JSON.stringify(mappings, null, 2));
+        return res.json({ message: `Mapping '${label}' deleted.` });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
 // ... existing code ...
 
 app.post('/run', (req, res) => {
@@ -234,10 +276,10 @@ app.post('/run', (req, res) => {
     (async () => {
         try {
             setRunStatus('blueprint', 'Generating blueprint...');
-            await runCommand('node', ['core/scenario_parser.js', UPLOADED_EXCEL], { cwd: ROOT_DIR, shell: true });
+            await runCommand('node', ['core/scenario_parser.js', getCurrentExcelPath()], { cwd: ROOT_DIR });
 
             setRunStatus('compile', 'Compiling executable spec...');
-            await runCommand('node', ['core/compiler.js'], { cwd: ROOT_DIR, shell: true });
+            await runCommand('node', ['core/compiler.js'], { cwd: ROOT_DIR });
 
             setRunStatus('playwright', 'Launching Playwright UI...');
             const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--ui', `--workers=${workers}`], {
@@ -247,7 +289,6 @@ app.post('/run', (req, res) => {
                     AUTOTEST_FULLY_PARALLEL: fullyParallel ? '1' : '0',
                     AUTOTEST_WORKERS: String(workers)
                 },
-                shell: true,
                 cwd: ROOT_DIR
             });
             pw.stdout.on('data', (data) => console.log(`[PW] ${data}`));
@@ -266,7 +307,8 @@ app.post('/restart', (req, res) => {
     try {
         const clearMappings = req.body?.clearMappings === true;
         if (clearMappings) fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
-        if (fs.existsSync(UPLOADED_EXCEL)) fs.unlinkSync(UPLOADED_EXCEL);
+        const excelPath = getCurrentExcelPath();
+        if (fs.existsSync(excelPath)) fs.unlinkSync(excelPath);
         if (fs.existsSync(RESULTS_DIR)) {
             fs.rmSync(RESULTS_DIR, { recursive: true, force: true });
             fs.mkdirSync(RESULTS_DIR);

@@ -90,6 +90,33 @@
 - Note:
   - In this environment, full end-to-end Playwright browser execution against live target was not run in this step; endpoint and compile-level SIT passed.
 
+## New External QA Defect Sweep (Security + Pipeline)
+- Files changed:
+  - `studio/server.js`
+  - `studio/studio-ui.html`
+  - `core/compiler.js`
+  - `core/scenario_parser.js`
+  - `.gitignore`
+  - `run_tests.command`
+  - `defect.md`
+- Key fixes:
+  - RCE hardening in replay generation (URL validation + safe JS string generation + `spawn` execution).
+  - XSS hardening in step list rendering (DOM API + `textContent`, no unsafe label interpolation).
+  - Safe compiler quoting for dynamic values/targets; removed site-specific YouTube logic.
+  - Parser now rejects invalid Excel structure with explicit errors and no cross-scenario data inheritance.
+  - Upload isolation now uses timestamped filenames with pointer tracking (no hard overwrite target).
+  - Added mapping delete API + UI delete button and manual code pre-validation before save.
+  - Expanded `.gitignore` for generated/runtime files.
+  - Updated CLI runner to use current upload naming pattern.
+
+## SIT (Post-Patch)
+- `node -c studio/server.js` passed
+- `node -c core/compiler.js` passed
+- `node -c core/scenario_parser.js` passed
+- `bash -n run_tests.command` passed
+- `node core/compiler.js` passed
+- `node internal_sit.js` passed `6/6`
+
 ## Notes for QA
 - Pre-existing working tree deletions/untracked artifacts were already present before this work started.
 - This log lists changes made during this Codex session on branch `codex`.

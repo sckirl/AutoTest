@@ -35,11 +35,7 @@ async function unmarkLocator(locator: any) {
 test.describe('Automated UAT Execution', () => {
     test.describe.configure({ mode: process.env.AUTOTEST_FULLY_PARALLEL === '1' ? 'parallel' : 'serial' });
 
-    test.beforeEach(async ({ page }) => {
-        await page.addInitScript(() => {
-            window.localStorage.setItem('yt-consent-dialog-shown', 'true');
-        });
-    });
+    test.beforeEach(async () => {});
 
     test('Scenario A.1: Login Scenario 1', async ({ page }) => {
         const resultsDir = path.join(process.cwd(), 'results', 'A_1');
@@ -48,49 +44,39 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Dashboard')`));
-            await expect(page.locator(`h6:has-text('Dashboard')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Dashboard')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Dashboard')"));
+            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
@@ -107,49 +93,39 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`WrongUser`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("WrongUser");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Verify Login Error Message', async () => {
-            await markLocator(page.locator(`p.oxd-alert-content-text`));
-            await expect(page.locator(`p.oxd-alert-content-text`)).toBeVisible();
-            await unmarkLocator(page.locator(`p.oxd-alert-content-text`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("p.oxd-alert-content-text"));
+            await expect(page.locator("p.oxd-alert-content-text")).toBeVisible();
+            await unmarkLocator(page.locator("p.oxd-alert-content-text"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
@@ -166,49 +142,39 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`WrongPass`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("WrongPass");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Verify Login Error Message', async () => {
-            await markLocator(page.locator(`p.oxd-alert-content-text`));
-            await expect(page.locator(`p.oxd-alert-content-text`)).toBeVisible();
-            await unmarkLocator(page.locator(`p.oxd-alert-content-text`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("p.oxd-alert-content-text"));
+            await expect(page.locator("p.oxd-alert-content-text")).toBeVisible();
+            await unmarkLocator(page.locator("p.oxd-alert-content-text"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
@@ -225,49 +191,39 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(``);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(``);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Verify Login Error Message', async () => {
-            await markLocator(page.locator(`p.oxd-alert-content-text`));
-            await expect(page.locator(`p.oxd-alert-content-text`)).toBeVisible();
-            await unmarkLocator(page.locator(`p.oxd-alert-content-text`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("p.oxd-alert-content-text"));
+            await expect(page.locator("p.oxd-alert-content-text")).toBeVisible();
+            await unmarkLocator(page.locator("p.oxd-alert-content-text"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
@@ -284,49 +240,39 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`ADMIN123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("ADMIN123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Verify Login Error Message', async () => {
-            await markLocator(page.locator(`p.oxd-alert-content-text`));
-            await expect(page.locator(`p.oxd-alert-content-text`)).toBeVisible();
-            await unmarkLocator(page.locator(`p.oxd-alert-content-text`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("p.oxd-alert-content-text"));
+            await expect(page.locator("p.oxd-alert-content-text")).toBeVisible();
+            await unmarkLocator(page.locator("p.oxd-alert-content-text"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
@@ -343,58 +289,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Admin Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Admin')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Admin')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Admin')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Admin')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Admin')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Admin')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Admin Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Admin')`));
-            await expect(page.locator(`h6:has-text('Admin')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Admin')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Admin')"));
+            await expect(page.locator("h6:has-text('Admin')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Admin')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -411,58 +346,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click PIM Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('PIM')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('PIM')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('PIM')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('PIM')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('PIM')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('PIM')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify PIM Header', async () => {
-            await markLocator(page.locator(`h6:has-text('PIM')`));
-            await expect(page.locator(`h6:has-text('PIM')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('PIM')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('PIM')"));
+            await expect(page.locator("h6:has-text('PIM')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('PIM')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -479,58 +403,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Leave Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Leave')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Leave')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Leave')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Leave')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Leave')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Leave')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Leave Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Leave')`));
-            await expect(page.locator(`h6:has-text('Leave')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Leave')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Leave')"));
+            await expect(page.locator("h6:has-text('Leave')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Leave')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -547,58 +460,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Time Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Time')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Time')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Time')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Time')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Time')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Time')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Time Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Time')`));
-            await expect(page.locator(`h6:has-text('Time')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Time')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Time')"));
+            await expect(page.locator("h6:has-text('Time')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Time')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -615,58 +517,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Recruitment Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Recruitment')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Recruitment')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Recruitment')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Recruitment')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Recruitment')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Recruitment')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Recruitment Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Recruitment')`));
-            await expect(page.locator(`h6:has-text('Recruitment')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Recruitment')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Recruitment')"));
+            await expect(page.locator("h6:has-text('Recruitment')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Recruitment')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -683,58 +574,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click My Info Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('My Info')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('My Info')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('My Info')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('My Info')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('My Info')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('My Info')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Personal Details Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Personal Details')`));
-            await expect(page.locator(`h6:has-text('Personal Details')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Personal Details')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Personal Details')"));
+            await expect(page.locator("h6:has-text('Personal Details')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Personal Details')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -751,58 +631,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Performance Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Performance')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Performance')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Performance')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Performance')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Performance')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Performance')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Performance Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Performance')`));
-            await expect(page.locator(`h6:has-text('Performance')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Performance')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Performance')"));
+            await expect(page.locator("h6:has-text('Performance')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Performance')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -819,58 +688,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Dashboard Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Dashboard')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Dashboard')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Dashboard')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Dashboard')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Dashboard')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Dashboard')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Dashboard')`));
-            await expect(page.locator(`h6:has-text('Dashboard')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Dashboard')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Dashboard')"));
+            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -887,58 +745,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Directory Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Directory')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Directory')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Directory')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Directory')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Directory')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Directory')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Directory Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Directory')`));
-            await expect(page.locator(`h6:has-text('Directory')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Directory')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Directory')"));
+            await expect(page.locator("h6:has-text('Directory')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Directory')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -955,58 +802,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Maintenance Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Maintenance')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Maintenance')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Maintenance')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Maintenance')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Maintenance')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Maintenance')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Maintenance Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Maintenance')`));
-            await expect(page.locator(`h6:has-text('Maintenance')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Maintenance')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Maintenance')"));
+            await expect(page.locator("h6:has-text('Maintenance')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Maintenance')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -1023,58 +859,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Admin Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Admin')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Admin')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Admin')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Admin')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Admin')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Admin')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Admin Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Admin')`));
-            await expect(page.locator(`h6:has-text('Admin')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Admin')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Admin')"));
+            await expect(page.locator("h6:has-text('Admin')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Admin')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -1091,58 +916,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click PIM Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('PIM')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('PIM')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('PIM')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('PIM')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('PIM')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('PIM')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify PIM Header', async () => {
-            await markLocator(page.locator(`h6:has-text('PIM')`));
-            await expect(page.locator(`h6:has-text('PIM')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('PIM')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('PIM')"));
+            await expect(page.locator("h6:has-text('PIM')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('PIM')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -1159,58 +973,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Leave Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Leave')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Leave')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Leave')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Leave')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Leave')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Leave')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Leave Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Leave')`));
-            await expect(page.locator(`h6:has-text('Leave')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Leave')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Leave')"));
+            await expect(page.locator("h6:has-text('Leave')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Leave')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -1227,58 +1030,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Time Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Time')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Time')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Time')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Time')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Time')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Time')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Time Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Time')`));
-            await expect(page.locator(`h6:has-text('Time')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Time')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Time')"));
+            await expect(page.locator("h6:has-text('Time')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Time')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -1295,58 +1087,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Recruitment Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Recruitment')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Recruitment')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Recruitment')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Recruitment')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Recruitment')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Recruitment')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Recruitment Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Recruitment')`));
-            await expect(page.locator(`h6:has-text('Recruitment')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Recruitment')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Recruitment')"));
+            await expect(page.locator("h6:has-text('Recruitment')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Recruitment')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -1363,58 +1144,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click My Info Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('My Info')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('My Info')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('My Info')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('My Info')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('My Info')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('My Info')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Personal Details Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Personal Details')`));
-            await expect(page.locator(`h6:has-text('Personal Details')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Personal Details')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Personal Details')"));
+            await expect(page.locator("h6:has-text('Personal Details')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Personal Details')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -1431,58 +1201,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Performance Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Performance')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Performance')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Performance')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Performance')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Performance')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Performance')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Performance Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Performance')`));
-            await expect(page.locator(`h6:has-text('Performance')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Performance')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Performance')"));
+            await expect(page.locator("h6:has-text('Performance')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Performance')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -1499,58 +1258,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Dashboard Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Dashboard')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Dashboard')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Dashboard')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Dashboard')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Dashboard')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Dashboard')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Dashboard')`));
-            await expect(page.locator(`h6:has-text('Dashboard')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Dashboard')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Dashboard')"));
+            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -1567,58 +1315,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Directory Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Directory')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Directory')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Directory')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Directory')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Directory')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Directory')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Directory Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Directory')`));
-            await expect(page.locator(`h6:has-text('Directory')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Directory')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Directory')"));
+            await expect(page.locator("h6:has-text('Directory')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Directory')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -1635,58 +1372,47 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Click Maintenance Menu', async () => {
-            await markLocator(page.locator(`a.oxd-main-menu-item:has-text('Maintenance')`));
+            await markLocator(page.locator("a.oxd-main-menu-item:has-text('Maintenance')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0_MARK.png`) });
-            await page.locator(`a.oxd-main-menu-item:has-text('Maintenance')`).click({ force: true });
-            await unmarkLocator(page.locator(`a.oxd-main-menu-item:has-text('Maintenance')`));
-            await page.waitForTimeout(500);
+            await page.locator("a.oxd-main-menu-item:has-text('Maintenance')").click({ force: true });
+            await unmarkLocator(page.locator("a.oxd-main-menu-item:has-text('Maintenance')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
             await test.step('Verify Maintenance Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Maintenance')`));
-            await expect(page.locator(`h6:has-text('Maintenance')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Maintenance')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Maintenance')"));
+            await expect(page.locator("h6:has-text('Maintenance')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Maintenance')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_5_ACT_0.png`) });
             });
 
@@ -1703,49 +1429,39 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Dashboard')`));
-            await expect(page.locator(`h6:has-text('Dashboard')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Dashboard')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Dashboard')"));
+            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
@@ -1762,49 +1478,39 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Dashboard')`));
-            await expect(page.locator(`h6:has-text('Dashboard')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Dashboard')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Dashboard')"));
+            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
@@ -1821,49 +1527,39 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Dashboard')`));
-            await expect(page.locator(`h6:has-text('Dashboard')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Dashboard')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Dashboard')"));
+            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
@@ -1880,49 +1576,39 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Dashboard')`));
-            await expect(page.locator(`h6:has-text('Dashboard')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Dashboard')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Dashboard')"));
+            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 
@@ -1939,49 +1625,39 @@ test.describe('Automated UAT Execution', () => {
         await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
         try {
             await test.step('Navigate to OrangeHRM', async () => {
-            await page.goto(`https://opensource-demo.orangehrmlive.com/web/index.php/auth/login`, { waitUntil: 'domcontentloaded' });
-            try {
-                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();
-                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });
-                await acceptBtn.click({ force: true });
-            } catch (e) {}
-            await page.waitForLoadState('networkidle').catch(() => {});
-            await page.waitForTimeout(500);
+            await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
             await page.screenshot({ path: path.join(resultsDir, `STEP_0_ACT_0.png`) });
             });
 
             await test.step('Input Username', async () => {
-            await markLocator(page.locator(`input[name='username']`));
+            await markLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0_MARK.png`) });
-            await page.locator(`input[name='username']`).fill(`Admin`);
-            await unmarkLocator(page.locator(`input[name='username']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='username']").fill("Admin");
+            await unmarkLocator(page.locator("input[name='username']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_1_ACT_0.png`) });
             });
 
             await test.step('Input Password', async () => {
-            await markLocator(page.locator(`input[name='password']`));
+            await markLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0_MARK.png`) });
-            await page.locator(`input[name='password']`).fill(`admin123`);
-            await unmarkLocator(page.locator(`input[name='password']`));
-            await page.waitForTimeout(500);
+            await page.locator("input[name='password']").fill("admin123");
+            await unmarkLocator(page.locator("input[name='password']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_2_ACT_0.png`) });
             });
 
             await test.step('Click Login Button', async () => {
-            await markLocator(page.locator(`button[type='submit']`));
+            await markLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0_MARK.png`) });
-            await page.locator(`button[type='submit']`).click({ force: true });
-            await unmarkLocator(page.locator(`button[type='submit']`));
-            await page.waitForTimeout(500);
+            await page.locator("button[type='submit']").click({ force: true });
+            await unmarkLocator(page.locator("button[type='submit']"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_3_ACT_0.png`) });
             });
 
             await test.step('Verify Dashboard Header', async () => {
-            await markLocator(page.locator(`h6:has-text('Dashboard')`));
-            await expect(page.locator(`h6:has-text('Dashboard')`)).toBeVisible();
-            await unmarkLocator(page.locator(`h6:has-text('Dashboard')`));
-            await page.waitForTimeout(500);
+            await markLocator(page.locator("h6:has-text('Dashboard')"));
+            await expect(page.locator("h6:has-text('Dashboard')")).toBeVisible();
+            await unmarkLocator(page.locator("h6:has-text('Dashboard')"));
             await page.screenshot({ path: path.join(resultsDir, `STEP_4_ACT_0.png`) });
             });
 

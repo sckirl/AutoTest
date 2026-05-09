@@ -14,6 +14,7 @@ function compile() {
     const scenarios = JSON.parse(fs.readFileSync(blueprintPath, 'utf8'));
     const mappings = JSON.parse(fs.readFileSync(mappingsPath, 'utf8'));
 
+    const q = (v) => JSON.stringify(String(v ?? ''));
     let code = `import { test, expect } from '@playwright/test';\nimport * as path from 'path';\nimport * as fs from 'fs';\n\n`;
     code += `async function markLocator(locator: any) {\n`;
     code += `    try {\n`;
@@ -46,17 +47,13 @@ function compile() {
     
     code += `test.describe('Automated UAT Execution', () => {\n`;
     code += `    test.describe.configure({ mode: process.env.AUTOTEST_FULLY_PARALLEL === '1' ? 'parallel' : 'serial' });\n\n`;
-    code += `    test.beforeEach(async ({ page }) => {\n`;
-    code += `        await page.addInitScript(() => {\n`;
-    code += `            window.localStorage.setItem('yt-consent-dialog-shown', 'true');\n`;
-    code += `        });\n`;
-    code += `    });\n\n`;
+    code += `    test.beforeEach(async () => {});\n\n`;
 
     const missingKeys = new Set();
 
     for (const scenario of scenarios) {
         const scenarioIdClean = scenario.Scenario_ID.replace(/[^a-z0-9]/gi, '_');
-        code += `    test('Scenario ${scenario.Scenario_ID}: ${scenario.Role}', async ({ page }) => {\n`;
+        code += `    test('Scenario ${String(scenario.Scenario_ID).replace(/'/g, "\\'")}: ${String(scenario.Role || '').replace(/'/g, "\\'")}', async ({ page }) => {\n`;
         code += `        const resultsDir = path.join(process.cwd(), 'results', '${scenarioIdClean}');\n`;
         code += `        if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });\n\n`;
         code += `        await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });\n`;
@@ -76,16 +73,11 @@ function compile() {
                     // Token replacement
                     const finalValue = value.replace(/\{\{(.*?)\}\}/g, (_, key) => step.Data[key] || "");
                     
-                    let locator = target.startsWith('getBy') ? `page.${target}` : `page.locator(\`${target}\`)`;
+                    let locator = target.startsWith('getBy') ? `page.${target}` : `page.locator(${q(target)})`;
 
                     if (action.type === 'goto') {
-                        code += `            await page.goto(\`${target}\`, { waitUntil: 'domcontentloaded' });\n`;
-                        code += `            try {\n`;
-                        code += `                const acceptBtn = page.locator('button[aria-label="Accept all"], button[aria-label="Accept the use of cookies and other data for the purposes described"], button:has-text("Accept all")').first();\n`;
-                        code += `                await acceptBtn.waitFor({ state: 'visible', timeout: 3000 });\n`;
-                        code += `                await acceptBtn.click({ force: true });\n`;
-                        code += `            } catch (e) {}\n`;
-                        code += `            await page.waitForLoadState('networkidle').catch(() => {});\n`;
+                        code += `            await page.goto(${q(target)}, { waitUntil: 'domcontentloaded' });\n`;
+                        code += `            await page.waitForLoadState('domcontentloaded');\n`;
                     }
                     else if (action.type === 'click') {
                         code += `            await markLocator(${locator});\n`;
@@ -96,13 +88,13 @@ function compile() {
                     else if (action.type === 'fill') {
                         code += `            await markLocator(${locator});\n`;
                         code += `            await page.screenshot({ path: path.join(resultsDir, \`STEP_${i}_ACT_${j}_MARK.png\`) });\n`;
-                        code += `            await ${locator}.fill(\`${finalValue}\`);\n`;
+                        code += `            await ${locator}.fill(${q(finalValue)});\n`;
                         code += `            await unmarkLocator(${locator});\n`;
                     }
                     else if (action.type === 'press') {
                         code += `            await markLocator(${locator});\n`;
                         code += `            await page.screenshot({ path: path.join(resultsDir, \`STEP_${i}_ACT_${j}_MARK.png\`) });\n`;
-                        code += `            await ${locator}.press(\`${finalValue || 'Enter'}\`);\n`;
+                        code += `            await ${locator}.press(${q(finalValue || 'Enter')});\n`;
                         code += `            await unmarkLocator(${locator});\n`;
                     }
                     else if (action.type === 'hover') {
@@ -118,11 +110,10 @@ function compile() {
                     }
                     else if (action.type === 'verifyText') {
                         code += `            await markLocator(${locator});\n`;
-                        code += `            await expect(${locator}).toContainText(\`${finalValue}\`);\n`;
+                        code += `            await expect(${locator}).toContainText(${q(finalValue)});\n`;
                         code += `            await unmarkLocator(${locator});\n`;
                     }
                     
-                    code += `            await page.waitForTimeout(500);\n`;
                     code += `            await page.screenshot({ path: path.join(resultsDir, \`STEP_${i}_ACT_${j}.png\`) });\n`;
                 }
                 code += `            });\n\n`;
