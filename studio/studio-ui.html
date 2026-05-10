@@ -153,6 +153,7 @@
                         <button class="btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}" onclick="openRecordModal('${s.label}', '${s.scenarioId}')">
                             ${s.status === 'missing' ? 'Record' : 'Re-Map'}
                         </button>
+                        <button class="btn btn-secondary" onclick="openManualModal('${s.label}', '${s.scenarioId}')">Manual</button>
                     </div>
                 `;
                 stepListUi.appendChild(row);
@@ -172,6 +173,12 @@
                 alert(err.error);
                 closeModal();
             }
+        }
+
+        function openManualModal(label, scenarioId) {
+            currentLabel = label; currentScenarioId = scenarioId;
+            isUserInteracting = true; codeArea.value = ''; modal.style.display = 'flex';
+            document.getElementById('modal-title').innerText = `Manual Map: "${label}"`;
         }
 
         function closeModal() {

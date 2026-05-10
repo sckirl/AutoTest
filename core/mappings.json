@@ -2,8 +2,8 @@
   "Action A 1": {
     "steps": [
       {
-        "type": "goto",
-        "target": "https://practicetestautomation.com/practice-test-login/"
+        "type": "click",
+        "target": "body"
       }
     ]
   },
@@ -37,7 +37,12 @@
     "steps": [
       {
         "type": "click",
-        "target": "locator('#test-4')"
+        "target": "getByRole('textbox', { name: 'Username' })"
+      },
+      {
+        "type": "fill",
+        "target": "getByRole('textbox', { name: 'Username' })",
+        "value": "student"
       }
     ]
   },
@@ -46,6 +51,14 @@
       {
         "type": "goto",
         "target": "https://practicetestautomation.com/practice-test-login/"
+      }
+    ]
+  },
+  "Action B 3": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "body"
       }
     ]
   }

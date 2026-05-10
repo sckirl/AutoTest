@@ -28,7 +28,9 @@ let RUN_STATUS = {
 
 // --- PERSISTENT BROWSER ARCHITECTURE (Zero-Crash) ---
 let globalBrowser = null;
+let activeRecordContext = null;
 let latestAutoRecordedCode = '';
+let activeRun = null;
 
 async function getBrowser() {
     if (!globalBrowser || !globalBrowser.isConnected()) {
@@ -50,7 +52,6 @@ function safeGetBy(target) {
     const m = target.match(/^getBy(Role|Label|Placeholder|Text|AltText|Title|TestId|DisplayValue)\((.*)\)$/);
     if (!m) return null;
     const args = m[2];
-    // DEF-053: Whitelist allowing essential enterprise locator symbols
     if (/[;+\-*\/%&|<>\!^~?]/.test(args) && !args.includes('{')) return null; 
     if (/\b(require|exec|eval|process|import|global|constructor|window|document)\b/.test(args)) return null;
     return target;
@@ -96,7 +97,6 @@ app.get('/scan', (req, res) => {
         for (let r = 1; r < rows.length; r++) {
             const scenarioNum = String(rows[r][1] || "").trim();
             const label = String(rows[r][2] || "").trim();
-            // [DEF-070] Robust Regex for Stress-Test Scenario IDs (S.100 etc)
             if (scenarioNum.match(/^[A-Z]+\.\d+/)) currentScenario = scenarioNum;
             else if (currentScenario && scenarioNum.match(/^\d+$/) && label) {
                 if (!stepMap.has(label)) {
@@ -110,55 +110,72 @@ app.get('/scan', (req, res) => {
 
 app.post('/record', async (req, res) => {
     const { label, url, scenarioId } = req.body;
+    
+    // HARDEN: Close previous recording page if it exists
+    if (activeRecordPage) {
+        try { await activeRecordPage.close(); } catch(_) {}
+        activeRecordPage = null;
+    }
+
     try {
         latestAutoRecordedCode = '';
-        const browser = await getBrowser();
-        const context = await browser.newContext();
-        const page = await context.newPage();
-        
-        // Define resolveTarget in-page for the replay
-        const mappings = fs.existsSync(MAPPINGS_PATH) ? JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8')) : {};
+        if (!fs.existsSync(MAPPINGS_PATH)) fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
+        const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
         const excelPath = RUN_STATUS.activeExcel;
         
+        if (!excelPath || !fs.existsSync(excelPath)) {
+            return res.status(400).json({ error: "No active matrix. Please upload an Excel file first." });
+        }
+
+        const context = await getContext();
+        const page = await context.newPage();
+        activeRecordPage = page;
+
+        // Resolvers inside Node
         const resolveAndRun = async (action) => {
             let locator;
             const target = action.target;
             if (target.startsWith('getBy')) {
                 const m = target.match(/^(getBy(?:Role|Label|Placeholder|Text|AltText|Title|TestId|DisplayValue))\((.*)\)$/s);
-                const method = m[1]; const raw = m[2];
-                try {
-                    const args = JSON.parse('[' + raw.replace(/'/g, '\"') + ']');
-                    locator = page[method](...args);
-                } catch(_) { locator = page.locator(target); }
+                if (m) {
+                    const method = m[1]; const raw = m[2];
+                    try {
+                        const args = JSON.parse('[' + raw.replace(/'/g, '\"') + ']');
+                        locator = page[method](...args);
+                    } catch(_) { locator = page.locator(target); }
+                } else {
+                    locator = page.locator(target);
+                }
             } else {
                 locator = page.locator(target);
             }
-            if (action.type === 'goto') await page.goto(target);
+            if (action.type === 'goto') await page.goto(action.target);
             else if (action.type === 'click') await locator.click();
             else if (action.type === 'fill') await locator.fill(action.value || "");
+            else if (action.type === 'selectOption') await locator.selectOption(action.value);
+            else if (action.type === 'press') await locator.press(action.value || 'Enter');
         };
 
         if (url) await page.goto(url);
 
-        // REPLAY PRECEDING STEPS
         const workbook = XLSX.readFile(excelPath);
-        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
         let currentScen = null;
         for (let r = 1; r < rows.length; r++) {
             const scenarioNum = String(rows[r][1] || "").trim();
             const stepLabel = String(rows[r][2] || "").trim();
             if (scenarioNum.match(/^[A-Z]+\.\d+/)) currentScen = scenarioNum;
-            if (currentScen === scenarioId && scenarioNum.match(/^\d+$/) && stepLabel) {
+            else if (currentScen === scenarioId && scenarioNum.match(/^\d+$/) && stepLabel) {
                 if (stepLabel === label) break;
                 if (mappings[stepLabel]) {
                     for (const action of mappings[stepLabel].steps) {
-                        await resolveAndRun(action);
+                        try { await resolveAndRun(action); } catch (e) { console.error('Replay step failed:', e.message); }
                     }
                 }
             }
         }
 
-        // INJECT RECORDING SCRIPT (DEF-065 & DEF-068 & DEF-072)
         await page.exposeBinding('__autotestRecord', async (_, line) => {
             latestAutoRecordedCode += line + '\n';
         });
@@ -180,71 +197,185 @@ app.post('/record', async (req, res) => {
                 if (e.altKey) rec('await expect(' + sel + ').toBeVisible();');
                 else rec('await ' + sel + '.click();');
             }, true);
-            // [DEF-068] Input listener for real-time capture
             document.addEventListener('input', (e) => {
                 const t = e.target; if (!t || !('value' in t)) return;
                 const sel = getBestSelector(t);
                 rec('await ' + sel + '.fill(' + JSON.stringify(String(t.value || '')) + ');');
             }, true);
+            document.addEventListener('change', (e) => {
+                const t = e.target; if (!t || t.tagName !== 'SELECT') return;
+                const sel = getBestSelector(t);
+                rec('await ' + sel + '.selectOption(' + JSON.stringify(String(t.value || '')) + ');');
+            }, true);
         });
-
-        res.json({ message: "Recording active in new tab." });
+        
+        res.json({ message: "Recording active in persistent browser." });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/record-cancel', (req, res) => {
-    // In persistent mode, we don't kill the browser, we just expect user to close the tab.
+app.post('/record-cancel', async (req, res) => {
+    if (activeRecordPage) { 
+        try { await activeRecordPage.close(); } catch(_) {}
+        activeRecordPage = null; 
+    }
     res.json({ message: "Cancelled." });
 });
 
-app.post('/save-mapping', (req, res) => {
-    const { label, code } = req.body;
+function parseRecordedCode(code) {
     const lines = code.split('\n');
     const steps = [];
+    const ignored = [];
     for (let line of lines) {
+        const rawLine = line;
         line = line.trim();
-        if (!line.includes('await') || line.includes('import ') || line.includes('test(')) continue;
-        if (line.includes('.click(')) {
-            const m = line.match(/page\.(.*?)\)\.click/);
-            if (m) steps.push({ type: 'click', target: m[1] + ')' });
-        } else if (line.includes('.fill(')) {
-            const m = line.match(/page\.(.*?)\)\.fill\((['"`])(.*?)\2\)/);
-            if (m) steps.push({ type: 'fill', target: m[1] + ')', value: m[3] });
-        } else if (line.includes('.toBeVisible(')) {
-            const m = line.match(/expect\(page\.(.*?)\)\)\.toBeVisible/);
-            if (m) steps.push({ type: 'verifyVisible', target: m[1] + ')' });
+        if (!line || !line.includes('await')) continue;
+        if (line.startsWith('import ') || line.startsWith('test(') || line.startsWith('});')) continue;
+        
+        if (line.includes('.goto(')) {
+            const m = line.match(/goto\((['"`])(.*?)\1\)/);
+            if (m) steps.push({ type: 'goto', target: m[2] }); else ignored.push(rawLine);
+            continue;
         }
+
+        const expectLocator = extractExpectLocator(line);
+        if (expectLocator) {
+            if (line.includes('.toBeVisible(')) { steps.push({ type: 'verifyVisible', target: expectLocator }); continue; }
+            if (line.includes('.toContainText(') || line.includes('.toHaveText(')) {
+                const t = line.match(/to(?:ContainText|HaveText)\((['"`])([\s\S]*?)\1\)/);
+                steps.push({ type: 'verifyText', target: expectLocator, value: t ? t[2] : '' });
+                continue;
+            }
+        }
+
+        const locator = extractLocator(line);
+        if (!locator) { ignored.push(rawLine); continue; }
+
+        if (line.includes('.click(')) steps.push({ type: 'click', target: locator });
+        else if (line.includes('.dblclick(')) steps.push({ type: 'dblclick', target: locator });
+        else if (line.includes('.check(')) steps.push({ type: 'check', target: locator });
+        else if (line.includes('.uncheck(')) steps.push({ type: 'uncheck', target: locator });
+        else if (line.includes('.fill(')) {
+            const v = line.match(/\.fill\((['"`])([\s\S]*?)\1\)/);
+            steps.push({ type: 'fill', target: locator, value: v ? v[2] : "{{data}}" });
+        } else if (line.includes('.selectOption(')) {
+            const v = line.match(/\.selectOption\((.*?)\)(?:;|$)/);
+            steps.push({ type: 'selectOption', target: locator, value: v ? v[1] : "{{data}}" });
+        } else if (line.includes('.press(')) {
+            const v = line.match(/\.press\((['"`])([\s\S]*?)\1\)/);
+            steps.push({ type: 'press', target: locator, value: v ? v[2] : "" });
+        } else if (line.includes('.hover(')) steps.push({ type: 'hover', target: locator });
+        else if (line.includes('.scrollIntoViewIfNeeded(')) steps.push({ type: 'scrollIntoView', target: locator });
+        else ignored.push(rawLine);
     }
-    const mappings = fs.existsSync(MAPPINGS_PATH) ? JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8')) : {};
-    mappings[label] = { steps };
+    return { steps, ignored };
+}
+
+function extractExpectLocator(line) {
+    const m = line.match(/expect\((page\..*?)\)\.to(?:BeVisible|ContainText|HaveText)\(/);
+    if (!m) return null;
+    const locatorExpr = m[1];
+    if (locatorExpr.startsWith('page.locator(')) {
+        const m2 = locatorExpr.match(/^page\.locator\((['"`])([\s\S]*)\1\)$/);
+        if (m2) return m2[2];
+    }
+    if (locatorExpr.startsWith('page.')) return locatorExpr.slice(5);
+    return null;
+}
+
+function extractLocator(line) {
+    const actionMatch = line.match(/await\s+(page\..*?)\.(click|dblclick|check|uncheck|fill|type|press|hover|scrollIntoViewIfNeeded|selectOption|toBeVisible|toContainText|toHaveText)\(/);
+    if (!actionMatch) return null;
+    const locatorExpr = actionMatch[1];
+    if (locatorExpr.startsWith('page.locator(')) {
+        const m = locatorExpr.match(/^page\.locator\((['"`])([\s\S]*)\1\)$/);
+        if (m) return m[2];
+    }
+    if (locatorExpr.startsWith('page.')) return locatorExpr.slice(5);
+    return null;
+}
+
+app.post('/save-mapping', (req, res) => {
+    const { label, code } = req.body;
+    if (!label || !code || !String(code).trim()) return res.status(400).json({ error: "Code required." });
+    
+    const parsed = parseRecordedCode(code);
+    const validLinesCount = code.split('\n').map(l => l.trim()).filter(l => {
+        const line = l.toLowerCase();
+        if (line.startsWith('import ') || line.startsWith('test(') || line.startsWith('});') || line === '' || line.startsWith('//')) return false;
+        return true;
+    }).length;
+
+    if (parsed.steps.length === 0) return res.status(400).json({ error: "No valid steps parsed from submitted code." });
+    if (parsed.steps.length < validLinesCount) return res.status(400).json({ error: "Partial parsing failure. Ensure your manual code follows Playwright action/assertion patterns.", ignored: parsed.ignored.slice(0,3) });
+
+    const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
+    mappings[label] = { steps: parsed.steps };
     fs.writeFileSync(MAPPINGS_PATH, JSON.stringify(mappings, null, 2));
-    res.json({ message: "Saved." });
+    res.json({ message: "Saved.", stepCount: parsed.steps.length });
+});
+
+app.get('/mapping/:label', (req, res) => {
+    try {
+        const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
+        return res.json({ label: req.params.label, mapping: mappings[req.params.label] || null });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/run', (req, res) => {
-    if (activeRun) return res.status(409).json({ error: 'Run in progress.' });
-    activeRun = { process: null };
-    const workers = req.body.workers || 4;
-    setRunStatus('queued', 'Starting...');
+    if (activeRun) return res.status(409).json({ error: 'A run is already in progress.' });
+    if (!RUN_STATUS.activeExcel) return res.status(400).json({ error: "No matrix uploaded." });
+    
+    activeRun = { startedAt: Date.now(), process: null, excel: RUN_STATUS.activeExcel };
+    const workers = Number(req.body?.workers) || 2;
+    setRunStatus('queued', 'Run accepted');
+    res.json({ message: "Run accepted." });
+
     (async () => {
         try {
-            const child = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', `--workers=${workers}`, '--headed'], { cwd: ROOT_DIR, env: { ...process.env, PW_HEADLESS: '0' } });
-            activeRun.process = child;
-            child.on('close', (code) => { 
-                setRunStatus(code === 0 ? 'completed' : 'failed', code === 0 ? 'Success' : 'Fail');
+            setRunStatus('blueprint', 'Generating blueprint...');
+            await runCommand('node', ['core/scenario_parser.js', activeRun.excel], { cwd: ROOT_DIR });
+            setRunStatus('compile', 'Compiling spec...');
+            await runCommand('node', ['core/compiler.js'], { cwd: ROOT_DIR });
+            setRunStatus('playwright', 'Executing Playwright...');
+            
+            const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', `--workers=${workers}`, '--headed'], {
+                env: { ...process.env, PW_HEADLESS: '0', AUTOTEST_FULLY_PARALLEL: req.body.fullyParallel ? '1' : '0' },
+                cwd: ROOT_DIR
+            });
+            activeRun.process = pw;
+            pw.on('close', (code) => {
+                if (RUN_STATUS.phase === 'cancelled') return;
+                if (code === 0) setRunStatus('completed', 'Finished successfully.');
+                else setRunStatus('failed', `Finished with failures (Code ${code})`, false, 'system', 'test');
                 activeRun = null;
             });
-        } catch (err) { setRunStatus('failed', err.message); activeRun = null; }
+        } catch (err) {
+            if (RUN_STATUS.phase !== 'cancelled') setRunStatus('failed', `System Error: ${err.message}`, false, 'system', 'system');
+            activeRun = null;
+        }
     })();
-    res.json({ message: "Run accepted." });
+});
+
+app.post('/run-cancel', (req, res) => {
+    if (activeRun?.process) { 
+        setRunStatus('cancelled', 'Cancelled');
+        activeRun.process.kill('SIGTERM'); 
+        activeRun = null; 
+    }
+    res.json({ message: 'Cancelled.' });
 });
 
 app.post('/restart', (req, res) => {
-    if (fs.existsSync(MAPPINGS_PATH)) fs.writeFileSync(MAPPINGS_PATH, '{}');
-    if (fs.existsSync(RESULTS_DIR)) fs.rmSync(RESULTS_DIR, { recursive: true, force: true });
-    fs.mkdirSync(RESULTS_DIR);
-    res.json({ message: "Reset." });
+    try {
+        if (activeRun) return res.status(409).json({ error: "Cannot reset while a run is active." });
+        if (req.body?.clearMappings === true) fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
+        const p = getCurrentExcelPath(); if (fs.existsSync(p)) fs.unlinkSync(p);
+        if (fs.existsSync(RESULTS_DIR)) { fs.rmSync(RESULTS_DIR, { recursive: true, force: true }); fs.mkdirSync(RESULTS_DIR); }
+        res.json({ message: "Reset." });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
+app.listen(PORT, () => console.log(`🚀 Studio Live on ${PORT}`));
+00);
 app.listen(PORT, () => console.log(`🚀 Studio Live on ${PORT}`));

@@ -1,7 +1,9 @@
 {
-  "phase": "failed",
-  "message": "Finished with failures (Code 1)",
-  "ok": false,
-  "failureType": "test",
-  "activeExcel": "/Users/alvin/CodeProjects/AutoTest/temp_uploads/scenario_uploaded_1778415641153.xlsx"
+  "phase": "idle",
+  "ok": true,
+  "kind": "system",
+  "message": "Matrix uploaded: scenario_stress_100.xlsx",
+  "updatedAt": "2026-05-10T12:53:27.591Z",
+  "failureType": null,
+  "activeExcel": "/Users/alvin/CodeProjects/AutoTest/temp_uploads/scenario_uploaded_1778417607589.xlsx"
 }
