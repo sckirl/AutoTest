@@ -1,13 +1,51 @@
 {
-  "Navigate to OrangeHRM": {
+  "Action A 1": {
     "steps": [
       {
         "type": "goto",
         "target": "https://practicetestautomation.com/practice-test-login/"
-      },
+      }
+    ]
+  },
+  "Action B 1": {
+    "steps": [
       {
-        "type": "verifyVisible",
-        "target": "getByRole('heading', { name: 'Test login' })"
+        "type": "fill",
+        "target": "locator(\"#username\")",
+        "value": "student"
+      }
+    ]
+  },
+  "Action A 2": {
+    "steps": [
+      {
+        "type": "fill",
+        "target": "locator(\"#password\")",
+        "value": "Password123"
+      }
+    ]
+  },
+  "Action B 2": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "locator(\"#submit\")"
+      }
+    ]
+  },
+  "Action A 3": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "locator('#test-4')"
+      }
+    ]
+  },
+  "${s.label}": {
+    "steps": [
+      {
+        "type": "goto",
+        "target": "https://practicetestautomation.com/practice-test-login/"
       }
     ]
   }

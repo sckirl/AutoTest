@@ -25,4 +25,4 @@ Structure the output using standard `@playwright/test` TypeScript conventions.
 3. Every scenario must end with an explicit validation. Write assertions to verify the expected outcome (e.g., `await expect(page.locator('.success-message')).toBeVisible();`). Use MCP to confirm the correct success/error state elements exist before writing the assertion.
 
 # FINAL OUTPUT
-Output the complete, robust TypeScript file ready to be executed. The code must be clean, heavily commented, and explicitly show where the dynamic variables are passed into the locators and actions.
+Output the complete, robust TypeScript file ready to be executed. The code must be clean, and explicitly show where the dynamic variables are passed into the locators and actions.

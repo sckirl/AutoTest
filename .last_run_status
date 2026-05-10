@@ -1,0 +1,7 @@
+{
+  "phase": "failed",
+  "message": "Finished with failures (Code 1)",
+  "ok": false,
+  "failureType": "test",
+  "activeExcel": "/Users/alvin/CodeProjects/AutoTest/temp_uploads/scenario_uploaded_1778415006424.xlsx"
+}
