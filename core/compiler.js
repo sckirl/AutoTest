@@ -17,8 +17,8 @@ function compile() {
         const m = target.match(/^getBy(Role|Label|Placeholder|Text|AltText|Title|TestId|DisplayValue)\((.*)\)$/);
         if (!m) return null;
         const args = m[2];
-        // DEF-053: Whitelist allowing :, {, }, , for enterprise locators
-        if (!/^(['"`])[a-zA-Z0-9\s\-#\.\:\{\},\[\]\=_\/]*\1$/.test(args.trim())) return null;
+        // Whitelist allowing alphanumeric, spaces, and basic CSS/Playwright symbols
+        if (!/^[a-zA-Z0-9\s\-#\.\:\{\},\[\]\=_\/'"`]*$/.test(args.trim())) return null;
         if (/\b(require|exec|eval|process|import|global|constructor|window|document)\b/.test(args)) return null;
         return target;
     };
@@ -64,6 +64,7 @@ function compile() {
                         code += `            await markLocator(${locator}); await ${locator}.fill(${q(finalValue)});\n`;
                     }
                 }
+                code += `            await page.screenshot({ path: path.join(resultsDir, 'STEP_${i + 1}_' + '${safeKey}'.replace(/[^a-z0-9]/gi, '_') + '.png') });\n`;
                 code += `            });\n\n`;
             }
         }

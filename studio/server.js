@@ -161,15 +161,16 @@ app.post('/save-mapping', (req, res) => {
 
 app.post('/run', (req, res) => {
     try {
+        const workers = req.body.workers || 2;
         console.log("🚀 Generating blueprint...");
         execSync(`node core/scenario_parser.js ${UPLOADED_EXCEL}`, { stdio: 'inherit' });
         
         console.log("🔨 Compiling scenarios into explicit code...");
         execSync(`node core/compiler.js`, { stdio: 'inherit' });
 
-        console.log("🏃 Launching Playwright UI...");
+        console.log(`🏃 Launching Playwright UI with ${workers} workers...`);
         
-        const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--ui'], {
+        const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--workers', String(workers), '--ui', '--trace', 'on'], {
             env: { ...process.env, PW_HEADLESS: '0' },
             shell: true
         });

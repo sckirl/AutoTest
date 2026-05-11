@@ -1,51 +1,103 @@
 {
-  "Action A 1": {
+  "Navigate to OrangeHRM": {
     "steps": [
       {
         "type": "goto",
-        "target": "https://practicetestautomation.com/practice-test-login/"
+        "target": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login"
       }
     ]
   },
-  "Action B 1": {
-    "steps": [
-      {
-        "type": "fill",
-        "target": "locator(\"#username\")",
-        "value": "student"
-      }
-    ]
-  },
-  "Action A 2": {
-    "steps": [
-      {
-        "type": "fill",
-        "target": "locator(\"#password\")",
-        "value": "Password123"
-      }
-    ]
-  },
-  "Action B 2": {
+  "Input Username": {
     "steps": [
       {
         "type": "click",
-        "target": "locator(\"#submit\")"
+        "target": "getByRole('textbox', { name: 'Username' })"
+      },
+      {
+        "type": "fill",
+        "target": "getByRole('textbox', { name: 'Username' })",
+        "value": "Admin"
       }
     ]
   },
-  "Action A 3": {
+  "Input Password": {
     "steps": [
       {
         "type": "click",
-        "target": "locator('#test-4')"
+        "target": "getByRole('textbox', { name: 'Password' })"
+      },
+      {
+        "type": "fill",
+        "target": "getByRole('textbox', { name: 'Password' })",
+        "value": "admin123"
       }
     ]
   },
-  "${s.label}": {
+  "Click Login Button": {
     "steps": [
       {
-        "type": "goto",
-        "target": "https://practicetestautomation.com/practice-test-login/"
+        "type": "click",
+        "target": "getByRole('button', { name: 'Login' })"
+      }
+    ]
+  },
+  "Click My Info Tab": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "getByText('Time at WorkPunched')"
+      },
+      {
+        "type": "click",
+        "target": "getByText('Quick LaunchAssign LeaveLeave')"
+      }
+    ]
+  },
+  "Verify Personal Details Header": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "getByRole('link', { name: 'Contact Details' })"
+      }
+    ]
+  },
+  "Verify Login Error Message": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "getByRole('menuitem', { name: 'Logout' })"
+      },
+      {
+        "type": "click",
+        "target": "getByRole('textbox', { name: 'Username' })"
+      },
+      {
+        "type": "fill",
+        "target": "getByRole('textbox', { name: 'Username' })",
+        "value": "salahsa"
+      },
+      {
+        "type": "click",
+        "target": "getByRole('textbox', { name: 'Password' })"
+      },
+      {
+        "type": "fill",
+        "target": "getByRole('textbox', { name: 'Username' })",
+        "value": "salahsal"
+      },
+      {
+        "type": "fill",
+        "target": "getByRole('textbox', { name: 'Password' })",
+        "value": "ahsalah"
+      },
+      {
+        "type": "press",
+        "target": "getByRole('textbox', { name: 'Password' })",
+        "value": "Enter"
+      },
+      {
+        "type": "click",
+        "target": "getByRole('button', { name: 'Login' })"
       }
     ]
   }
