@@ -27,17 +27,44 @@ let RUN_STATUS = {
 };
 
 // --- PERSISTENT BROWSER ARCHITECTURE (Zero-Crash) ---
-let globalBrowser = null;
-let activeRecordContext = null;
-let latestAutoRecordedCode = '';
+let globalContext = null;
+let contextLock = false; // DEF-073
+let activeRecordSessions = {}; // DEF-074: Maps sessionId -> { page, code }
 let activeRun = null;
 
-async function getBrowser() {
-    if (!globalBrowser || !globalBrowser.isConnected()) {
-        console.log("🚀 Initializing Persistent Playwright Instance...");
-        globalBrowser = await chromium.launch({ headless: false });
+async function getContext() {
+    while (contextLock) await new Promise(r => setTimeout(r, 100));
+    
+    // Check if context exists AND if the underlying browser is still connected
+    let isConnected = false;
+    try {
+        if (globalContext && globalContext.browser()) {
+            isConnected = globalContext.browser().isConnected();
+        }
+    } catch (_) {
+        isConnected = false;
     }
-    return globalBrowser;
+
+    if (!globalContext || !isConnected) {
+        contextLock = true;
+        try {
+            console.log("🚀 Initializing Persistent Playwright Context (Self-Healing)...");
+            const userDataDir = path.join(ROOT_DIR, '.pw_data');
+            globalContext = await chromium.launchPersistentContext(userDataDir, { 
+                headless: false, 
+                bypassCSP: true 
+            });
+            
+            // Nullify on close to trigger re-init on next request
+            globalContext.on('close', () => {
+                console.log("⚠️ Persistent Context Closed.");
+                globalContext = null;
+            });
+        } finally {
+            contextLock = false;
+        }
+    }
+    return globalContext;
 }
 
 function setRunStatus(phase, message, ok = true, kind = 'system', failureType = null) {
@@ -52,9 +79,13 @@ function safeGetBy(target) {
     const m = target.match(/^getBy(Role|Label|Placeholder|Text|AltText|Title|TestId|DisplayValue)\((.*)\)$/);
     if (!m) return null;
     const args = m[2];
-    if (/[;+\-*\/%&|<>\!^~?]/.test(args) && !args.includes('{')) return null; 
+    if (!/^(['"`])[a-zA-Z0-9\s\-#\.\:\{\},\[\]\=_\/]*\1$/.test(args.trim())) return null;
     if (/\b(require|exec|eval|process|import|global|constructor|window|document)\b/.test(args)) return null;
     return target;
+}
+
+function getCurrentExcelPath() {
+    return RUN_STATUS.activeExcel;
 }
 
 const storage = multer.diskStorage({
@@ -75,7 +106,8 @@ app.post('/upload', upload.single('excel'), (req, res) => {
 app.get('/run-status', (req, res) => res.json(RUN_STATUS));
 
 app.get('/recording-latest', (req, res) => {
-    let code = latestAutoRecordedCode || '';
+    const sessionId = req.query.sessionId;
+    let code = (sessionId && activeRecordSessions[sessionId]) ? activeRecordSessions[sessionId].code : '';
     if (code) {
         code = `import { test, expect } from '@playwright/test';\n\ntest('test', async ({ page }) => {\n` + 
                code.split('\n').filter(l => l.trim()).map(l => '  ' + l).join('\n') + 
@@ -109,16 +141,16 @@ app.get('/scan', (req, res) => {
 });
 
 app.post('/record', async (req, res) => {
-    const { label, url, scenarioId } = req.body;
-    
-    // HARDEN: Close previous recording page if it exists
-    if (activeRecordPage) {
-        try { await activeRecordPage.close(); } catch(_) {}
-        activeRecordPage = null;
+    const { label, url, scenarioId, sessionId } = req.body;
+    if (!sessionId) return res.status(400).json({ error: "Session ID required." });
+
+    // DEF-076: Close previous recording page if it exists for this session
+    if (activeRecordSessions[sessionId] && activeRecordSessions[sessionId].page) {
+        try { await activeRecordSessions[sessionId].page.close(); } catch(_) {}
     }
 
     try {
-        latestAutoRecordedCode = '';
+        activeRecordSessions[sessionId] = { code: '', page: null };
         if (!fs.existsSync(MAPPINGS_PATH)) fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
         const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
         const excelPath = RUN_STATUS.activeExcel;
@@ -127,9 +159,14 @@ app.post('/record', async (req, res) => {
             return res.status(400).json({ error: "No active matrix. Please upload an Excel file first." });
         }
 
-        const context = await getContext();
+        const context = await getContext(); // DEF-073 Safe now
         const page = await context.newPage();
-        activeRecordPage = page;
+        activeRecordSessions[sessionId].page = page;
+
+        // DEF-076: Handle ghost tabs if user closes them manually
+        page.on('close', () => {
+            if (activeRecordSessions[sessionId]) activeRecordSessions[sessionId].page = null;
+        });
 
         // Resolvers inside Node
         const resolveAndRun = async (action) => {
@@ -176,10 +213,12 @@ app.post('/record', async (req, res) => {
             }
         }
 
+        // DEF-074: Route code exclusively to the active session
         await page.exposeBinding('__autotestRecord', async (_, line) => {
-            latestAutoRecordedCode += line + '\n';
+            if (activeRecordSessions[sessionId]) activeRecordSessions[sessionId].code += line + '\n';
         });
 
+        // DEF-075: bypassCSP enables these listeners on secure websites
         await page.evaluate(() => {
             const rec = (line) => window.__autotestRecord(line).catch(() => {});
             const getBestSelector = (el) => {
@@ -214,9 +253,12 @@ app.post('/record', async (req, res) => {
 });
 
 app.post('/record-cancel', async (req, res) => {
-    if (activeRecordPage) { 
-        try { await activeRecordPage.close(); } catch(_) {}
-        activeRecordPage = null; 
+    const { sessionId } = req.body;
+    if (sessionId && activeRecordSessions[sessionId]) {
+        if (activeRecordSessions[sessionId].page) {
+            try { await activeRecordSessions[sessionId].page.close(); } catch(_) {}
+        }
+        delete activeRecordSessions[sessionId];
     }
     res.json({ message: "Cancelled." });
 });
@@ -376,6 +418,4 @@ app.post('/restart', (req, res) => {
 });
 
 const PORT = Number(process.env.PORT || 3000);
-app.listen(PORT, () => console.log(`🚀 Studio Live on ${PORT}`));
-00);
 app.listen(PORT, () => console.log(`🚀 Studio Live on ${PORT}`));

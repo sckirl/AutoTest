@@ -109,6 +109,7 @@
 
         let currentLabel = "";
         let currentScenarioId = "";
+        let currentSessionId = "";
         let isUserInteracting = false;
 
         codeArea.onfocus = () => isUserInteracting = true;
@@ -163,9 +164,10 @@
 
         async function openRecordModal(label, scenarioId) {
             currentLabel = label; currentScenarioId = scenarioId;
+            currentSessionId = label + '_' + scenarioId + '_' + Date.now();
             const url = document.getElementById('base-url').value;
             isUserInteracting = false; codeArea.value = ''; modal.style.display = 'flex';
-            const res = await fetch('/record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, scenarioId, url }) });
+            const res = await fetch('/record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, scenarioId, url, sessionId: currentSessionId }) });
             if (res.ok) {
                 startAutoRecordPolling();
             } else {
@@ -183,7 +185,9 @@
 
         function closeModal() {
             modal.style.display = 'none';
-            fetch('/record-cancel', { method: 'POST' });
+            if (currentSessionId) {
+                fetch('/record-cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: currentSessionId }) }).catch(() => {});
+            }
         }
 
         async function saveMapping() {
@@ -220,7 +224,7 @@
                     if (modal.style.display !== 'flex') clearInterval(interval);
                     return;
                 }
-                const res = await fetch('/recording-latest');
+                const res = await fetch('/recording-latest?sessionId=' + encodeURIComponent(currentSessionId));
                 const data = await res.json();
                 if (data.code) codeArea.value = data.code;
             }, 1200);

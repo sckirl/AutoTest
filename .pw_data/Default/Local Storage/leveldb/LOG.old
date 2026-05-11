@@ -1,0 +1,6 @@
+2026/05/11-00:02:13.901 17fc7 Reusing MANIFEST /Users/alvin/CodeProjects/AutoTest/.pw_data/Default/Local Storage/leveldb/MANIFEST-000001
+2026/05/11-00:02:13.904 17fc7 Recovering log #3
+2026/05/11-00:02:13.904 17fc7 Reusing old log /Users/alvin/CodeProjects/AutoTest/.pw_data/Default/Local Storage/leveldb/000003.log 
+2026/05/11-00:02:58.122 17fca Level-0 table #5: started
+2026/05/11-00:02:58.125 17fca Level-0 table #5: 66011 bytes OK
+2026/05/11-00:02:58.133 17fca Delete type=0 #3

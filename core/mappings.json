@@ -3,62 +3,345 @@
     "steps": [
       {
         "type": "click",
-        "target": "body"
+        "target": "#username"
+      },
+      {
+        "type": "click",
+        "target": "#max-width"
+      },
+      {
+        "type": "click",
+        "target": "li"
+      },
+      {
+        "type": "click",
+        "target": "#username"
+      },
+      {
+        "type": "fill",
+        "target": "#username",
+        "value": "s"
+      },
+      {
+        "type": "fill",
+        "target": "#username",
+        "value": "st"
+      },
+      {
+        "type": "fill",
+        "target": "#username",
+        "value": "stu"
+      },
+      {
+        "type": "fill",
+        "target": "#username",
+        "value": "stud"
+      },
+      {
+        "type": "fill",
+        "target": "#username",
+        "value": "studn"
+      },
+      {
+        "type": "fill",
+        "target": "#username",
+        "value": "studne"
+      },
+      {
+        "type": "fill",
+        "target": "#username",
+        "value": "studnet"
+      },
+      {
+        "type": "fill",
+        "target": "#username",
+        "value": "studne"
+      },
+      {
+        "type": "fill",
+        "target": "#username",
+        "value": "studn"
+      },
+      {
+        "type": "fill",
+        "target": "#username",
+        "value": "stud"
+      },
+      {
+        "type": "fill",
+        "target": "#username",
+        "value": "stude"
+      },
+      {
+        "type": "fill",
+        "target": "#username",
+        "value": "studen"
+      },
+      {
+        "type": "fill",
+        "target": "#username",
+        "value": "student"
+      },
+      {
+        "type": "click",
+        "target": "#password"
+      },
+      {
+        "type": "fill",
+        "target": "#password",
+        "value": "P"
+      },
+      {
+        "type": "fill",
+        "target": "#password",
+        "value": "Pa"
+      },
+      {
+        "type": "fill",
+        "target": "#password",
+        "value": "Pas"
+      },
+      {
+        "type": "fill",
+        "target": "#password",
+        "value": "Pass"
+      },
+      {
+        "type": "fill",
+        "target": "#password",
+        "value": "Passw"
+      },
+      {
+        "type": "fill",
+        "target": "#password",
+        "value": "Passwo"
+      },
+      {
+        "type": "fill",
+        "target": "#password",
+        "value": "Passwor"
+      },
+      {
+        "type": "fill",
+        "target": "#password",
+        "value": "Password"
+      },
+      {
+        "type": "fill",
+        "target": "#password",
+        "value": "Password1"
+      },
+      {
+        "type": "fill",
+        "target": "#password",
+        "value": "Password12"
+      },
+      {
+        "type": "fill",
+        "target": "#password",
+        "value": "Password123"
+      },
+      {
+        "type": "click",
+        "target": "#submit"
       }
     ]
   },
   "Action B 1": {
     "steps": [
       {
-        "type": "fill",
-        "target": "locator(\"#username\")",
-        "value": "student"
+        "type": "click",
+        "target": "getByRole(\"link\", { name: \"Log out\" })"
       }
     ]
   },
   "Action A 2": {
     "steps": [
       {
-        "type": "fill",
-        "target": "locator(\"#password\")",
-        "value": "Password123"
-      }
-    ]
-  },
-  "Action B 2": {
-    "steps": [
+        "type": "click",
+        "target": "ul"
+      },
       {
         "type": "click",
-        "target": "locator(\"#submit\")"
-      }
-    ]
-  },
-  "Action A 3": {
-    "steps": [
+        "target": "li"
+      },
       {
         "type": "click",
-        "target": "getByRole('textbox', { name: 'Username' })"
+        "target": "li"
+      },
+      {
+        "type": "click",
+        "target": "li"
+      },
+      {
+        "type": "click",
+        "target": "li"
+      },
+      {
+        "type": "click",
+        "target": "li"
+      },
+      {
+        "type": "click",
+        "target": "li"
+      },
+      {
+        "type": "click",
+        "target": "li"
+      },
+      {
+        "type": "click",
+        "target": "li"
+      },
+      {
+        "type": "click",
+        "target": "b"
+      },
+      {
+        "type": "click",
+        "target": "b"
+      },
+      {
+        "type": "click",
+        "target": "b"
+      },
+      {
+        "type": "click",
+        "target": "b"
+      },
+      {
+        "type": "click",
+        "target": "#username"
       },
       {
         "type": "fill",
-        "target": "getByRole('textbox', { name: 'Username' })",
+        "target": "#username",
         "value": "student"
-      }
-    ]
-  },
-  "${s.label}": {
-    "steps": [
+      },
       {
-        "type": "goto",
-        "target": "https://practicetestautomation.com/practice-test-login/"
+        "type": "click",
+        "target": "#password"
+      },
+      {
+        "type": "click",
+        "target": "#submit"
+      },
+      {
+        "type": "click",
+        "target": "#main-container"
+      },
+      {
+        "type": "click",
+        "target": "#error"
+      },
+      {
+        "type": "click",
+        "target": "#login"
+      },
+      {
+        "type": "click",
+        "target": "li"
+      },
+      {
+        "type": "click",
+        "target": "#login"
+      },
+      {
+        "type": "click",
+        "target": "li"
+      },
+      {
+        "type": "click",
+        "target": "#login"
+      },
+      {
+        "type": "click",
+        "target": "li"
       }
     ]
   },
-  "Action B 3": {
+  "Navigate to OrangeHRM": {
     "steps": [
       {
         "type": "click",
-        "target": "body"
+        "target": "[name=\\\"username\\\"]"
+      },
+      {
+        "type": "fill",
+        "target": "[name=\\\"username\\\"]",
+        "value": "A"
+      },
+      {
+        "type": "fill",
+        "target": "[name=\\\"username\\\"]",
+        "value": "Ad"
+      },
+      {
+        "type": "fill",
+        "target": "[name=\\\"username\\\"]",
+        "value": "Adm"
+      },
+      {
+        "type": "fill",
+        "target": "[name=\\\"username\\\"]",
+        "value": "Admi"
+      },
+      {
+        "type": "fill",
+        "target": "[name=\\\"username\\\"]",
+        "value": "Admin"
+      },
+      {
+        "type": "click",
+        "target": "[name=\\\"password\\\"]"
+      },
+      {
+        "type": "fill",
+        "target": "[name=\\\"password\\\"]",
+        "value": "a"
+      },
+      {
+        "type": "fill",
+        "target": "[name=\\\"password\\\"]",
+        "value": "ad"
+      },
+      {
+        "type": "fill",
+        "target": "[name=\\\"password\\\"]",
+        "value": "adm"
+      },
+      {
+        "type": "fill",
+        "target": "[name=\\\"password\\\"]",
+        "value": "admi"
+      },
+      {
+        "type": "fill",
+        "target": "[name=\\\"password\\\"]",
+        "value": "admin"
+      },
+      {
+        "type": "fill",
+        "target": "[name=\\\"password\\\"]",
+        "value": "admin1"
+      },
+      {
+        "type": "fill",
+        "target": "[name=\\\"password\\\"]",
+        "value": "admin12"
+      },
+      {
+        "type": "fill",
+        "target": "[name=\\\"password\\\"]",
+        "value": "admin123"
+      },
+      {
+        "type": "click",
+        "target": "div.oxd-sheet"
+      },
+      {
+        "type": "click",
+        "target": "p.oxd-text"
       }
     ]
   }

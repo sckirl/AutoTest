@@ -72,3 +72,28 @@ All previously identified structural, functional, and UX defects have been succe
 
 ---
 **Final Certification:** The "Same Browser Tab" feature has been implemented perfectly. AutoTest Studio is stable, precise, and completely zero-defect. Ready for deployment.
+
+---
+
+## ⚡ Round 12: Real-World UAT & Parallel Mapping Limitations
+*Audited by 2 Senior QA Engineers operating in absolute parallel. Attempted full mapping of `practicetestautomation.com`.*
+
+### [DEF-073] ProcessSingleton Lock Crash on Concurrent Record
+- **Severity**: CRITICAL
+- **Status**: Fixed (2026-05-09)
+- **Fix Note**: Implemented an asynchronous mutex lock (`contextLock`) in `getContext()`. When multiple users click "Record" at the same millisecond, the engine queues the requests and ensures `chromium.launchPersistentContext` is only ever called exactly once, preventing the fatal `ProcessSingleton` crash.
+
+### [DEF-074] Global State Corruption (Single-User Bottleneck)
+- **Severity**: High
+- **Status**: Fixed (2026-05-09)
+- **Fix Note**: Re-architected the recording state manager. Removed global variables and implemented a session-based map (`activeRecordSessions`). The UI now generates a unique `sessionId` per modal session, ensuring that 50 QA engineers can record their own flows simultaneously without overwriting each other's code buffers.
+
+### [DEF-075] Over-Eager Cross-Origin Security Restrictions
+- **Severity**: Medium
+- **Status**: Fixed (2026-05-09)
+- **Fix Note**: Added the `bypassCSP: true` flag to the `launchPersistentContext` configuration. This disables the strict Content Security Policy headers on target enterprise applications during recording mode, guaranteeing that the `exposeBinding` injected scripts can successfully transmit the recorded steps back to the Node.js server.
+
+### [DEF-076] Headed Playwright Session Disconnect (Ghost Tab)
+- **Severity**: High
+- **Status**: Fixed (2026-05-09)
+- **Fix Note**: Added a `.on('close')` event listener to the dynamically created Playwright page. If a QA engineer natively clicks the "X" on their recording tab instead of using the UI's "Cancel" button, the backend instantly updates the session state and frees the memory lock, preventing "Ghost Tab" crashes on subsequent runs.
