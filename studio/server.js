@@ -16,6 +16,7 @@ const RESULTS_DIR = path.join(__dirname, '../results');
 const ROOT_DIR = path.join(__dirname, '../');
 const MAPPINGS_PATH = path.join(CORE_DIR, 'mappings.json');
 const UPLOADED_EXCEL = path.join(ROOT_DIR, 'scenario_uploaded.xlsx');
+const RUNTIME_DATA_PATH = path.join(CORE_DIR, 'runtime_data.json');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, ROOT_DIR),
@@ -24,7 +25,26 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'studio-ui.html')));
-app.post('/upload', upload.single('excel'), (req, res) => res.json({ message: "Uploaded." }));
+app.post('/upload', upload.single('excel'), (req, res) => {
+    if (fs.existsSync(RUNTIME_DATA_PATH)) fs.unlinkSync(RUNTIME_DATA_PATH);
+    res.json({ message: "Uploaded." });
+});
+
+app.get('/data-matrix', (req, res) => {
+    try {
+        if (!fs.existsSync(RUNTIME_DATA_PATH)) return res.json({});
+        res.json(JSON.parse(fs.readFileSync(RUNTIME_DATA_PATH, 'utf8')));
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/data-matrix', (req, res) => {
+    try {
+        const payload = req.body;
+        if (typeof payload !== 'object' || payload === null) return res.status(400).json({ error: "Invalid payload." });
+        fs.writeFileSync(RUNTIME_DATA_PATH, JSON.stringify(payload, null, 2));
+        res.json({ message: "Saved." });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 app.get('/scan', (req, res) => {
     try {
@@ -38,6 +58,7 @@ app.get('/scan', (req, res) => {
         
         const stepMap = new Map();
         const scenarios = [];
+        const scenarioVariables = {};
         let currentScenario = null;
 
         // Hierarchical Parser: Detects A.1, A.2 and their steps
@@ -48,6 +69,7 @@ app.get('/scan', (req, res) => {
             if (scenarioNum.match(/^[A-Z]\.\d+/)) {
                 currentScenario = scenarioNum;
                 scenarios.push(currentScenario);
+                scenarioVariables[currentScenario] = new Set();
             } else if (currentScenario && scenarioNum.match(/^\d+$/) && label) {
                 // This is a step within a scenario
                 if (!stepMap.has(label)) {
@@ -60,10 +82,26 @@ app.get('/scan', (req, res) => {
                 } else {
                     stepMap.get(label).flows.push(currentScenario);
                 }
+
+                // Harvest variables for this scenario
+                if (mappings[label] && mappings[label].steps) {
+                    for (const action of mappings[label].steps) {
+                        const str = (action.target || "") + " " + (action.value || "");
+                        const matches = str.match(/\{([a-zA-Z0-9_]+)\}/g);
+                        if (matches) {
+                            matches.forEach(m => scenarioVariables[currentScenario].add(m.replace(/[{}]/g, '')));
+                        }
+                    }
+                }
             }
         }
 
-        res.json({ steps: Array.from(stepMap.values()), scenarios });
+        // Convert Sets to Arrays for JSON
+        for (const s of Object.keys(scenarioVariables)) {
+            scenarioVariables[s] = Array.from(scenarioVariables[s]);
+        }
+
+        res.json({ steps: Array.from(stepMap.values()), scenarios, scenarioVariables });
     } catch (err) { 
         console.error("Scan Error:", err);
         res.status(500).json({ error: err.message }); 
@@ -196,6 +234,7 @@ app.post('/restart', (req, res) => {
     try {
         fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
         if (fs.existsSync(UPLOADED_EXCEL)) fs.unlinkSync(UPLOADED_EXCEL);
+        if (fs.existsSync(RUNTIME_DATA_PATH)) fs.unlinkSync(RUNTIME_DATA_PATH);
         if (fs.existsSync(RESULTS_DIR)) {
             fs.rmSync(RESULTS_DIR, { recursive: true, force: true });
             fs.mkdirSync(RESULTS_DIR);
