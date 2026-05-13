@@ -16,7 +16,17 @@
       {
         "type": "fill",
         "target": "getByRole('textbox', { name: 'Username' })",
-        "value": "Admin"
+        "value": "{}"
+      },
+      {
+        "type": "press",
+        "target": "getByRole('textbox', { name: 'Username' })",
+        "value": "ArrowLeft"
+      },
+      {
+        "type": "fill",
+        "target": "getByRole('textbox', { name: 'Username' })",
+        "value": "{Username}"
       }
     ]
   },
@@ -45,11 +55,22 @@
     "steps": [
       {
         "type": "click",
-        "target": "getByText('Time at WorkPunched')"
+        "target": "getByRole('textbox', { name: 'Type for hints...' })"
       },
       {
-        "type": "click",
-        "target": "getByText('Quick LaunchAssign LeaveLeave')"
+        "type": "fill",
+        "target": "getByRole('textbox', { name: 'Type for hints...' })",
+        "value": "{}"
+      },
+      {
+        "type": "press",
+        "target": "getByRole('textbox', { name: 'Type for hints...' })",
+        "value": "ArrowLeft"
+      },
+      {
+        "type": "fill",
+        "target": "getByRole('textbox', { name: 'Type for hints...' })",
+        "value": "{name}"
       }
     ]
   },

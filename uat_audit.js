@@ -1,86 +1,52 @@
-const http = require('http');
+const { chromium } = require('playwright');
 const fs = require('fs');
-const path = require('path');
 
-async function uploadExcel() {
-    return new Promise((resolve, reject) => {
-        const boundary = '--------------------------' + Date.now();
-        const filePath = path.join(process.cwd(), 'scenario_qa.xlsx');
-        const fileData = fs.readFileSync(filePath);
-        
-        const postData = Buffer.concat([
-            Buffer.from(`--${boundary}\r\n`),
-            Buffer.from(`Content-Disposition: form-data; name="excel"; filename="scenario_qa.xlsx"\r\n`),
-            Buffer.from(`Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n`),
-            fileData,
-            Buffer.from(`\r\n--${boundary}--\r\n`)
-        ]);
-
-        const req = http.request('http://localhost:3000/upload', {
-            method: 'POST',
-            headers: {
-                'Content-Type': `multipart/form-data; boundary=${boundary}`,
-                'Content-Length': postData.length
-            }
-        }, (res) => {
-            let body = '';
-            res.on('data', d => body += d);
-            res.on('end', () => resolve(JSON.parse(body)));
-        });
-        req.on('error', reject);
-        req.write(postData);
-        req.end();
-    });
-}
-
-async function triggerRun() {
-    return new Promise((resolve, reject) => {
-        const req = http.request('http://localhost:3000/run', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        }, (res) => {
-            let body = '';
-            res.on('data', d => body += d);
-            res.on('end', () => resolve(JSON.parse(body)));
-        });
-        req.write(JSON.stringify({ workers: 4 }));
-        req.end();
-    });
-}
-
-async function pollStatus() {
-    return new Promise((resolve) => {
-        const interval = setInterval(() => {
-            http.get('http://localhost:3000/run-status', (res) => {
-                let body = '';
-                res.on('data', d => body += d);
-                res.on('end', () => {
-                    const data = JSON.parse(body);
-                    console.log(`Phase: ${data.phase} - ${data.message}`);
-                    if (data.phase === 'completed' || data.phase === 'failed') {
-                        clearInterval(interval);
-                        resolve(data);
-                    }
-                });
-            });
-        }, 2000);
-    });
-}
-
-async function main() {
-    console.log('--- STARTING UAT E2E AUDIT ---');
+(async () => {
+    console.log("🔍 Starting Rigorous Tab Audit...");
+    const browser = await chromium.launch({ headless: true }); // headless for the tool environment
+    const page = await browser.newPage();
+    
     try {
-        const upload = await uploadExcel();
-        console.log('Upload Result:', upload);
+        await page.goto('http://localhost:3000');
         
-        const run = await triggerRun();
-        console.log('Run Trigger Result:', run);
-        
-        const finalStatus = await pollStatus();
-        console.log('Final Execution Status:', finalStatus);
-    } catch (err) {
-        console.error('UAT AUDIT CRASHED:', err);
-    }
-}
+        // 1. Audit Studio Tab
+        console.log("   - Auditing Studio Tab...");
+        await page.click('#tab-studio');
+        const studioVisible = await page.isVisible('#view-studio');
+        console.log(`     - Studio View Visible: ${studioVisible}`);
+        if (!studioVisible) throw new Error("Studio tab failed");
 
-main();
+        // 2. Audit Mappings Tab
+        console.log("   - Auditing Mappings Tab...");
+        await page.click('#tab-mappings');
+        const mappingsVisible = await page.isVisible('#view-mappings');
+        console.log(`     - Mappings View Visible: ${mappingsVisible}`);
+        if (!mappingsVisible) throw new Error("Mappings tab failed");
+
+        // 3. Audit Data Matrix Tab
+        console.log("   - Auditing Data Matrix Tab...");
+        await page.click('#tab-data-matrix');
+        const dataMatrixVisible = await page.isVisible('#view-data-matrix');
+        console.log(`     - Data Matrix View Visible: ${dataMatrixVisible}`);
+        if (!dataMatrixVisible) throw new Error("Data Matrix tab failed");
+        
+        // Check for "Save Data Matrix" button
+        const saveBtn = await page.isVisible('button:has-text("Save Data Matrix")');
+        console.log(`     - Save Button Visible: ${saveBtn}`);
+        if (!saveBtn) throw new Error("Data Matrix Save button missing");
+
+        // 4. Audit Execution Tab
+        console.log("   - Auditing Execution Tab...");
+        await page.click('#tab-execution');
+        const executionVisible = await page.isVisible('#view-execution');
+        console.log(`     - Execution View Visible: ${executionVisible}`);
+        if (!executionVisible) throw new Error("Execution tab failed");
+
+        console.log("✅ Audit Passed: All menus are present and functional.");
+    } catch (e) {
+        console.error(`❌ Audit Failed: ${e.message}`);
+        process.exit(1);
+    } finally {
+        await browser.close();
+    }
+})();

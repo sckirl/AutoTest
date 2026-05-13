@@ -68,6 +68,7 @@
             <div class="tab-strip">
                 <button class="tab tab-active" onclick="switchTab('studio')" id="tab-studio">Studio</button>
                 <button class="tab tab-mappings" onclick="switchTab('mappings')" id="tab-mappings">Mappings</button>
+                <button class="tab tab-data-matrix" onclick="switchTab('data-matrix')" id="tab-data-matrix">Data Matrix</button>
                 <button class="tab tab-execution" onclick="switchTab('execution')" id="tab-execution">Execution</button>
             </div>
 
@@ -85,6 +86,14 @@
 
             <div id="view-mappings" class="view-pane">
                 <div id="step-list-ui"></div>
+            </div>
+
+            <div id="view-data-matrix" class="view-pane">
+                <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <p style="color:var(--muted-text); margin:0;">Manage runtime data overrides. Variables are auto-harvested from mappings.</p>
+                    <button class="btn btn-primary" style="width:auto;" onclick="saveDataMatrix()">Save Data Matrix</button>
+                </div>
+                <div id="data-matrix-ui"></div>
             </div>
 
             <div id="view-execution" class="view-pane">
@@ -117,7 +126,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const res = await fetch('/run-status');
             const data = await res.json();
-            if (data.phase !== 'idle') {
+            if (data.phase && data.phase !== 'idle') {
                 switchTab('execution');
                 pollRunStatus();
             }
@@ -129,6 +138,7 @@
             document.getElementById(`view-${tabId}`).classList.add('active');
             document.getElementById(`tab-${tabId}`).classList.remove('tab-inactive');
             document.getElementById(`tab-${tabId}`).classList.add('tab-active');
+            if (tabId === 'data-matrix') initDataMatrix();
         }
 
         dropZone.onclick = () => fileInput.click();
@@ -153,6 +163,7 @@
                         <button class="btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}" onclick="openRecordModal('${s.label}', '${s.scenarioId}')">
                             ${s.status === 'missing' ? 'Record' : 'Re-Map'}
                         </button>
+                        <button class="btn btn-secondary" onclick="openManualModal('${s.label}', '${s.scenarioId}')">Manual</button>
                     </div>
                 `;
                 stepListUi.appendChild(row);
@@ -166,7 +177,7 @@
             isUserInteracting = false; codeArea.value = ''; modal.style.display = 'flex';
             const res = await fetch('/record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, scenarioId, url }) });
             if (res.ok) {
-                startAutoRecordPolling();
+                // Polling logic removed as per user request to keep mapping stable
             } else {
                 const err = await res.json();
                 alert(err.error);
@@ -174,9 +185,20 @@
             }
         }
 
+        function openManualModal(label, scenarioId) {
+            currentLabel = label; currentScenarioId = scenarioId;
+            isUserInteracting = true; codeArea.value = ''; modal.style.display = 'flex';
+            document.getElementById('modal-title').innerText = `Manual Map: "${label}"`;
+            fetch(`/mapping/${encodeURIComponent(label)}`).then(r => r.json()).then(data => {
+                if (data.mapping) {
+                    // Reconstruct code if needed, or just show placeholder
+                    codeArea.placeholder = "Paste your Playwright code here...";
+                }
+            });
+        }
+
         function closeModal() {
             modal.style.display = 'none';
-            fetch('/record-cancel', { method: 'POST' });
         }
 
         async function saveMapping() {
@@ -207,18 +229,6 @@
             statusBox.innerText = msg; statusBox.style.display = 'block'; statusBox.className = `status-${type}`;
         }
 
-        function startAutoRecordPolling() {
-            const interval = setInterval(async () => {
-                if (modal.style.display !== 'flex' || isUserInteracting) {
-                    if (modal.style.display !== 'flex') clearInterval(interval);
-                    return;
-                }
-                const res = await fetch('/recording-latest');
-                const data = await res.json();
-                if (data.code) codeArea.value = data.code;
-            }, 1200);
-        }
-
         async function restartSystem() {
             if (confirm("Reset everything?")) { await fetch('/restart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clearMappings: true }) }); location.reload(); }
         }
@@ -229,6 +239,119 @@
                 if (text) { codeArea.value = text; isUserInteracting = true; }
             } catch (e) { alert("Clipboard access denied."); }
         }
+
+        // --- DATA MATRIX UI LOGIC ---
+        let currentRuntimeData = {};
+        let currentScenarioVariables = {};
+        let currentScenariosList = [];
+
+        async function initDataMatrix() {
+            const scanRes = await fetch('/scan');
+            const scanData = await scanRes.json();
+            currentScenarioVariables = scanData.scenarioVariables || {};
+            currentScenariosList = scanData.scenarios || [];
+
+            const dataRes = await fetch('/data-matrix');
+            currentRuntimeData = await dataRes.json();
+            
+            renderDataMatrixUI();
+        }
+
+        function renderDataMatrixUI() {
+            const container = document.getElementById('data-matrix-ui');
+            container.innerHTML = '';
+
+            for (const scenarioId of currentScenariosList) {
+                const vars = currentScenarioVariables[scenarioId] || [];
+                if (vars.length === 0) continue; 
+
+                const iterations = currentRuntimeData[scenarioId] || [];
+
+                const acc = document.createElement('div');
+                acc.style.border = '1px solid #ddd';
+                acc.style.marginBottom = '10px';
+                acc.style.borderRadius = '6px';
+                acc.style.overflow = 'hidden';
+
+                const header = document.createElement('div');
+                header.style.background = '#f5f5f5';
+                header.style.padding = '12px 16px';
+                header.style.cursor = 'pointer';
+                header.style.fontWeight = '600';
+                header.innerHTML = `Scenario: ${scenarioId} <span style="float:right">${iterations.length} Iterations</span>`;
+                
+                const body = document.createElement('div');
+                body.style.padding = '16px';
+                body.style.display = 'block'; 
+                
+                header.onclick = () => body.style.display = body.style.display === 'none' ? 'block' : 'none';
+
+                let html = `<table style="width:100%; border-collapse: collapse; margin-bottom: 10px;">`;
+                html += `<tr>`;
+                vars.forEach(v => html += `<th style="text-align:left; padding:8px; border-bottom:2px solid #ddd;">{${v}}</th>`);
+                html += `<th style="width: 50px;"></th></tr>`;
+
+                iterations.forEach((iter, idx) => {
+                    html += `<tr data-scen="${scenarioId}" data-idx="${idx}">`;
+                    vars.forEach(v => {
+                        html += `<td style="padding:4px; border-bottom:1px solid #eee;"><input type="text" style="width:100%; padding:6px; box-sizing:border-box;" data-var="${v}" value="${String(iter[v] || '').replace(/"/g, '&quot;')}" /></td>`;
+                    });
+                    html += `<td><button class="btn btn-danger" style="padding:4px 8px;" onclick="removeDataRow('${scenarioId}', ${idx})">X</button></td></tr>`;
+                });
+                html += `</table>`;
+                html += `<button type="button" class="btn btn-secondary" onclick="addDataRow('${scenarioId}')">+ Add Iteration</button>`;
+
+                body.innerHTML = html;
+                acc.appendChild(header);
+                acc.appendChild(body);
+                container.appendChild(acc);
+            }
+
+            if (container.innerHTML === '') {
+                container.innerHTML = '<p style="color:var(--muted-text); text-align:center; padding: 40px;">No {Variables} found in your mapped steps. Map steps with {Variable} to enable data-driven overrides.</p>';
+            }
+        }
+
+        window.addDataRow = (scenarioId) => {
+            saveDataMatrixStateFromDOM(); 
+            if (!currentRuntimeData[scenarioId] || !Array.isArray(currentRuntimeData[scenarioId])) {
+                currentRuntimeData[scenarioId] = [];
+            }
+            currentRuntimeData[scenarioId].push({});
+            renderDataMatrixUI(); 
+        };
+
+        window.removeDataRow = (scenarioId, idx) => {
+            saveDataMatrixStateFromDOM(); 
+            if (Array.isArray(currentRuntimeData[scenarioId])) {
+                currentRuntimeData[scenarioId].splice(idx, 1);
+            }
+            renderDataMatrixUI();
+        };
+
+        function saveDataMatrixStateFromDOM() {
+            document.querySelectorAll('#data-matrix-ui tr[data-scen]').forEach(tr => {
+                const scen = tr.getAttribute('data-scen');
+                const idx = parseInt(tr.getAttribute('data-idx'));
+                if (!currentRuntimeData[scen] || !Array.isArray(currentRuntimeData[scen])) currentRuntimeData[scen] = [];
+                if (!currentRuntimeData[scen][idx]) currentRuntimeData[scen][idx] = {};
+                
+                tr.querySelectorAll('input').forEach(input => {
+                    const v = input.getAttribute('data-var');
+                    currentRuntimeData[scen][idx][v] = input.value;
+                });
+            });
+        }
+
+        window.saveDataMatrix = async () => {
+            saveDataMatrixStateFromDOM();
+            const res = await fetch('/data-matrix', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(currentRuntimeData) 
+            });
+            if (res.ok) alert("Saved!");
+        };
     </script>
 </body>
 </html>
