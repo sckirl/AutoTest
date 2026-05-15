@@ -103,11 +103,13 @@ function compile() {
                             code += `            await markLocator(${locator}); await ${locator}.press(${q(finalValue || 'Enter')});\n`;
                         }
                     }
+                    code += `            await page.waitForTimeout(500);\n`;
                     code += `            await page.screenshot({ path: path.join(resultsDir, 'STEP_${i + 1}_' + '${safeKey}'.replace(/[^a-z0-9]/gi, '_') + '.png') });\n`;
                     code += `            });\n\n`;
                 }
             }
             code += `        } finally {\n`;
+            code += `            await page.waitForTimeout(500);\n`;
             code += `            await page.screenshot({ path: path.join(resultsDir, 'FINAL.png') });\n`;
             code += `        }\n    });\n\n`;
         }

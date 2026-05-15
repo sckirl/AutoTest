@@ -60,4 +60,27 @@ The following defects persist or have re-appeared due to architectural instabili
 - **Status**: Intermittent regression.
 
 ---
+## 🚨 ROUND 15: RUTHLESS PM & QA AUDIT (CRITICAL MVP FAILURES)
+
+The current MVP has been reviewed by the Elite PM and QA teams and found to be utterly unacceptable for a production-grade testing suite. The following fundamental flaws persist and must be addressed immediately in the next deployment cycle.
+
+### [DEF-077] CRITICAL: Ghost UI / White PNG Screenshots (Timing Race Condition)
+- **Severity**: CRITICAL
+- **Description**: The Playwright engine takes screenshots indiscriminately immediately after a `click()` or `goto()` action is fired. Because modern SPAs are asynchronous, Playwright captures the frame *before* the DOM has fully painted or network requests have settled, resulting in completely blank or white PNG files in the `/results` folder. 
+- **Impact**: The core value proposition of visual tracking is entirely broken. The evidence generated is useless.
+- **Harsh Criticism**: This is a rookie automation mistake. Failing to implement `waitForLoadState('networkidle')`, `waitForTimeout()`, or explicit element-ready checks before screenshotting demonstrates a fundamental lack of understanding of asynchronous web rendering.
+
+### [DEF-078] CRITICAL: Data-Driven Testing (DDT) Iteration & Overrides Silently Failing
+- **Severity**: CRITICAL
+- **Description**: The Accordion Data Matrix fails to reliably inject user-provided data into the executing Playwright tests. If a user defines variables like `{Username}` or `{Password}`, the system fails to correctly iterate over each variable matrix row. 
+- **Impact**: DDT is a core enterprise requirement. The failure to map runtime UI data to the compiler's loop means the testing suite cannot actually perform data-driven execution.
+- **Harsh Criticism**: The architectural connection between the frontend UI saving the matrix state (`runtime_data.json`) and the backend compiler executing it is completely disjointed. Relying on an asynchronous UI `alert("Saved!")` blocking the execution sequence, combined with brittle fallback logic inside the compiler, creates a fragmented and useless DDT experience.
+
+### [DEF-079] HIGH: Missing Platform Context Indicators (Web vs Mobile)
+- **Severity**: HIGH
+- **Description**: The application provides absolutely zero visual indication of whether the user is recording or executing tests against a Mobile Application or a Web Website.
+- **Impact**: The user is forced to guess the environmental context, which is unacceptable for an omnichannel testing suite.
+- **Harsh Criticism**: An enterprise tool cannot have an ambiguous target environment. If we are integrating Appium, the UI must immediately and visually declare the active testing context (e.g., distinct badges or device overlays) to prevent disastrous cross-platform mapping errors.
+
+---
 **Handover Summary:** The previous agent failed to establish a robust process lifecycle or a reliable data parser. The core issue is the reliance on regex for code manipulation and the lack of proper async process orchestration.

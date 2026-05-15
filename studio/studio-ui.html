@@ -210,6 +210,7 @@
 
         runBtn.onclick = async () => {
             runBtn.disabled = true;
+            try { await window.saveDataMatrix(true); } catch(e) {} // Auto-save Data Matrix
             await fetch('/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workers: document.getElementById('worker-count').value }) });
             switchTab('execution'); pollRunStatus();
         };

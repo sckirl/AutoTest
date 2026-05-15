@@ -58,3 +58,16 @@ Adhering to the Zero-Trust Constitution:
 - **SIT is Strictly Dev-Owned:** No QA agent touches any Track A, B, or C output until the SIT gate for that track is formally logged.
 - **QA Extensive Testing:** Begins only after all Dev SIT gates pass. QA owns this phase fully, executing dynamic payloads against the Data Matrix to test for state corruption and compiler syntax breakages.
 - **UAT Acceptance Gate:** UAT opens only when Track D passes completely. This confirms the new Data Matrix seamlessly integrates with the existing perfect execution flow without breaking parallel workers or UI tracing.
+
+## 5. Phase 5: Appium Integration & Omnichannel Mapping
+**Status:** PENDING CRITICAL BUG FIXES (DEF-077, DEF-078)
+Once the core engine is stabilized and all CRITICAL defects are resolved, the AutoTest architecture must expand to support Omnichannel orchestration (Web + Mobile).
+
+**Track E: Appium Mobile Engine**
+- **Mobile Execution:** Integrate Appium to mirror the Playwright web mapping experience natively for iOS and Android applications.
+- **Unified Blueprint:** The existing Excel blueprint format will be leveraged for both Web and Mobile. The engine will intelligently route `.click()` or `.fill()` actions to either the Playwright context or the Appium context based on the target specification.
+- **Workflow Parity:** The manual recording and mapping process for Mobile must be fundamentally identical to the Web experience, ensuring QA engineers do not need to learn two different workflows.
+
+**Track F: Contextual Visual Indicators (Web vs. Mobile)**
+- **Explicit Context Badges:** The AutoTest UI will be updated to display persistent, unmistakable visual indicators declaring the active testing context (e.g., a "MOBILE" badge with device icons vs. a "WEB" badge with browser icons).
+- **Zero Ambiguity Mandate:** The user must NEVER have to guess whether they are mapping for a mobile application or a website. This context must be explicitly requested when generating the scenario and visually enforced throughout the Studio, Mappings, Data Matrix, and Execution tabs.
