@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './core',
+  testMatch: '**/*.spec.ts', // Exclude .test.ts files which are for jest
   timeout: 60000,
   fullyParallel: false, 
   forbidOnly: !!process.env.CI,
