@@ -64,7 +64,7 @@
 
     <div class="container">
         <div class="card">
-            <h1>AUTOMATION STUDIO</h1>
+            <h1>AUTOMATION STUDIO <span style="font-size:14px; background:var(--deep-corporate); color:white; padding:4px 8px; border-radius:4px; margin-left:10px;">WEB</span><span style="font-size:14px; background:#ddd; color:#888; padding:4px 8px; border-radius:4px; margin-left:10px;">MOBILE</span></h1>
             <div class="tab-strip">
                 <button class="tab tab-active" onclick="switchTab('studio')" id="tab-studio">Studio</button>
                 <button class="tab tab-mappings" onclick="switchTab('mappings')" id="tab-mappings">Mappings</button>
@@ -351,7 +351,7 @@
                 headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify(currentRuntimeData) 
             });
-            if (res.ok) alert("Saved!");
+            if (res.ok) showStatus("Saved!", "success");
         };
     </script>
 </body>

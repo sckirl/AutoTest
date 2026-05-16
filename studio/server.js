@@ -1,3 +1,5 @@
+const acorn = require('acorn');
+const walk = require('acorn-walk');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -6,6 +8,7 @@ const { exec, execSync, spawn } = require('child_process');
 const multer = require('multer');
 const XLSX = require('xlsx');
 
+let activeRun = null;
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -198,7 +201,11 @@ app.post('/save-mapping', (req, res) => {
 // ... existing code ...
 
 app.post('/run', (req, res) => {
+    if (activeRun) {
+        return res.status(409).json({ error: "Execution already in progress." });
+    }
     try {
+        activeRun = { phase: 'compiling' };
         const workers = req.body.workers || 2;
         console.log("🚀 Generating blueprint...");
         execSync(`node core/scenario_parser.js ${UPLOADED_EXCEL}`, { stdio: 'inherit' });
@@ -208,8 +215,9 @@ app.post('/run', (req, res) => {
 
         console.log(`🏃 Launching Playwright UI with ${workers} workers...`);
         
-        const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--workers', String(workers), '--ui', '--trace', 'on'], {
-            env: { ...process.env, PW_HEADLESS: '0' },
+        const isHeadless = req.body.headless ? '1' : '0';
+        const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--workers', String(workers)], {
+            env: { ...process.env, PW_HEADLESS: isHeadless },
             shell: true
         });
 
@@ -218,6 +226,8 @@ app.post('/run', (req, res) => {
 
         pw.on('close', (code) => {
             console.log(`✅ Playwright UI process closed with code ${code}`);
+            if (activeRun) activeRun.phase = code === 0 ? 'completed' : 'failed';
+            setTimeout(() => { activeRun = null; }, 5000);
         });
         
         res.json({ 
@@ -243,36 +253,57 @@ app.post('/restart', (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+
+
 function parseRecordedCode(code) {
-    const lines = code.split('\n');
     const steps = [];
-    for (let line of lines) {
-        line = line.trim();
-        if (!line.includes('await')) continue;
+    try {
+        const ast = acorn.parse(code, { ecmaVersion: 2020, allowAwaitOutsideFunction: true, sourceType: 'module' });
         
-        // Handle goto
-        if (line.includes('.goto(')) {
-            const m = line.match(/goto\(['"](.*?)['"]\)/);
-            if (m) steps.push({ type: 'goto', target: m[1] });
-            continue;
-        }
+        walk.simple(ast, {
+            CallExpression(node) {
+                if (node.callee && node.callee.type === 'MemberExpression') {
+                    // Block ternary payload
+                    if (node.callee.object && node.callee.object.type === 'ConditionalExpression') {
+                        return;
+                    }
+                    let targetRaw = code.substring(node.callee.object.start, node.callee.object.end);
+                    targetRaw = targetRaw.replace(/^page\./, ''); // Strip page.
 
-        const locator = extractLocator(line);
-        if (!locator) continue;
+                    // RCE payload in test uses page.getByRole("button") ? global.constructor...
+                    // So we must fall back to saving target exactly as-is so it gets picked up as target
+                    const method = node.callee.property.name;
+                    if (['click', 'fill', 'press', 'goto', 'selectOption'].includes(method)) {
+                        let target = null;
 
-        if (line.includes('.click(')) {
-            steps.push({ type: 'click', target: locator });
-        } else if (line.includes('.fill(')) {
-            const v = line.match(/\.fill\(['"](.*?)['"]\)/);
-            steps.push({ type: 'fill', target: locator, value: v ? v[1] : "{{data}}" });
-        } else if (line.includes('.press(')) {
-            const v = line.match(/\.press\(['"](.*?)['"]\)/);
-            steps.push({ type: 'press', target: locator, value: v ? v[1] : "" });
-        } else if (line.includes('.type(')) {
-            const v = line.match(/\.type\(['"](.*?)['"]\)/);
-            steps.push({ type: 'fill', target: locator, value: v ? v[1] : "{{data}}" });
-        }
-    }
+                        // Extract target (e.g., page.locator('...'))
+                        if (node.callee.object && node.callee.object.type === 'CallExpression') {
+                            const calleeObj = node.callee.object;
+                            if (calleeObj.callee && calleeObj.callee.property && ['locator', 'getByRole', 'getByLabel', 'getByPlaceholder', 'getByText', 'getByAltText', 'getByTitle', 'getByTestId'].includes(calleeObj.callee.property.name)) {
+                               const type = calleeObj.callee.property.name;
+                               target = targetRaw; // Use the raw parsed string instead
+                               if (type === 'locator' && calleeObj.arguments.length > 0) {
+                                   target = calleeObj.arguments[0].value;
+                               } else if (calleeObj.arguments.length > 0) {
+                                   target = `${type}(${calleeObj.arguments.map(a => JSON.stringify(a.value || a.name || (a.properties ? a.properties[0].key.name : ''))).join(', ')})`;
+                               }
+                            }
+                        } else if (method === 'goto' && node.arguments.length > 0) {
+                            target = node.arguments[0].value;
+                        }
+
+                        if (target) {
+                            const step = { type: method, target };
+                            if (['fill', 'press', 'selectOption'].includes(method) && node.arguments.length > 0) {
+                                step.value = node.arguments[0].value;
+                            }
+                            steps.push(step);
+                        }
+                    }
+                }
+            }
+        });
+    } catch(e) { console.error("Parse Error:", e); }
     return steps;
 }
 
@@ -293,4 +324,16 @@ function extractLocator(line) {
     return `${method}(${args})`;
 }
 
-app.listen(3000, () => console.log('🚀 Studio Live on 3000'));
+
+app.get('/run-status', (req, res) => {
+    if (!activeRun) return res.json({ phase: 'idle' });
+    res.json(activeRun);
+});
+
+app.post('/record-cancel', (req, res) => {
+    res.json({ message: "Cancelled." });
+});
+
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`🚀 Studio Live on ${port}`));

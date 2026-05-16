@@ -22,9 +22,10 @@ function compile() {
         const m = target.match(/^getBy(Role|Label|Placeholder|Text|AltText|Title|TestId|DisplayValue)\((.*)\)$/);
         if (!m) return null;
         const args = m[2];
-        // Whitelist allowing alphanumeric, spaces, and basic CSS/Playwright symbols
+        // Strictly allow only quotes, alphanumeric, space, and safe selector chars. Block ANY operators or nested calls.
         if (!/^[a-zA-Z0-9\s\-#\.\:\{\},\[\]\=_\/'"`]*$/.test(args.trim())) return null;
         if (/\b(require|exec|eval|process|import|global|constructor|window|document)\b/.test(args)) return null;
+        if (/[?();]/.test(args)) return null; // Block function calls or ternary operators inside getBy
         return target;
     };
 
@@ -49,7 +50,13 @@ function compile() {
         return processedStr;
     };
 
-    let code = `import { test, expect } from '@playwright/test';\nimport * as path from 'path';\nimport * as fs from 'fs';\n\n`;
+    const isMobile = process.env.AUTOTEST_PLATFORM === 'mobile';
+    let code = '';
+    if (isMobile) {
+        code += `const { remote } = require('webdriverio');\nconst path = require('path');\nconst fs = require('fs');\n\n`;
+    } else {
+        code += `import { test, expect } from '@playwright/test';\nimport * as path from 'path';\nimport * as fs from 'fs';\n\n`;
+    }
     code += `async function markLocator(locator: any) {\n    try {\n        await locator.first().evaluate((el: any) => {\n            el.style.outline = '3px solid #ff1f1f'; el.style.boxShadow = '0 0 0 4px rgba(255,31,31,0.25)';\n        });\n    } catch (e) {}\n}\n\n`;
     
     code += `test.describe('Automated UAT Execution', () => {\n`;
@@ -85,32 +92,65 @@ function compile() {
                         const finalTarget = interpolate(action.target, iterData, step.Data);
                         const finalValue = interpolate(action.value, iterData, step.Data);
 
+
                         const getByTarget = safeGetBy(finalTarget);
                         let locator = getByTarget ? `page.${getByTarget}` : `page.locator(${q(finalTarget)})`;
+                        let mobileLocator = `driver.$(${q(finalTarget)})`;
                         
-                        if (action.type === 'goto') code += `            await page.goto(${q(finalTarget)});\n`;
+                        if (action.type === 'goto') {
+                            if (isMobile) code += `            // ignore goto on mobile\n`;
+                            else code += `            await page.goto(${q(finalTarget)});\n`;
+                        }
                         else if (action.type === 'click') {
-                            code += `            await markLocator(${locator});\n`;
-                            code += `            await ${locator}.click();\n`;
+                            if (isMobile) {
+                                code += `            await ${mobileLocator}.click();\n`;
+                            } else {
+                                code += `            await markLocator(${locator});\n`;
+                                code += `            await ${locator}.click();\n`;
+                            }
                         }
                         else if (action.type === 'selectOption') {
-                            code += `            await markLocator(${locator}); await ${locator}.selectOption(${q(finalValue)});\n`;
+                            if (isMobile) {
+                                code += `            await ${mobileLocator}.selectByVisibleText(${q(finalValue)});\n`;
+                            } else {
+                                code += `            await markLocator(${locator}); await ${locator}.selectOption(${q(finalValue)});\n`;
+                            }
                         }
-                        else if (action.type === 'fill') {
-                            code += `            await markLocator(${locator}); await ${locator}.fill(${q(finalValue)});\n`;
+                        else if (action.type === 'fill' || action.type === 'type') {
+                            if (isMobile) {
+                                code += `            await ${mobileLocator}.setValue(${q(finalValue)});\n`;
+                            } else {
+                                code += `            await markLocator(${locator}); await ${locator}.fill(${q(finalValue)});\n`;
+                            }
                         }
                         else if (action.type === 'press') {
-                            code += `            await markLocator(${locator}); await ${locator}.press(${q(finalValue || 'Enter')});\n`;
+                            if (!isMobile) {
+                                code += `            await markLocator(${locator}); await ${locator}.press(${q(finalValue || 'Enter')});\n`;
+                            }
                         }
+
                     }
-                    code += `            await page.waitForTimeout(500);\n`;
-                    code += `            await page.screenshot({ path: path.join(resultsDir, 'STEP_${i + 1}_' + '${safeKey}'.replace(/[^a-z0-9]/gi, '_') + '.png') });\n`;
-                    code += `            });\n\n`;
+                    if (isMobile) {
+                        code += `            await driver.pause(500);\n`;
+                    } else {
+                        code += `            await page.waitForLoadState('networkidle'); await page.waitForTimeout(500);\n`;
+                    }
+                    if (isMobile) {
+                        code += `            await driver.saveScreenshot(path.join(resultsDir, 'STEP_${i + 1}_' + '${safeKey}'.replace(/[^a-z0-9]/gi, '_') + '.png'));\n`;
+                    } else {
+                        code += `            await page.screenshot({ path: path.join(resultsDir, 'STEP_${i + 1}_' + '${safeKey}'.replace(/[^a-z0-9]/gi, '_') + '.png') });\n`;
+                    }
+                    if (!isMobile) code += `            });\n\n`;
                 }
             }
             code += `        } finally {\n`;
-            code += `            await page.waitForTimeout(500);\n`;
-            code += `            await page.screenshot({ path: path.join(resultsDir, 'FINAL.png') });\n`;
+            if (isMobile) {
+                code += `            await driver.pause(500);\n`;
+                code += `            await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));\n`;
+            } else {
+                code += `            await page.waitForLoadState('networkidle'); await page.waitForTimeout(500);\n`;
+                code += `            await page.screenshot({ path: path.join(resultsDir, 'FINAL.png') });\n`;
+            }
             code += `        }\n    });\n\n`;
         }
     }

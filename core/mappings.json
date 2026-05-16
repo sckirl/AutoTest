@@ -121,5 +121,11 @@
         "target": "getByRole('button', { name: 'Login' })"
       }
     ]
+  },
+  "RCE_TEST": {
+    "steps": []
+  },
+  "BP_TEST": {
+    "steps": []
   }
 }

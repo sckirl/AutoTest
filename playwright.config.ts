@@ -9,7 +9,7 @@ export default defineConfig({
   workers: Number(process.env.AUTOTEST_WORKERS || 2),
   reporter: 'list',
   use: {
-    headless: false,
+    headless: process.env.PW_HEADLESS === '1',
     screenshot: 'off',
     trace: 'off',
   },
