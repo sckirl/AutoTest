@@ -325,6 +325,8 @@ function extractLocator(line) {
 }
 
 
+app.get('/env', (req, res) => { res.json({ platform: process.env.AUTOTEST_PLATFORM }); });
+
 app.get('/run-status', (req, res) => {
     if (!activeRun) return res.json({ phase: 'idle' });
     res.json(activeRun);
