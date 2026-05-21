@@ -120,15 +120,15 @@ fetch('/env').then(r=>r.json()).then(d => {
             </div>
 
             <div id="view-studio" class="view-pane active">
-                <div id="drop-zone" class="drop-zone">Click or Drop Scenario Excel (.xlsx)</div>
+                <div id="drop-zone" class="drop-zone" title="Drag and drop your Scenario Excel here to begin parsing">Click or Drop Scenario Excel (.xlsx)</div>
                 <input type="file" id="file-input" style="display:none" accept=".xlsx" />
                 
                 <div style="margin-top: 20px;">
                     <label style="display:block; font-weight:600; color:var(--muted-text); margin-bottom:5px;">Base URL for Recording:</label>
-                    <input type="text" id="base-url" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;" placeholder="https://example.com" />
+                    <input type="text" id="base-url" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;" placeholder="https://example.com" title="Optional: Set the starting URL for the recording session" />
                 </div>
 
-                <button class="btn btn-danger" style="margin-top:20px; width: 100%" onclick="restartSystem()">Reset System (Wipe All)</button>
+                <button class="btn btn-danger" style="margin-top:20px; width: 100%" onclick="restartSystem()" title="DANGEROUS: Wipes all current mappings and uploads. Use for fresh start.">Reset System (Wipe All)</button>
             </div>
 
             <div id="view-mappings" class="view-pane">
@@ -246,10 +246,10 @@ fetch('/env').then(r=>r.json()).then(d => {
                 row.innerHTML = `
                     <div class="step-label">${s.label} <small>(Flow: ${s.scenarioId})</small></div>
                     <div style="display:flex; gap:8px">
-                        <button class="btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}" onclick="openRecordModal('${s.label}', '${s.scenarioId}')">
+                        <button class="btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}" onclick="openRecordModal('${s.label}', '${s.scenarioId}')" title="${s.status === 'missing' ? 'Open the browser to record this action' : 'Re-record this action to update the mapping'}">
                             ${s.status === 'missing' ? 'Record' : 'Re-Map'}
                         </button>
-                        <button class="btn btn-secondary" onclick="openManualModal('${s.label}', '${s.scenarioId}')">Manual</button>
+                        <button class="btn btn-secondary" onclick="openManualModal('${s.label}', '${s.scenarioId}')" title="Manually edit or paste Playwright code for this action">Manual</button>
                     </div>
                 `;
                 stepListUi.appendChild(row);
