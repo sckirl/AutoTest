@@ -1,6 +1,7 @@
 {
   "A.1": [
-    { "Unique": "data_row_1" },
-    { "Unique": "data_row_2" }
+    {
+      "Val": "O'Brien\"Quote"
+    }
   ]
 }
