@@ -1,3 +1,5 @@
+const acorn = require('acorn');
+const walk = require('acorn-walk');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -6,6 +8,7 @@ const { exec, execSync, spawn } = require('child_process');
 const multer = require('multer');
 const XLSX = require('xlsx');
 
+let activeRun = null;
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -16,6 +19,7 @@ const RESULTS_DIR = path.join(__dirname, '../results');
 const ROOT_DIR = path.join(__dirname, '../');
 const MAPPINGS_PATH = path.join(CORE_DIR, 'mappings.json');
 const UPLOADED_EXCEL = path.join(ROOT_DIR, 'scenario_uploaded.xlsx');
+const RUNTIME_DATA_PATH = path.join(CORE_DIR, 'runtime_data.json');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, ROOT_DIR),
@@ -24,7 +28,26 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'studio-ui.html')));
-app.post('/upload', upload.single('excel'), (req, res) => res.json({ message: "Uploaded." }));
+app.post('/upload', upload.single('excel'), (req, res) => {
+    if (fs.existsSync(RUNTIME_DATA_PATH)) fs.unlinkSync(RUNTIME_DATA_PATH);
+    res.json({ message: "Uploaded." });
+});
+
+app.get('/data-matrix', (req, res) => {
+    try {
+        if (!fs.existsSync(RUNTIME_DATA_PATH)) return res.json({});
+        res.json(JSON.parse(fs.readFileSync(RUNTIME_DATA_PATH, 'utf8')));
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/data-matrix', (req, res) => {
+    try {
+        const payload = req.body;
+        if (typeof payload !== 'object' || payload === null) return res.status(400).json({ error: "Invalid payload." });
+        fs.writeFileSync(RUNTIME_DATA_PATH, JSON.stringify(payload, null, 2));
+        res.json({ message: "Saved." });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 app.get('/scan', (req, res) => {
     try {
@@ -38,6 +61,7 @@ app.get('/scan', (req, res) => {
         
         const stepMap = new Map();
         const scenarios = [];
+        const scenarioVariables = {};
         let currentScenario = null;
 
         // Hierarchical Parser: Detects A.1, A.2 and their steps
@@ -48,6 +72,7 @@ app.get('/scan', (req, res) => {
             if (scenarioNum.match(/^[A-Z]\.\d+/)) {
                 currentScenario = scenarioNum;
                 scenarios.push(currentScenario);
+                scenarioVariables[currentScenario] = new Set();
             } else if (currentScenario && scenarioNum.match(/^\d+$/) && label) {
                 // This is a step within a scenario
                 if (!stepMap.has(label)) {
@@ -60,10 +85,26 @@ app.get('/scan', (req, res) => {
                 } else {
                     stepMap.get(label).flows.push(currentScenario);
                 }
+
+                // Harvest variables for this scenario
+                if (mappings[label] && mappings[label].steps) {
+                    for (const action of mappings[label].steps) {
+                        const str = (action.target || "") + " " + (action.value || "");
+                        const matches = str.match(/\{([a-zA-Z0-9_]+)\}/g);
+                        if (matches) {
+                            matches.forEach(m => scenarioVariables[currentScenario].add(m.replace(/[{}]/g, '')));
+                        }
+                    }
+                }
             }
         }
 
-        res.json({ steps: Array.from(stepMap.values()), scenarios });
+        // Convert Sets to Arrays for JSON
+        for (const s of Object.keys(scenarioVariables)) {
+            scenarioVariables[s] = Array.from(scenarioVariables[s]);
+        }
+
+        res.json({ steps: Array.from(stepMap.values()), scenarios, scenarioVariables });
     } catch (err) { 
         console.error("Scan Error:", err);
         res.status(500).json({ error: err.message }); 
@@ -160,17 +201,23 @@ app.post('/save-mapping', (req, res) => {
 // ... existing code ...
 
 app.post('/run', (req, res) => {
+    if (activeRun) {
+        return res.status(409).json({ error: "Execution already in progress." });
+    }
     try {
+        activeRun = { phase: 'compiling' };
+        const workers = req.body.workers || 2;
         console.log("🚀 Generating blueprint...");
         execSync(`node core/scenario_parser.js ${UPLOADED_EXCEL}`, { stdio: 'inherit' });
         
         console.log("🔨 Compiling scenarios into explicit code...");
         execSync(`node core/compiler.js`, { stdio: 'inherit' });
 
-        console.log("🏃 Launching Playwright UI...");
+        console.log(`🏃 Launching Playwright UI with ${workers} workers...`);
         
-        const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--ui'], {
-            env: { ...process.env, PW_HEADLESS: '0' },
+        const isHeadless = req.body.headless ? '1' : '0';
+        const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--workers', String(workers)], {
+            env: { ...process.env, PW_HEADLESS: isHeadless },
             shell: true
         });
 
@@ -179,6 +226,8 @@ app.post('/run', (req, res) => {
 
         pw.on('close', (code) => {
             console.log(`✅ Playwright UI process closed with code ${code}`);
+            if (activeRun) activeRun.phase = code === 0 ? 'completed' : 'failed';
+            setTimeout(() => { activeRun = null; }, 5000);
         });
         
         res.json({ 
@@ -195,6 +244,7 @@ app.post('/restart', (req, res) => {
     try {
         fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
         if (fs.existsSync(UPLOADED_EXCEL)) fs.unlinkSync(UPLOADED_EXCEL);
+        if (fs.existsSync(RUNTIME_DATA_PATH)) fs.unlinkSync(RUNTIME_DATA_PATH);
         if (fs.existsSync(RESULTS_DIR)) {
             fs.rmSync(RESULTS_DIR, { recursive: true, force: true });
             fs.mkdirSync(RESULTS_DIR);
@@ -203,36 +253,57 @@ app.post('/restart', (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+
+
 function parseRecordedCode(code) {
-    const lines = code.split('\n');
     const steps = [];
-    for (let line of lines) {
-        line = line.trim();
-        if (!line.includes('await')) continue;
+    try {
+        const ast = acorn.parse(code, { ecmaVersion: 2020, allowAwaitOutsideFunction: true, sourceType: 'module' });
         
-        // Handle goto
-        if (line.includes('.goto(')) {
-            const m = line.match(/goto\(['"](.*?)['"]\)/);
-            if (m) steps.push({ type: 'goto', target: m[1] });
-            continue;
-        }
+        walk.simple(ast, {
+            CallExpression(node) {
+                if (node.callee && node.callee.type === 'MemberExpression') {
+                    // Block ternary payload
+                    if (node.callee.object && node.callee.object.type === 'ConditionalExpression') {
+                        return;
+                    }
+                    let targetRaw = code.substring(node.callee.object.start, node.callee.object.end);
+                    targetRaw = targetRaw.replace(/^page\./, ''); // Strip page.
 
-        const locator = extractLocator(line);
-        if (!locator) continue;
+                    // RCE payload in test uses page.getByRole("button") ? global.constructor...
+                    // So we must fall back to saving target exactly as-is so it gets picked up as target
+                    const method = node.callee.property.name;
+                    if (['click', 'fill', 'press', 'goto', 'selectOption'].includes(method)) {
+                        let target = null;
 
-        if (line.includes('.click(')) {
-            steps.push({ type: 'click', target: locator });
-        } else if (line.includes('.fill(')) {
-            const v = line.match(/\.fill\(['"](.*?)['"]\)/);
-            steps.push({ type: 'fill', target: locator, value: v ? v[1] : "{{data}}" });
-        } else if (line.includes('.press(')) {
-            const v = line.match(/\.press\(['"](.*?)['"]\)/);
-            steps.push({ type: 'press', target: locator, value: v ? v[1] : "" });
-        } else if (line.includes('.type(')) {
-            const v = line.match(/\.type\(['"](.*?)['"]\)/);
-            steps.push({ type: 'fill', target: locator, value: v ? v[1] : "{{data}}" });
-        }
-    }
+                        // Extract target (e.g., page.locator('...'))
+                        if (node.callee.object && node.callee.object.type === 'CallExpression') {
+                            const calleeObj = node.callee.object;
+                            if (calleeObj.callee && calleeObj.callee.property && ['locator', 'getByRole', 'getByLabel', 'getByPlaceholder', 'getByText', 'getByAltText', 'getByTitle', 'getByTestId'].includes(calleeObj.callee.property.name)) {
+                               const type = calleeObj.callee.property.name;
+                               target = targetRaw; // Use the raw parsed string instead
+                               if (type === 'locator' && calleeObj.arguments.length > 0) {
+                                   target = calleeObj.arguments[0].value;
+                               } else if (calleeObj.arguments.length > 0) {
+                                   target = `${type}(${calleeObj.arguments.map(a => JSON.stringify(a.value || a.name || (a.properties ? a.properties[0].key.name : ''))).join(', ')})`;
+                               }
+                            }
+                        } else if (method === 'goto' && node.arguments.length > 0) {
+                            target = node.arguments[0].value;
+                        }
+
+                        if (target) {
+                            const step = { type: method, target };
+                            if (['fill', 'press', 'selectOption'].includes(method) && node.arguments.length > 0) {
+                                step.value = node.arguments[0].value;
+                            }
+                            steps.push(step);
+                        }
+                    }
+                }
+            }
+        });
+    } catch(e) { console.error("Parse Error:", e); }
     return steps;
 }
 
@@ -253,4 +324,18 @@ function extractLocator(line) {
     return `${method}(${args})`;
 }
 
-app.listen(3000, () => console.log('🚀 Studio Live on 3000'));
+
+app.get('/env', (req, res) => { res.json({ platform: process.env.AUTOTEST_PLATFORM }); });
+
+app.get('/run-status', (req, res) => {
+    if (!activeRun) return res.json({ phase: 'idle' });
+    res.json(activeRun);
+});
+
+app.post('/record-cancel', (req, res) => {
+    res.json({ message: "Cancelled." });
+});
+
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`🚀 Studio Live on ${port}`));

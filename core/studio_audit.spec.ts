@@ -12,7 +12,7 @@ test('Zero-Defect Studio E2E Audit: Upload, Chain-Record, Global-Sync, Run', asy
     const fileChooserPromise = page.waitForEvent('filechooser');
     await page.click('#drop-zone');
     const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(path.join(process.cwd(), 'scenario_pukat.xlsx'));
+    await fileChooser.setFiles(path.join(process.cwd(), 'scenario_uploaded.xlsx'));
     await page.waitForSelector('.step-row');
     console.log('✅ Multi-Scenario Upload Verified');
 

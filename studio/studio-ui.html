@@ -2,48 +2,72 @@
 <html>
 <head>
     <title>Automation Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 40px; background: #f0f2f5; color: #1c1e21; line-height: 1.6; }
+        :root {
+            --primary-action: #0D5CAB;
+            --deep-corporate: #014C8B;
+            --surface: #FFFFFF;
+            --danger: #C8463F;
+            --muted-text: #65748B;
+        }
+        body { font-family: 'Montserrat', sans-serif; padding: 40px; background: #F5F5F5; color: #333; line-height: 1.6; }
         .container { max-width: 1000px; margin: 0 auto; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid #e5e7eb; }
-        h1 { margin: 0; color: #1877f2; display: flex; align-items: center; gap: 12px; font-size: 28px; }
-        .subtitle { color: #65676b; margin-bottom: 25px; }
+        .card { background: var(--surface); padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid #E5E7EB; min-height: 400px; }
+        h1 { margin: 0; color: var(--deep-corporate); display: flex; align-items: center; gap: 12px; font-size: 32px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
         
-        .drop-zone { border: 2px dashed #bec3c9; padding: 30px; text-align: center; border-radius: 12px; cursor: pointer; transition: 0.3s; background: #fafafa; margin: 20px 0; }
-        .drop-zone.dragover { border-color: #1877f2; background: #e7f3ff; }
+        .tab-strip { display: flex; gap: 4px; margin: 20px 0 0; }
+        .tab { cursor: pointer; padding: 10px 24px; border-radius: 6px 6px 0 0; font-weight: 600; border: none; font-family: 'Montserrat', sans-serif; }
+        .tab-active { background: var(--surface); border-top: 8px solid var(--primary-action); color: var(--deep-corporate); }
+        .tab-inactive { background: var(--primary-action); color: #fff; opacity: 0.8; }
 
-        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px; display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
-        .btn-primary { background: #1877f2; color: white; width: 100%; }
-        .btn-record { background: #e7f3ff; color: #1877f2; border: 1px solid #1877f2; }
-        .btn-danger { background: #fff; color: #d93025; border: 1px solid #d93025; margin-top: 20px; }
-        .btn:disabled { background: #ebedf0; color: #bcc0c4; cursor: not-allowed; opacity: 0.6; }
+        .view-pane { display: none; padding-top: 20px; }
+        .view-pane.active { display: block; }
+
+        .drop-zone { border: 2px dashed #C4C4C4; padding: 50px 30px; text-align: center; border-radius: 8px; cursor: pointer; background: var(--surface); margin: 20px 0; font-weight: 500; }
+        .btn { padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: var(--primary-action); color: #FFFFFF; width: 100%; }
+        .btn-secondary { background: #F5F5F5; color: #333; border: 1px solid #ddd; }
+        .btn-danger { background: #FFFFFF; color: var(--danger); border: 1px solid var(--danger); }
+        .btn-record { background: #FFF5F4; color: var(--danger); border: 1px solid var(--danger); }
+        .btn-remap { background: #FFFFFF; color: var(--primary-action); border: 1px solid var(--primary-action); }
         
-        #status-box { margin-top: 20px; padding: 16px; border-radius: 8px; font-size: 14px; display: none; border-left: 4px solid #1877f2; }
-        .status-info { background: #e7f3ff; color: #1877f2; }
-        .status-success { background: #e8f5e9; color: #2e7d32; border-left-color: #2e7d32; }
+        #status-box { margin-top: 20px; padding: 16px; border-radius: 4px; font-size: 13px; display: none; font-weight: 600; }
+        .status-info { background: #F0F8FF; color: var(--primary-action); border-left: 4px solid var(--primary-action); }
+        .status-success { background: #F6FFED; color: var(--primary-action); border-left: 4px solid var(--primary-action); }
+        .status-error { background: #FFF5F4; color: var(--danger); border-left: 4px solid var(--danger); }
         
-        .script-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; margin-top: 15px; }
-        .step-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid #f0f2f5; }
-        .step-label { font-weight: 600; font-size: 14px; }
-        .step-instruction { color: #65676b; font-size: 12px; }
-        
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-        .badge-missing { background: #fff1f0; color: #d93025; }
-        .badge-mapped { background: #f6ffed; color: #52c41a; }
-        
+        .step-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border: 1px solid #E5E7EB; border-radius: 6px; margin-bottom: 8px; background: var(--surface); }
+        .step-row:nth-child(odd) { background: #E2E2EB; }
+        .step-label { font-weight: 600; font-size: 16px; color: var(--deep-corporate); }
+
         .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 600px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
-        textarea { width: 100%; height: 180px; margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 12px; box-sizing: border-box; resize: none; }
+        .modal-content { background: #FFFFFF; padding: 30px; border-radius: 8px; width: 750px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        textarea { width: 100%; height: 400px; margin: 15px 0; padding: 12px; border: 1px solid #C4C4C4; border-radius: 8px; font-family: 'Open Sans', monospace; font-size: 13px; box-sizing: border-box; resize: none; }
     </style>
-</head>
+<script>
+fetch('/env').then(r=>r.json()).then(d => {
+    const badge = document.getElementById('env-badge');
+    if (d.platform === 'mobile') {
+        badge.innerText = 'MOBILE';
+        badge.style.background = '#e74c3c';
+    } else {
+        badge.innerText = 'WEB';
+        badge.style.background = 'var(--deep-corporate)';
+    }
+});
+</script></head>
 <body>
     <div id="record-modal" class="modal">
         <div class="modal-content">
-            <h3 id="modal-title">Finalize Action Code</h3>
-            <p style="font-size: 13px;">1. Replay will happen first. Wait for the <b>Inspector</b> window.<br>2. Use the <b>"Record"</b> button in Inspector to capture your action.<br>3. <b>Copy the code line</b> from Inspector (e.g. <code>await page.click(...)</code>).<br>4. Paste it here and click Sync.</p>
-            <textarea id="recorded-code" placeholder="Paste your recorded code here..."></textarea>
+            <h3 id="modal-title" style="margin-top:0;">Record Action</h3>
+            <p style="font-size: 13px; color: var(--muted-text);">Manual Recording Active. Use the browser to record steps, then click "Sync & Save". User edits block auto-polling.</p>
+            <textarea id="recorded-code" placeholder="Wait for browser to open..."></textarea>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-secondary" onclick="pasteFromClipboard()">Paste Clipboard</button>
+                <button class="btn btn-danger" onclick="closeModal()">Cancel & Close Replay</button>
                 <button class="btn btn-primary" style="width: auto;" onclick="saveMapping()">Sync & Save Action</button>
             </div>
         </div>
@@ -51,35 +75,46 @@
 
     <div class="container">
         <div class="card">
-            <h1>🚀 Automation Studio</h1>
-            <p class="subtitle">Multi-Flow UAT Engine (A.1, B.1, C.1 Support)</p>
-            
-            <div id="drop-zone" class="drop-zone">
-                <span id="drop-text">📄 Drag & Drop <b>scenario.xlsx</b> here or <b>Click to Upload</b></span>
-                <input type="file" id="file-input" style="opacity: 0.01; width: 1px; height: 1px; position: absolute;" accept=".xlsx" />
+            <h1>AUTOMATION STUDIO <span id="env-badge" style="font-size:14px; background:var(--deep-corporate); color:white; padding:4px 8px; border-radius:4px; margin-left:10px;">WEB</span></h1>
+            <div class="tab-strip">
+                <button class="tab tab-active" onclick="switchTab('studio')" id="tab-studio">Studio</button>
+                <button class="tab tab-mappings" onclick="switchTab('mappings')" id="tab-mappings">Mappings</button>
+                <button class="tab tab-data-matrix" onclick="switchTab('data-matrix')" id="tab-data-matrix">Data Matrix</button>
+                <button class="tab tab-execution" onclick="switchTab('execution')" id="tab-execution">Execution</button>
             </div>
 
-            <div id="url-config" style="margin-bottom: 20px;">
-                <label style="font-size: 13px; font-weight: 600; color: #65676b;">Base URL for Recording:</label>
-                <input type="text" id="base-url" placeholder="https://youtube.com" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 5px;" />
-            </div>
-
-            <div id="status-box"></div>
-
-            <div id="step-scan-container" style="display: none;">
-                <h3>📋 Unique Action Library</h3>
-                <p style="font-size: 12px; color: #65676b; margin-bottom: 10px;">If a label appears in multiple flows, record it once to map it globally.</p>
-                <div id="step-list-ui" class="script-box"></div>
-                <div style="margin-top: 30px;">
-                    <button class="btn btn-primary" id="run-btn" disabled>🚀 Execute Test Scenarios</button>
+            <div id="view-studio" class="view-pane active">
+                <div id="drop-zone" class="drop-zone">Click or Drop Scenario Excel (.xlsx)</div>
+                <input type="file" id="file-input" style="display:none" accept=".xlsx" />
+                
+                <div style="margin-top: 20px;">
+                    <label style="display:block; font-weight:600; color:var(--muted-text); margin-bottom:5px;">Base URL for Recording:</label>
+                    <input type="text" id="base-url" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;" placeholder="https://example.com" />
                 </div>
-            </div>
-        </div>
 
-        <div class="card" style="background: #f7f8fa; border: none;">
-            <h3 style="margin:0;">⚙️ Project Workspace</h3>
-            <p style="font-size: 13px;">Wiping the system will delete all results and mappings for a clean slate.</p>
-            <button class="btn btn-danger" onclick="restartSystem()">Reset System (Wipe All)</button>
+                <button class="btn btn-danger" style="margin-top:20px; width: 100%" onclick="restartSystem()">Reset System (Wipe All)</button>
+            </div>
+
+            <div id="view-mappings" class="view-pane">
+                <div id="step-list-ui"></div>
+            </div>
+
+            <div id="view-data-matrix" class="view-pane">
+                <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <p style="color:var(--muted-text); margin:0;">Manage runtime data overrides. Variables are auto-harvested from mappings.</p>
+                    <button class="btn btn-primary" style="width:auto;" onclick="saveDataMatrix()">Save Data Matrix</button>
+                </div>
+                <div id="data-matrix-ui"></div>
+            </div>
+
+            <div id="view-execution" class="view-pane">
+                <div style="margin-bottom:20px; background: #eee; padding: 20px; border-radius: 8px;">
+                    Workers: <input type="number" id="worker-count" value="4" min="1" max="16" style="padding:8px; border-radius:6px; border:1px solid #ddd" />
+                </div>
+                <button class="btn btn-primary" id="run-btn">Execute Test Scenarios</button>
+                <button class="btn btn-danger" id="cancel-run-btn" style="display:none; margin-top:10px; width:100%" onclick="cancelRun()">Cancel Execution</button>
+                <div id="status-box"></div>
+            </div>
         </div>
     </div>
 
@@ -88,126 +123,247 @@
         const fileInput = document.getElementById('file-input');
         const runBtn = document.getElementById('run-btn');
         const statusBox = document.getElementById('status-box');
-        const dropText = document.getElementById('drop-text');
         const stepListUi = document.getElementById('step-list-ui');
         const modal = document.getElementById('record-modal');
         const codeArea = document.getElementById('recorded-code');
 
         let currentLabel = "";
         let currentScenarioId = "";
+        let isUserInteracting = false;
+
+        codeArea.onfocus = () => isUserInteracting = true;
+        codeArea.oninput = () => isUserInteracting = true;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const res = await fetch('/run-status');
+            const data = await res.json();
+            if (data.phase && data.phase !== 'idle') {
+                switchTab('execution');
+                pollRunStatus();
+            }
+        });
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => { t.classList.remove('tab-active'); t.classList.add('tab-inactive'); });
+            document.getElementById(`view-${tabId}`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.remove('tab-inactive');
+            document.getElementById(`tab-${tabId}`).classList.add('tab-active');
+            if (tabId === 'data-matrix') initDataMatrix();
+        }
 
         dropZone.onclick = () => fileInput.click();
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
-        dropZone.ondrop = (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            handleFile(e.dataTransfer.files[0]);
-        };
         fileInput.onchange = (e) => handleFile(e.target.files[0]);
 
         async function handleFile(file) {
-            if (!file) return;
-            const formData = new FormData();
-            formData.append('excel', file);
-            showStatus("⏳ Processing scenarios...", "info");
+            const formData = new FormData(); formData.append('excel', file);
             const res = await fetch('/upload', { method: 'POST', body: formData });
-            if (res.ok) {
-                showStatus("✅ Excel Loaded.", "success");
-                await scanSteps();
-            }
+            if (res.ok) { await scanSteps(); switchTab('mappings'); }
         }
 
         async function scanSteps() {
             const res = await fetch('/scan');
             const data = await res.json();
-            document.getElementById('step-scan-container').style.display = 'block';
-            let allMapped = true;
-            
-            stepListUi.innerHTML = data.steps.map(s => {
-                if (s.status === 'missing') allMapped = false;
-                return `
-                <div class="step-row">
-                    <div>
-                        <div class="step-label">${s.label}</div>
-                        <div class="step-instruction">Scenario: ${s.scenarioId}</div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span class="badge ${s.status === 'mapped' ? 'badge-mapped' : 'badge-missing'}">${s.status}</span>
-                        <button class="btn btn-record" onclick="openRecordModal('${s.label}', '${s.scenarioId}')">
-                            ${s.status === 'missing' ? '⏺ Record' : '🔄 Re-Map'}
+            stepListUi.innerHTML = '';
+            data.steps.forEach(s => {
+                const row = document.createElement('div');
+                row.className = 'step-row';
+                row.innerHTML = `
+                    <div class="step-label">${s.label} <small>(Flow: ${s.scenarioId})</small></div>
+                    <div style="display:flex; gap:8px">
+                        <button class="btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}" onclick="openRecordModal('${s.label}', '${s.scenarioId}')">
+                            ${s.status === 'missing' ? 'Record' : 'Re-Map'}
                         </button>
+                        <button class="btn btn-secondary" onclick="openManualModal('${s.label}', '${s.scenarioId}')">Manual</button>
                     </div>
-                </div>`;
-            }).join('');
-            
-            runBtn.disabled = !allMapped;
-            if (allMapped && data.steps.length > 0) {
-                showStatus("✨ All unique actions mapped. Ready to execute flows.", "success");
-            }
+                `;
+                stepListUi.appendChild(row);
+            });
+            runBtn.disabled = data.steps.filter(s => s.status === 'mapped').length === 0;
         }
 
         async function openRecordModal(label, scenarioId) {
-            currentLabel = label;
-            currentScenarioId = scenarioId;
-            const baseUrl = document.getElementById('base-url').value;
-            
-            document.getElementById('modal-title').innerText = `Record: "${label}"`;
-            modal.style.display = 'flex';
-            
-            showStatus(`🎬 Replaying preceding steps for context. Please look for the browser window.`, "info");
-            await fetch('/record', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ label, scenarioId, url: baseUrl })
+            currentLabel = label; currentScenarioId = scenarioId;
+            const url = document.getElementById('base-url').value;
+            isUserInteracting = false; codeArea.value = ''; modal.style.display = 'flex';
+            const res = await fetch('/record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, scenarioId, url }) });
+            if (res.ok) {
+                // Polling logic removed as per user request to keep mapping stable
+            } else {
+                const err = await res.json();
+                alert(err.error);
+                closeModal();
+            }
+        }
+
+        function openManualModal(label, scenarioId) {
+            currentLabel = label; currentScenarioId = scenarioId;
+            isUserInteracting = true; codeArea.value = ''; modal.style.display = 'flex';
+            document.getElementById('modal-title').innerText = `Manual Map: "${label}"`;
+            fetch(`/mapping/${encodeURIComponent(label)}`).then(r => r.json()).then(data => {
+                if (data.mapping) {
+                    // Reconstruct code if needed, or just show placeholder
+                    codeArea.placeholder = "Paste your Playwright code here...";
+                }
             });
         }
 
-        function closeModal() { modal.style.display = 'none'; codeArea.value = ''; }
+        function closeModal() {
+            modal.style.display = 'none';
+        }
 
         async function saveMapping() {
-            const code = codeArea.value.trim();
-            if (!code) return alert("Please paste the recorded code.");
-            const res = await fetch('/save-mapping', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ label: currentLabel, code })
-            });
-            if (res.ok) {
-                closeModal();
-                await scanSteps();
-                showStatus(`✅ Mapped "${currentLabel}" globally.`, "success");
-            }
+            const res = await fetch('/save-mapping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label: currentLabel, code: codeArea.value }) });
+            const data = await res.json();
+            if (res.ok) { modal.style.display = 'none'; await scanSteps(); }
+            else { alert(data.error); }
         }
 
         runBtn.onclick = async () => {
             runBtn.disabled = true;
-            runBtn.innerText = "🚀 Launching Playwright UI...";
-            showStatus("⏳ Launching Playwright Interactive UI on your desktop...", "info");
-            
-            const res = await fetch('/run', { method: 'POST' });
-            const data = await res.json();
-            
-            if (res.ok) {
-                showStatus(`✅ ${data.message} ${data.instruction}`, "success");
-                runBtn.innerText = "🚀 Run Test Execution";
-                runBtn.disabled = false;
-            } else {
-                showStatus("❌ Failed to launch UI. Check server logs.", "error");
-                runBtn.disabled = false;
-                runBtn.innerText = "🚀 Run Test Execution";
-            }
+            try { await window.saveDataMatrix(true); } catch(e) {} // Auto-save Data Matrix
+            await fetch('/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workers: document.getElementById('worker-count').value }) });
+            switchTab('execution'); pollRunStatus();
         };
-        function showStatus(msg, type) {
-            statusBox.innerText = msg;
-            statusBox.style.display = 'block';
-            statusBox.className = `status-${type}`;
+
+        function pollRunStatus() {
+            const interval = setInterval(async () => {
+                const res = await fetch('/run-status');
+                const data = await res.json();
+                showStatus(data.message, data.failureType === 'system' ? 'error' : 'info');
+                if (['completed', 'failed', 'cancelled'].includes(data.phase)) {
+                    clearInterval(interval); runBtn.disabled = false;
+                }
+            }, 1500);
         }
+
+        function showStatus(msg, type) {
+            statusBox.innerText = msg; statusBox.style.display = 'block'; statusBox.className = `status-${type}`;
+        }
+
         async function restartSystem() {
-            if (confirm("Wipe everything?")) {
-                await fetch('/restart', { method: 'POST' });
-                location.reload();
+            if (confirm("Reset everything?")) { await fetch('/restart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clearMappings: true }) }); location.reload(); }
+        }
+
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) { codeArea.value = text; isUserInteracting = true; }
+            } catch (e) { alert("Clipboard access denied."); }
+        }
+
+        // --- DATA MATRIX UI LOGIC ---
+        let currentRuntimeData = {};
+        let currentScenarioVariables = {};
+        let currentScenariosList = [];
+
+        async function initDataMatrix() {
+            const scanRes = await fetch('/scan');
+            const scanData = await scanRes.json();
+            currentScenarioVariables = scanData.scenarioVariables || {};
+            currentScenariosList = scanData.scenarios || [];
+
+            const dataRes = await fetch('/data-matrix');
+            currentRuntimeData = await dataRes.json();
+            
+            renderDataMatrixUI();
+        }
+
+        function renderDataMatrixUI() {
+            const container = document.getElementById('data-matrix-ui');
+            container.innerHTML = '';
+
+            for (const scenarioId of currentScenariosList) {
+                const vars = currentScenarioVariables[scenarioId] || [];
+                if (vars.length === 0) continue; 
+
+                const iterations = currentRuntimeData[scenarioId] || [];
+
+                const acc = document.createElement('div');
+                acc.style.border = '1px solid #ddd';
+                acc.style.marginBottom = '10px';
+                acc.style.borderRadius = '6px';
+                acc.style.overflow = 'hidden';
+
+                const header = document.createElement('div');
+                header.style.background = '#f5f5f5';
+                header.style.padding = '12px 16px';
+                header.style.cursor = 'pointer';
+                header.style.fontWeight = '600';
+                header.innerHTML = `Scenario: ${scenarioId} <span style="float:right">${iterations.length} Iterations</span>`;
+                
+                const body = document.createElement('div');
+                body.style.padding = '16px';
+                body.style.display = 'block'; 
+                
+                header.onclick = () => body.style.display = body.style.display === 'none' ? 'block' : 'none';
+
+                let html = `<table style="width:100%; border-collapse: collapse; margin-bottom: 10px;">`;
+                html += `<tr>`;
+                vars.forEach(v => html += `<th style="text-align:left; padding:8px; border-bottom:2px solid #ddd;">{${v}}</th>`);
+                html += `<th style="width: 50px;"></th></tr>`;
+
+                iterations.forEach((iter, idx) => {
+                    html += `<tr data-scen="${scenarioId}" data-idx="${idx}">`;
+                    vars.forEach(v => {
+                        html += `<td style="padding:4px; border-bottom:1px solid #eee;"><input type="text" style="width:100%; padding:6px; box-sizing:border-box;" data-var="${v}" value="${String(iter[v] || '').replace(/"/g, '&quot;')}" /></td>`;
+                    });
+                    html += `<td><button class="btn btn-danger" style="padding:4px 8px;" onclick="removeDataRow('${scenarioId}', ${idx})">X</button></td></tr>`;
+                });
+                html += `</table>`;
+                html += `<button type="button" class="btn btn-secondary" onclick="addDataRow('${scenarioId}')">+ Add Iteration</button>`;
+
+                body.innerHTML = html;
+                acc.appendChild(header);
+                acc.appendChild(body);
+                container.appendChild(acc);
+            }
+
+            if (container.innerHTML === '') {
+                container.innerHTML = '<p style="color:var(--muted-text); text-align:center; padding: 40px;">No {Variables} found in your mapped steps. Map steps with {Variable} to enable data-driven overrides.</p>';
             }
         }
+
+        window.addDataRow = (scenarioId) => {
+            saveDataMatrixStateFromDOM(); 
+            if (!currentRuntimeData[scenarioId] || !Array.isArray(currentRuntimeData[scenarioId])) {
+                currentRuntimeData[scenarioId] = [];
+            }
+            currentRuntimeData[scenarioId].push({});
+            renderDataMatrixUI(); 
+        };
+
+        window.removeDataRow = (scenarioId, idx) => {
+            saveDataMatrixStateFromDOM(); 
+            if (Array.isArray(currentRuntimeData[scenarioId])) {
+                currentRuntimeData[scenarioId].splice(idx, 1);
+            }
+            renderDataMatrixUI();
+        };
+
+        function saveDataMatrixStateFromDOM() {
+            document.querySelectorAll('#data-matrix-ui tr[data-scen]').forEach(tr => {
+                const scen = tr.getAttribute('data-scen');
+                const idx = parseInt(tr.getAttribute('data-idx'));
+                if (!currentRuntimeData[scen] || !Array.isArray(currentRuntimeData[scen])) currentRuntimeData[scen] = [];
+                if (!currentRuntimeData[scen][idx]) currentRuntimeData[scen][idx] = {};
+                
+                tr.querySelectorAll('input').forEach(input => {
+                    const v = input.getAttribute('data-var');
+                    currentRuntimeData[scen][idx][v] = input.value;
+                });
+            });
+        }
+
+        window.saveDataMatrix = async () => {
+            saveDataMatrixStateFromDOM();
+            const res = await fetch('/data-matrix', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(currentRuntimeData) 
+            });
+            if (res.ok) showStatus("Saved!", "success");
+        };
     </script>
 </body>
 </html>

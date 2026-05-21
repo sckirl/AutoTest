@@ -18,7 +18,15 @@ function generateBlueprintFromExcel(excelPath) {
 
     const blueprint = [];
     let currentScenario = null;
-    const globalStepDataCache = {}; // Cache to inherit data across scenarios
+    if (!rows.length || rows[0].length < 3) {
+        throw new Error('❌ Invalid Excel structure: expected scenario matrix with at least 3 columns.');
+    }
+
+    const headerScanRows = rows.slice(0, 5).map(r => r.map(c => String(c || '').toLowerCase()));
+    const hasScenarioHint = headerScanRows.some(r => r.some(c => c.includes('scenario')));
+    if (!hasScenarioHint) {
+        throw new Error('❌ Invalid Excel header: missing "Scenario" marker in first 5 rows.');
+    }
 
     for (let r = 1; r < rows.length; r++) {
         const scenarioNum = String(rows[r][1] || "").trim();
@@ -49,11 +57,6 @@ function generateBlueprintFromExcel(excelPath) {
                 } catch (e) {
                     data["default"] = testDataRaw;
                 }
-                // Save to global cache for future scenarios to inherit
-                globalStepDataCache[labelOrTitle] = { ...data };
-            } else if (globalStepDataCache[labelOrTitle]) {
-                // Inherit data from a previous scenario's execution of this step
-                Object.assign(data, globalStepDataCache[labelOrTitle]);
             }
 
             currentScenario.Flow.push({
@@ -64,6 +67,9 @@ function generateBlueprintFromExcel(excelPath) {
     }
 
     const outputPath = path.join(process.cwd(), 'core/blueprint.json');
+    if (blueprint.length === 0) {
+        throw new Error('❌ No scenarios parsed from the uploaded file.');
+    }
     fs.writeFileSync(outputPath, JSON.stringify(blueprint, null, 2));
     console.log(`✅ Blueprint generated successfully at ${outputPath}`);
 }
