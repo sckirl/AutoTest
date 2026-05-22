@@ -1,5 +1,4 @@
 # Dependencies
-node_modules/
 
 # Test/runtime artifacts
 results/
@@ -25,6 +24,11 @@ studio_audit.log
 .DS_Store
 .idea/
 .vscode/
+
+# Allow bundled binaries
+!bin/
+!bin/**/
+
 
 # Temporary files
 *.tmp
