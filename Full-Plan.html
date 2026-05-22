@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoTest — Agent Orchestration PRD</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080C14;
+    --surface: #0E1520;
+    --surface2: #141D2E;
+    --border: #1E2D45;
+    --border-bright: #2A4060;
+    --text: #C8D8EE;
+    --text-dim: #6A8AAA;
+    --text-bright: #EEF4FF;
+    --blue: #3B82F6;
+    --blue-dim: #1D3F7A;
+    --blue-glow: rgba(59,130,246,0.15);
+    --cyan: #22D3EE;
+    --green: #10B981;
+    --green-dim: #064E3B;
+    --yellow: #F59E0B;
+    --yellow-dim: #451A03;
+    --red: #EF4444;
+    --red-dim: #450A0A;
+    --purple: #A855F7;
+    --purple-dim: #2E1065;
+    --orange: #F97316;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 32px 48px 28px;
+    background: linear-gradient(180deg, #0B1220 0%, var(--bg) 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .logo {
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-bright);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--blue); }
+  .version-badge {
+    background: var(--blue-dim);
+    border: 1px solid var(--blue);
+    color: var(--blue);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+  }
+  .header h1 {
+    font-family: var(--sans);
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--text-bright);
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+  }
+  .header h1 em { color: var(--cyan); font-style: normal; }
+  .header-meta {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+  .meta-item .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* SYSTEM MEMORY ANCHOR */
+  .memory-anchor {
+    margin: 24px 48px;
+    background: var(--surface);
+    border: 1px solid var(--yellow);
+    border-left: 4px solid var(--yellow);
+    border-radius: 6px;
+    padding: 16px 20px;
+  }
+  .memory-anchor .label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--yellow);
+    margin-bottom: 8px;
+  }
+  .memory-anchor p {
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .memory-anchor strong { color: var(--yellow); }
+
+  /* LAYOUT */
+  .main { padding: 0 48px 64px; }
+
+  /* SECTION HEADERS */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 40px 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+  }
+  .section-title {
+    font-family: var(--sans);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-bright);
+  }
+  .section-badge {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+  .badge-critical { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+  .badge-active   { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+  .badge-pending  { background: var(--yellow-dim); color: var(--yellow); border: 1px solid var(--yellow); }
+  .badge-system   { background: var(--purple-dim); color: var(--purple); border: 1px solid var(--purple); }
+
+  /* AGENT ROSTER GRID */
+  .agent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .agent-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .agent-card:hover { border-color: var(--border-bright); }
+  .agent-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .agent-pm::before { background: var(--blue); }
+  .agent-ba::before { background: var(--cyan); }
+  .agent-dev::before { background: var(--green); }
+  .agent-flash::before { background: var(--orange); }
+  .agent-review::before { background: var(--purple); }
+  .agent-qa::before { background: var(--yellow); }
+
+  .agent-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .agent-name {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-bright);
+  }
+  .agent-model {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .model-pro  { background: var(--blue-dim); color: var(--blue); }
+  .model-flash { background: #1C1430; color: var(--orange); border: 1px solid var(--orange); }
+
+  .agent-role {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .agent-duties {
+    list-style: none;
+    padding: 0;
+  }
+  .agent-duties li {
+    font-size: 12px;
+    color: var(--text);
+    padding: 3px 0;
+    padding-left: 14px;
+    position: relative;
+  }
+  .agent-duties li::before {
+    content: '›';
+    position: absolute;
+    left: 0;
+    color: var(--text-dim);
+  }
+  .agent-memory-tag {
+    margin-top: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 11px;
+    color: var(--yellow);
+  }
+  .agent-memory-tag .mem-label {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  /* LOOP DIAGRAM */
+  .loop-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .loop-container::after {
+    content: 'THE LOOP';
+    position: absolute;
+    top: 16px; right: 20px;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--border-bright);
+    font-weight: 700;
+  }
+
+  .loop-track {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .loop-step {
+    flex: 1;
+    min-width: 120px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 12px;
+    position: relative;
+    text-align: center;
+  }
+  .loop-step + .loop-step {
+    margin-left: 8px;
+  }
+  .loop-step-num {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .loop-step-icon { font-size: 20px; margin-bottom: 6px; }
+  .loop-step-title {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+  }
+  .loop-step-agent { font-size: 10px; color: var(--text-dim); }
+
+  .loop-arrow {
+    display: flex;
+    align-items: center;
+    color: var(--text-dim);
+    font-size: 16px;
+    padding: 0 2px;
+    flex-shrink: 0;
+  }
+
+  .loop-back {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 10px 16px;
+    background: var(--red-dim);
+    border: 1px dashed var(--red);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .loop-back-label {
+    color: var(--red);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+  .loop-back p { color: var(--text-dim); }
+
+  .loop-pass {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 10px 16px;
+    background: var(--green-dim);
+    border: 1px solid var(--green);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .loop-pass-label {
+    color: var(--green);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+  .loop-pass p { color: var(--text-dim); }
+
+  /* PHASE CARDS */
+  .phase-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .phase-id {
+    font-family: var(--sans);
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--border-bright);
+    letter-spacing: -1px;
+    width: 56px;
+    flex-shrink: 0;
+  }
+  .phase-info { flex: 1; }
+  .phase-name {
+    font-family: var(--sans);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-bottom: 2px;
+  }
+  .phase-goal { font-size: 12px; color: var(--text-dim); }
+  .phase-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .phase-tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  .phase-body { padding: 20px 24px; }
+
+  /* PARALLEL TRACKS */
+  .tracks-header {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+  .tracks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .track-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+  .track-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .track-id {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--surface2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .track-agent-tag {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .track-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+    font-family: var(--sans);
+  }
+  .track-tasks {
+    list-style: none;
+  }
+  .track-tasks li {
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 2px 0;
+    padding-left: 12px;
+    position: relative;
+  }
+  .track-tasks li::before {
+    content: '—';
+    position: absolute; left: 0;
+    color: var(--border-bright);
+  }
+
+  /* BRANCH PROTOCOL */
+  .branch-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .branch-box .branch-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .branch-name {
+    font-size: 13px;
+    color: var(--cyan);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .branch-name code {
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  /* PROMPT BLOCK */
+  .prompt-block {
+    background: #050810;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--cyan);
+    border-radius: 6px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .prompt-block .prompt-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--cyan);
+    margin-bottom: 10px;
+  }
+  .prompt-block pre {
+    font-size: 12px;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.8;
+  }
+  .prompt-block pre .hl-yellow { color: var(--yellow); }
+  .prompt-block pre .hl-green  { color: var(--green); }
+  .prompt-block pre .hl-red    { color: var(--red); }
+  .prompt-block pre .hl-blue   { color: var(--blue); }
+  .prompt-block pre .hl-cyan   { color: var(--cyan); }
+  .prompt-block pre .hl-orange { color: var(--orange); }
+
+  /* KPI TABLE */
+  .kpi-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .kpi-table th {
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-weight: 600;
+    letter-spacing: 1px;
+    font-size: 10px;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .kpi-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .kpi-table tr:last-child td { border-bottom: none; }
+  .kpi-table tr:hover td { background: var(--surface2); }
+  .kpi-id { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+  .kpi-desc { color: var(--text); }
+  .kpi-target { color: var(--green); font-weight: 600; }
+  .kpi-owner { color: var(--blue); font-size: 11px; }
+
+  /* GATE BADGE */
+  .gate-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .gate-icon { font-size: 18px; }
+  .gate-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-bottom: 2px;
+    font-family: var(--sans);
+  }
+  .gate-desc { font-size: 11px; color: var(--text-dim); }
+  .gate-cert {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  /* CONSTITUTION */
+  .constitution {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .constitution-title {
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .law {
+    display: flex;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .law:last-child { border-bottom: none; }
+  .law-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    width: 28px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .law-text {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .law-text strong { color: var(--yellow); }
+  .law-text em { color: var(--cyan); font-style: normal; }
+
+  /* UAT PROTOCOL */
+  .uat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .uat-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+  .uat-card-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+    font-family: var(--sans);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .uat-card p, .uat-card li {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+  .uat-card ul { list-style: none; }
+  .uat-card ul li { padding-left: 12px; position: relative; }
+  .uat-card ul li::before { content:'—'; position:absolute; left:0; color: var(--border-bright); }
+
+  /* DEFECT ROUTING */
+  .routing-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .routing-table th {
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .routing-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    font-size: 12px;
+  }
+  .routing-table tr:last-child td { border-bottom: none; }
+  .sev-crit { color: var(--red); font-weight: 700; }
+  .sev-high { color: var(--orange); font-weight: 700; }
+  .sev-med  { color: var(--yellow); }
+  .sev-low  { color: var(--text-dim); }
+  .route-arrow { color: var(--blue); }
+
+  /* FOOTER */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-dim);
+    font-size: 11px;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+  @media (max-width: 768px) {
+    .header, .main, .footer { padding-left: 20px; padding-right: 20px; }
+    .memory-anchor { margin: 16px 20px; }
+    .loop-track { flex-direction: column; }
+    .uat-grid { grid-template-columns: 1fr; }
+    .tracks-grid { grid-template-columns: 1fr; }
+    .agent-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="logo">Auto<span>Test</span></div>
+    <span class="version-badge">AGENT PRD v1.0</span>
+  </div>
+  <h1>Agent <em>Orchestration</em><br>Master Plan</h1>
+  <div class="header-meta">
+    <div class="meta-item"><span class="dot"></span> ACTIVE EXECUTION DOCUMENT</div>
+    <div class="meta-item">· Team: Gemini 3 Pro + Flash Agents</div>
+    <div class="meta-item">· Roles: PM · BA · DEV · QA</div>
+    <div class="meta-item">· Protocol: Looped Certification</div>
+  </div>
+</div>
+
+<!-- SYSTEM MEMORY ANCHOR -->
+<div class="memory-anchor">
+  <div class="label">⚙ SYSTEM MEMORY ANCHOR — ALL AGENTS MUST LOAD THIS FIRST</div>
+  <p>This document <strong>is your PRD</strong>. Save it to system memory before taking any action. The project is <strong>AutoTest</strong> — a No-Code Playwright Engine that translates UAT Excel matrices into automated tests for <strong>non-technical business users</strong>. Your <strong>Prime Directive</strong>: make the minimum possible code changes to already-working features while delivering every specified missing piece to 100% completion. Every agent loop ends in a <strong>zero-defect PM certification</strong> or returns to DEV. There is no middle state.</p>
+</div>
+
+<div class="main">
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 1: AGENT ROSTER -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <span class="section-title">Agent Roster & Responsibilities</span>
+    <span class="section-badge badge-system">SYSTEM MEMORY</span>
+  </div>
+
+  <div class="agent-grid">
+    <div class="agent-card agent-pm">
+      <div class="agent-header">
+        <div class="agent-name">PM Agent</div>
+        <span class="agent-model model-pro">GEMINI 3 PRO</span>
+      </div>
+      <div class="agent-role">Project Manager · Orchestrator</div>
+      <ul class="agent-duties">
+        <li>Owns phase gates — nothing advances without PM sign-off</li>
+        <li>Reads KPIs and certifies pass/fail for each phase</li>
+        <li>Routes defect reports back to DEV Lead with priority tags</li>
+        <li>Triggers the next loop iteration after a phase fails QA</li>
+        <li>Declares "Phase Complete" when 100% UAT certification received</li>
+      </ul>
+      <div class="agent-memory-tag">
+        <div class="mem-label">SYSTEM MEMORY MANDATE</div>
+        This PRD · All KPIs · Current phase status · Defect backlog · Loop iteration count
+      </div>
+    </div>
+
+    <div class="agent-card agent-ba">
+      <div class="agent-header">
+        <div class="agent-name">BA Agent</div>
+        <span class="agent-model model-pro">GEMINI 3 PRO</span>
+      </div>
+      <div class="agent-role">Business Analyst · Requirements Guardian</div>
+      <ul class="agent-duties">
+        <li>Maintains acceptance criteria for every track and KPI</li>
+        <li>Translates phase requirements into DEV-ready task specs</li>
+        <li>Reviews all track outputs against original PRD intent</li>
+        <li>Flags scope creep — any change not in PRD needs PM approval</li>
+        <li>Owns the Zero-Modification Rule enforcement for stable features</li>
+      </ul>
+      <div class="agent-memory-tag">
+        <div class="mem-label">SYSTEM MEMORY MANDATE</div>
+        This PRD · DESIGN_SYSTEM.md · PLAN.md · All acceptance criteria · Scope boundary log
+      </div>
+    </div>
+
+    <div class="agent-card agent-dev">
+      <div class="agent-header">
+        <div class="agent-name">DEV Lead Agent</div>
+        <span class="agent-model model-pro">GEMINI 3 PRO</span>
+      </div>
+      <div class="agent-role">Senior Software Architect · Code Owner</div>
+      <ul class="agent-duties">
+        <li>Decomposes each phase into parallelizable Flash sub-tasks</li>
+        <li>Owns branch strategy — creates and names all branches</li>
+        <li>Reviews all Flash Agent output before Code Reviewer sees it</li>
+        <li>Enforces the Minimal-Change Constitution at every commit</li>
+        <li>Resolves all SIT failures before handing off to QA</li>
+      </ul>
+      <div class="agent-memory-tag">
+        <div class="mem-label">SYSTEM MEMORY MANDATE</div>
+        This PRD · server.js · studio-ui.html · Current branch state · SIT results log
+      </div>
+    </div>
+
+    <div class="agent-card agent-flash">
+      <div class="agent-header">
+        <div class="agent-name">DEV Worker Agents (×N)</div>
+        <span class="agent-model model-flash">GEMINI FLASH</span>
+      </div>
+      <div class="agent-role">Implementation Engineers · Parallel Executors</div>
+      <ul class="agent-duties">
+        <li>Each instance owns exactly one track (A, B, C, D…) at a time</li>
+        <li>Makes minimal, surgical code changes per Minimal-Change Law</li>
+        <li>Writes inline code comments for every modification made</li>
+        <li>Runs own unit test before submitting to Code Reviewer</li>
+        <li>Never touches files outside their assigned track's scope</li>
+      </ul>
+      <div class="agent-memory-tag">
+        <div class="mem-label">SYSTEM MEMORY MANDATE</div>
+        Assigned track spec · Minimal-Change Law · Branch name · Files in scope only
+      </div>
+    </div>
+
+    <div class="agent-card agent-review">
+      <div class="agent-header">
+        <div class="agent-name">Code Reviewer Agent</div>
+        <span class="agent-model model-pro">GEMINI 3 PRO</span>
+      </div>
+      <div class="agent-role">Senior Computer Scientist · Quality Gate</div>
+      <ul class="agent-duties">
+        <li>Reviews every PR from DEV Workers — no merge without approval</li>
+        <li>Checks: minimal changes, no regressions, correct logic, no security issues</li>
+        <li>Runs static analysis and flags any changes that touch working features</li>
+        <li>Returns PRs with explicit line-level feedback if rejected</li>
+        <li>Signs off SIT test coverage before QA handoff</li>
+      </ul>
+      <div class="agent-memory-tag">
+        <div class="mem-label">SYSTEM MEMORY MANDATE</div>
+        Minimal-Change Constitution · Working feature registry · PR checklist
+      </div>
+    </div>
+
+    <div class="agent-card agent-qa">
+      <div class="agent-header">
+        <div class="agent-name">QA Lead + Worker Agents</div>
+        <span class="agent-model model-pro">PRO Lead · FLASH Workers</span>
+      </div>
+      <div class="agent-role">UAT Owners · Zero-Defect Certifiers</div>
+      <ul class="agent-duties">
+        <li>QA Lead: designs 100-scenario UAT test matrix per phase</li>
+        <li>Flash Workers: execute test scenarios in parallel (split evenly)</li>
+        <li>Documents every defect with: steps to reproduce, severity, expected vs actual</li>
+        <li>Will NOT submit pass certification with even one unresolved defect</li>
+        <li>Provides PM with a signed "Zero-Defect Certificate" on 100% pass</li>
+      </ul>
+      <div class="agent-memory-tag">
+        <div class="mem-label">SYSTEM MEMORY MANDATE</div>
+        This PRD · KPIs per phase · UAT matrix · All prior defect logs · Pass threshold = 100%
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 2: THE LOOP PROTOCOL -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <span class="section-title">The Loop Protocol</span>
+    <span class="section-badge badge-critical">CORE MECHANIC</span>
+  </div>
+
+  <div class="loop-container">
+    <div class="loop-track">
+      <div class="loop-step">
+        <div class="loop-step-num">STEP 01</div>
+        <div class="loop-step-icon">📋</div>
+        <div class="loop-step-title">PM RELEASE</div>
+        <div class="loop-step-agent">PM Agent</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">
+        <div class="loop-step-num">STEP 02</div>
+        <div class="loop-step-icon">📐</div>
+        <div class="loop-step-title">BA SPEC</div>
+        <div class="loop-step-agent">BA Agent</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">
+        <div class="loop-step-num">STEP 03</div>
+        <div class="loop-step-icon">⚡</div>
+        <div class="loop-step-title">PARALLEL DEV</div>
+        <div class="loop-step-agent">DEV Workers (×N)</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">
+        <div class="loop-step-num">STEP 04</div>
+        <div class="loop-step-icon">🔍</div>
+        <div class="loop-step-title">CODE REVIEW</div>
+        <div class="loop-step-agent">Reviewer Agent</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">
+        <div class="loop-step-num">STEP 05</div>
+        <div class="loop-step-icon">🧪</div>
+        <div class="loop-step-title">DEV SIT</div>
+        <div class="loop-step-agent">DEV Lead</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">
+        <div class="loop-step-num">STEP 06</div>
+        <div class="loop-step-icon">🏆</div>
+        <div class="loop-step-title">100-SCENARIO UAT</div>
+        <div class="loop-step-agent">QA Lead + Workers</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">
+        <div class="loop-step-num">STEP 07</div>
+        <div class="loop-step-icon">✅</div>
+        <div class="loop-step-title">PM CERTIFY</div>
+        <div class="loop-step-agent">PM Agent</div>
+      </div>
+    </div>
+
+    <div class="loop-back">
+      <span class="loop-back-label">🔁 DEFECT LOOP</span>
+      <p>If UAT returns ANY defect → QA submits full defect report to PM → PM routes to DEV Lead with severity tags → DEV re-enters at Step 03 → Loop counter increments → Process repeats from Step 03 to Step 07. <strong style="color:var(--red)">PM certification is NEVER given on a partial pass.</strong></p>
+    </div>
+    <div class="loop-pass">
+      <span class="loop-pass-label">🎯 PHASE ADVANCE</span>
+      <p>If UAT returns zero defects → QA issues Zero-Defect Certificate → PM signs Phase Complete → Next phase unlocks → BA Agent writes new acceptance criteria → Loop resets for next phase.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 3: THE MINIMAL-CHANGE CONSTITUTION -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <span class="section-title">The Minimal-Change Constitution</span>
+    <span class="section-badge badge-system">ADD TO SOUL</span>
+  </div>
+
+  <div class="constitution">
+    <div class="constitution-title">⚖ Laws Every Agent Must Internalize</div>
+    <div class="law">
+      <div class="law-num">L-01</div>
+      <div class="law-text"><strong>Working features are sacred.</strong> If a feature works today, no agent may touch its code unless that specific feature is in the active track's scope. Any accidental modification to a working feature is an automatic SIT failure requiring a full revert.</div>
+    </div>
+    <div class="law">
+      <div class="law-num">L-02</div>
+      <div class="law-text"><strong>Add, don't rewrite.</strong> New functionality must be added as <em>new functions, new endpoints, new components</em> — not by rewriting existing ones. If a fix requires changing an existing function, that change must be the minimum possible delta.</div>
+    </div>
+    <div class="law">
+      <div class="law-num">L-03</div>
+      <div class="law-text"><strong>Every change must be commented.</strong> Any new line or modified line must have a comment beginning with <em>// [TRACK-X]</em> identifying which track added it. This enables precise rollback.</div>
+    </div>
+    <div class="law">
+      <div class="law-num">L-04</div>
+      <div class="law-text"><strong>No speculative improvements.</strong> DEV Workers may not "clean up" or "optimize" code outside their track scope, even if the code looks bad. Scope creep disguised as refactoring breaks working features. Flag it to PM instead.</div>
+    </div>
+    <div class="law">
+      <div class="law-num">L-05</div>
+      <div class="law-text"><strong>100% completion or nothing.</strong> A track is either fully done (all tasks complete, all KPIs green) or it isn't merged. Partial merges are prohibited. DEV Workers submit only when their entire track spec is satisfied.</div>
+    </div>
+    <div class="law">
+      <div class="law-num">L-06</div>
+      <div class="law-text"><strong>Data lifecycle is inviolable.</strong> <em>POST /upload</em> and <em>POST /restart</em> must always delete <em>runtime_data.json</em>. Any agent modifying these endpoints must verify this lifecycle hook is preserved. Silent stale-data bugs are the worst class of failure.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 4: BRANCH STRATEGY -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <span class="section-title">Branch Strategy</span>
+    <span class="section-badge badge-active">GIT PROTOCOL</span>
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 8px;">
+    <div class="branch-box">
+      <div class="branch-label">MAIN BRANCH</div>
+      <div class="branch-name"><code>main</code></div>
+      <p style="font-size:12px; color:var(--text-dim)">Production-ready only. PM Agent is the sole merge authority. Never receives direct commits.</p>
+    </div>
+    <div class="branch-box">
+      <div class="branch-label">STABLE BRANCH</div>
+      <div class="branch-name"><code>stable-web</code></div>
+      <p style="font-size:12px; color:var(--text-dim)">Phase-complete snapshots. Merges in from phase branches after 100% UAT cert. Recovery base.</p>
+    </div>
+    <div class="branch-box">
+      <div class="branch-label">PHASE BRANCH PATTERN</div>
+      <div class="branch-name"><code>phase/[N]-[name]</code></div>
+      <p style="font-size:12px; color:var(--text-dim)">e.g., <code>phase/1-stabilization</code>, <code>phase/2-ddt</code>. Created by DEV Lead at phase start.</p>
+    </div>
+    <div class="branch-box">
+      <div class="branch-label">TRACK BRANCH PATTERN</div>
+      <div class="branch-name"><code>track/[phase]-[letter]</code></div>
+      <p style="font-size:12px; color:var(--text-dim)">e.g., <code>track/1-A</code>, <code>track/2-B</code>. One per DEV Worker. Merges into its phase branch.</p>
+    </div>
+  </div>
+
+  <div class="prompt-block">
+    <div class="prompt-label">📋 STANDARD DEV WORKER SPAWN PROMPT TEMPLATE</div>
+    <pre>Deploy <span class="hl-yellow">Senior Software Engineer Agent</span>, <span class="hl-yellow">Computer Scientist Agent</span>, and <span class="hl-yellow">Code Reviewer Agent</span>.
+
+Load <span class="hl-cyan">AUTOTEST_AGENT_PRD.html</span> as your PRD — save to system memory.
+
+<span class="hl-green">YOUR ASSIGNED TRACK: [TRACK-LETTER] — [TRACK NAME]</span>
+<span class="hl-green">ACTIVE PHASE BRANCH: [phase/N-name]</span>
+<span class="hl-green">YOUR TRACK BRANCH: [track/N-X]  (create from phase branch)</span>
+
+Execute all tasks listed under Track [X] in the PRD Phase [N] section.
+
+<span class="hl-red">PRIME DIRECTIVE: MAKE AS MINIMAL CHANGES AS POSSIBLE TO ALREADY WORKING
+FEATURES. EVERY NEW LINE MUST BE TAGGED WITH // [TRACK-X]. NEVER TOUCH
+FILES OUTSIDE YOUR TRACK SCOPE. ADD THIS TO YOUR SOUL AND SYSTEM MEMORY.</span>
+
+After all tasks complete:
+1. Run rigorous SIT on every change you have made.
+2. SIT must cover: happy path, edge cases, and regression against working features.
+3. Only open a PR to <span class="hl-cyan">[phase/N-name]</span> when SIT passes 100%.
+4. Include SIT log as PR description.</pre>
+  </div>
+
+  <div class="prompt-block">
+    <div class="prompt-label">📋 STANDARD QA SPAWN PROMPT TEMPLATE</div>
+    <pre>Deploy the <span class="hl-yellow">best QA Lead Agent</span> and <span class="hl-orange">N QA Worker Agents (Flash)</span> in parallel.
+
+Load <span class="hl-cyan">AUTOTEST_AGENT_PRD.html</span> as your PRD — save to system memory.
+
+<span class="hl-green">ACTIVE PHASE: [N] — [PHASE NAME]</span>
+<span class="hl-green">BRANCH UNDER TEST: [phase/N-name] (all tracks merged)</span>
+
+QA Lead: Design the 100-scenario UAT test matrix for Phase [N] using the
+KPIs defined in the PRD. Distribute scenarios evenly across all QA Workers.
+
+QA Workers: Execute your assigned scenarios in parallel. Document every
+defect with: Scenario ID, Steps to Reproduce, Expected Result, Actual Result,
+Severity (CRITICAL / HIGH / MEDIUM / LOW), Screenshot or log evidence.
+
+<span class="hl-red">CERTIFICATION RULE: You will ONLY submit a Zero-Defect Certificate to the
+PM Agent when ALL 100 scenarios pass with ZERO unresolved defects.
+If any defect exists — regardless of severity — submit a full Defect Report
+to PM instead. DO NOT issue partial certifications. EVER.</span></pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 5: PHASE BREAKDOWN -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <span class="section-title">Phase Breakdown with Parallel Tracks</span>
+    <span class="section-badge badge-active">EXECUTION PLAN</span>
+  </div>
+
+  <!-- PHASE 1 -->
+  <div class="phase-block">
+    <div class="phase-header">
+      <div class="phase-id">P1</div>
+      <div class="phase-info">
+        <div class="phase-name">Core Stabilization</div>
+        <div class="phase-goal">Make the Upload → Map → Run → Results cycle bulletproof. Zero crashes. Zero white screenshots. No raw template literals.</div>
+      </div>
+      <div class="phase-tags">
+        <span class="phase-tag badge-critical">MUST SHIP FIRST</span>
+        <span class="phase-tag" style="background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue);">4 PARALLEL TRACKS</span>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="tracks-header">⚡ PARALLEL EXECUTION TRACKS — SPAWN ALL 4 WORKERS SIMULTANEOUSLY</div>
+      <div class="tracks-grid">
+        <div class="track-card">
+          <div class="track-header">
+            <span class="track-id">TRACK 1-A</span>
+            <span class="track-agent-tag">DEV Worker</span>
+          </div>
+          <div class="track-title">Screenshot Timing Fix</div>
+          <ul class="track-tasks">
+            <li>Locate every screenshot call in compiler/execution engine</li>
+            <li>Insert <code>waitForLoadState('networkidle')</code> before each</li>
+            <li>Add 800ms buffer for SPA render safety</li>
+            <li>SIT: 3 consecutive runs, 100% non-white PNGs</li>
+          </ul>
+        </div>
+        <div class="track-card">
+          <div class="track-header">
+            <span class="track-id">TRACK 1-B</span>
+            <span class="track-agent-tag">DEV Worker</span>
+          </div>
+          <div class="track-title">UI Template Literal Fix</div>
+          <ul class="track-tasks">
+            <li>Audit all <code>.innerHTML</code> assignments in studio-ui.html</li>
+            <li>Fix render timing — data must be bound before HTML constructed</li>
+            <li>SIT: Load UI, upload Excel, confirm zero raw <code>${}</code> in all views</li>
+          </ul>
+        </div>
+        <div class="track-card">
+          <div class="track-header">
+            <span class="track-id">TRACK 1-C</span>
+            <span class="track-agent-tag">DEV Worker</span>
+          </div>
+          <div class="track-title">Playwright Crash Hardening</div>
+          <ul class="track-tasks">
+            <li>Wrap child process spawns in try/catch with retry logic (max 3)</li>
+            <li>Add <code>process.on('exit')</code> cleanup hook for globalBrowser</li>
+            <li>Implement 10-min inactivity timeout for idle contexts</li>
+            <li>SIT: Simulate 5 consecutive record/run/stop cycles, verify no zombie processes</li>
+          </ul>
+        </div>
+        <div class="track-card">
+          <div class="track-header">
+            <span class="track-id">TRACK 1-D</span>
+            <span class="track-agent-tag">DEV Worker</span>
+          </div>
+          <div class="track-title">Error Feedback + Platform Badge</div>
+          <ul class="track-tasks">
+            <li>Replace all HTTP error codes in UI with plain-language messages</li>
+            <li>Add "🌐 WEB" platform context badge to header (hard-coded, persistent)</li>
+            <li>Execution tab: surface Playwright error log on test failure</li>
+            <li>SIT: Trigger each error condition, confirm human-readable message appears</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tracks-header">📊 PHASE 1 KPIs</div>
+      <table class="kpi-table">
+        <tr><th>KPI ID</th><th>Description</th><th>Target</th><th>Owner</th></tr>
+        <tr><td class="kpi-id">KPI-1.1</td><td class="kpi-desc">Screenshot artifacts show real page content</td><td class="kpi-target">100% of runs</td><td class="kpi-owner">Track 1-A</td></tr>
+        <tr><td class="kpi-id">KPI-1.2</td><td class="kpi-desc">Zero raw template literals in any UI view</td><td class="kpi-target">0 instances</td><td class="kpi-owner">Track 1-B</td></tr>
+        <tr><td class="kpi-id">KPI-1.3</td><td class="kpi-desc">Full cycle (Upload→Map→Run) zero 500 errors</td><td class="kpi-target">3/3 consecutive</td><td class="kpi-owner">Track 1-C</td></tr>
+        <tr><td class="kpi-id">KPI-1.4</td><td class="kpi-desc">Zombie Chromium processes after 3 run/stop cycles</td><td class="kpi-target">0 processes</td><td class="kpi-owner">Track 1-C</td></tr>
+        <tr><td class="kpi-id">KPI-1.5</td><td class="kpi-desc">Platform context badge visible on all tabs</td><td class="kpi-target">100% visibility</td><td class="kpi-owner">Track 1-D</td></tr>
+        <tr><td class="kpi-id">KPI-1.6</td><td class="kpi-desc">Error messages are plain-language, actionable</td><td class="kpi-target">0 raw error codes shown</td><td class="kpi-owner">Track 1-D</td></tr>
+      </table>
+
+      <div class="gate-row">
+        <div class="gate-icon">🚦</div>
+        <div>
+          <div class="gate-title">Phase 1 Gate</div>
+          <div class="gate-desc">All 4 tracks merged → DEV Lead SIT pass → QA runs 100-scenario UAT → Zero-Defect Certificate → PM unlocks Phase 2</div>
+        </div>
+        <span class="gate-cert badge-critical">BLOCKS PHASE 2</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="phase-block">
+    <div class="phase-header">
+      <div class="phase-id">P2</div>
+      <div class="phase-info">
+        <div class="phase-name">Data-Driven Testing (DDT) & Accordion Data Matrix</div>
+        <div class="phase-goal">The complete DDT loop: UI saves iterations → compiler reads them → Playwright executes N×M test blocks. End-to-end, no silent failures.</div>
+      </div>
+      <div class="phase-tags">
+        <span class="phase-tag badge-pending">REQUIRES P1 CERT</span>
+        <span class="phase-tag" style="background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue);">3 PARALLEL TRACKS</span>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="tracks-header">⚡ PARALLEL EXECUTION TRACKS</div>
+      <div class="tracks-grid">
+        <div class="track-card">
+          <div class="track-header">
+            <span class="track-id">TRACK 2-A</span>
+            <span class="track-agent-tag">DEV Worker (Backend)</span>
+          </div>
+          <div class="track-title">State Management APIs</div>
+          <ul class="track-tasks">
+            <li>Validate <code>GET/POST /data-matrix</code> with 50 consecutive save/load cycles</li>
+            <li>Confirm <code>POST /upload</code> and <code>POST /restart</code> delete <code>runtime_data.json</code></li>
+            <li>Add strict JSON payload validation (structure, types)</li>
+            <li>SIT: Simulate new file upload → confirm Data Matrix wipes completely</li>
+          </ul>
+        </div>
+        <div class="track-card">
+          <div class="track-header">
+            <span class="track-id">TRACK 2-B</span>
+            <span class="track-agent-tag">DEV Worker (Compiler)</span>
+          </div>
+          <div class="track-title">Compiler Iteration Engine</div>
+          <ul class="track-tasks">
+            <li>Modify <code>core/compiler.js</code> to load <code>runtime_data.json</code></li>
+            <li>For N data rows: emit N independent <code>test()</code> blocks with iteration suffix</li>
+            <li>Implement <code>JSON.stringify()</code> safe interpolation for all variable injection</li>
+            <li>Strip surrounding quotes from templates before injecting (Double-Quote Prevention Rule)</li>
+            <li>SIT: Compile with values: <code>test"value</code>, <code>O'Brien</code>, <code>line1\nline2</code> — confirm valid TS output</li>
+          </ul>
+        </div>
+        <div class="track-card">
+          <div class="track-header">
+            <span class="track-id">TRACK 2-C</span>
+            <span class="track-agent-tag">DEV Worker (Frontend)</span>
+          </div>
+          <div class="track-title">Accordion Data Matrix UI</div>
+          <ul class="track-tasks">
+            <li>Add "Data Matrix" tab to Studio navigation</li>
+            <li>Auto-harvest <code>{Variable}</code> tokens from mapped steps on tab open</li>
+            <li>Render accordion: one section per ScenarioID, columns = variables, rows = iterations</li>
+            <li>Add Row / Remove Row controls with confirmation</li>
+            <li>Wire Save button to <code>POST /data-matrix</code>, load state on refresh via <code>GET /data-matrix</code></li>
+            <li>SIT: Save 3 rows, refresh, confirm persistence. Delete all rows, confirm single baseline run</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tracks-header">📊 PHASE 2 KPIs</div>
+      <table class="kpi-table">
+        <tr><th>KPI ID</th><th>Description</th><th>Target</th><th>Owner</th></tr>
+        <tr><td class="kpi-id">KPI-2.1</td><td class="kpi-desc">Uploading new Excel wipes Data Matrix completely</td><td class="kpi-target">100% of uploads</td><td class="kpi-owner">Track 2-A</td></tr>
+        <tr><td class="kpi-id">KPI-2.2</td><td class="kpi-desc">50 consecutive save/load API cycles with no corruption</td><td class="kpi-target">50/50 clean</td><td class="kpi-owner">Track 2-A</td></tr>
+        <tr><td class="kpi-id">KPI-2.3</td><td class="kpi-desc">3 data rows compile to exactly 3 independent test blocks</td><td class="kpi-target">Exact count match</td><td class="kpi-owner">Track 2-B</td></tr>
+        <tr><td class="kpi-id">KPI-2.4</td><td class="kpi-desc">Malicious string values produce valid, executable TypeScript</td><td class="kpi-target">0 syntax errors</td><td class="kpi-owner">Track 2-B</td></tr>
+        <tr><td class="kpi-id">KPI-2.5</td><td class="kpi-desc">5 scenarios × 10 iterations = 50 Playwright executions</td><td class="kpi-target">Exactly 50</td><td class="kpi-owner">Track 2-B</td></tr>
+        <tr><td class="kpi-id">KPI-2.6</td><td class="kpi-desc">Data Matrix state survives 10 page refreshes</td><td class="kpi-target">100% persistence</td><td class="kpi-owner">Track 2-C</td></tr>
+        <tr><td class="kpi-id">KPI-2.7</td><td class="kpi-desc">Empty matrix cells fall back to Excel defaults</td><td class="kpi-target">Verified on 5 scenarios</td><td class="kpi-owner">Track 2-C</td></tr>
+      </table>
+
+      <div class="gate-row">
+        <div class="gate-icon">🚦</div>
+        <div>
+          <div class="gate-title">Phase 2 Gate</div>
+          <div class="gate-desc">Tracks 2-A, 2-B must merge before 2-C starts (UI depends on working APIs). All 3 merged → SIT → 100-scenario UAT → Zero-Defect Cert → PM unlocks Phase 3</div>
+        </div>
+        <span class="gate-cert badge-critical">BLOCKS PHASE 3</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 3 -->
+  <div class="phase-block">
+    <div class="phase-header">
+      <div class="phase-id">P3</div>
+      <div class="phase-info">
+        <div class="phase-name">UX Polish for Non-Technical Users</div>
+        <div class="phase-goal">A business user with zero QA background completes a full test cycle unassisted in under 15 minutes on first attempt.</div>
+      </div>
+      <div class="phase-tags">
+        <span class="phase-tag badge-pending">REQUIRES P2 CERT</span>
+        <span class="phase-tag" style="background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue);">3 PARALLEL TRACKS</span>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="tracks-header">⚡ PARALLEL EXECUTION TRACKS</div>
+      <div class="tracks-grid">
+        <div class="track-card">
+          <div class="track-header">
+            <span class="track-id">TRACK 3-A</span>
+            <span class="track-agent-tag">DEV Worker</span>
+          </div>
+          <div class="track-title">Results Dashboard</div>
+          <ul class="track-tasks">
+            <li>Replace raw file-system output with visual summary in Execution tab</li>
+            <li>Show: total scenarios, pass/fail count, per-scenario status chips</li>
+            <li>Use DESIGN_SYSTEM.md semantic colors (green/red/yellow chips)</li>
+            <li>Direct link to open trace ZIP from UI</li>
+            <li>SIT: Run tests, confirm dashboard renders within 3 seconds of completion</li>
+          </ul>
+        </div>
+        <div class="track-card">
+          <div class="track-header">
+            <span class="track-id">TRACK 3-B</span>
+            <span class="track-agent-tag">DEV Worker</span>
+          </div>
+          <div class="track-title">Recording Flow Guidance</div>
+          <ul class="track-tasks">
+            <li>Add step-by-step overlay modal during recording (plain-language instructions)</li>
+            <li>Explain what's happening in browser without assuming Playwright knowledge</li>
+            <li>Add "What happens next?" contextual tooltips on all action buttons</li>
+            <li>SIT: Non-technical user tester completes record flow without reading docs</li>
+          </ul>
+        </div>
+        <div class="track-card">
+          <div class="track-header">
+            <span class="track-id">TRACK 3-C</span>
+            <span class="track-agent-tag">DEV Worker</span>
+          </div>
+          <div class="track-title">Platform Context Selector</div>
+          <ul class="track-tasks">
+            <li>Upgrade hardcoded WEB badge to a persistent context selector</li>
+            <li>Options: "🌐 WEB" (active) and "📱 MOBILE / Appium" (disabled + "Coming Soon" tooltip)</li>
+            <li>Context choice persists in localStorage across sessions</li>
+            <li>Context badge visible on ALL tabs: Studio, Mappings, Data Matrix, Execution</li>
+            <li>SIT: Switch context, refresh, confirm persistence. Confirm MOBILE is disabled-only</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tracks-header">📊 PHASE 3 KPIs</div>
+      <table class="kpi-table">
+        <tr><th>KPI ID</th><th>Description</th><th>Target</th><th>Owner</th></tr>
+        <tr><td class="kpi-id">KPI-3.1</td><td class="kpi-desc">Non-technical user completes full cycle unassisted</td><td class="kpi-target">&lt; 15 minutes</td><td class="kpi-owner">Track 3-A/B</td></tr>
+        <tr><td class="kpi-id">KPI-3.2</td><td class="kpi-desc">Zero raw error codes displayed to user (500, 404, etc.)</td><td class="kpi-target">0 instances</td><td class="kpi-owner">Track 3-A</td></tr>
+        <tr><td class="kpi-id">KPI-3.3</td><td class="kpi-desc">Results dashboard renders within 3s of test completion</td><td class="kpi-target">≤ 3 seconds</td><td class="kpi-owner">Track 3-A</td></tr>
+        <tr><td class="kpi-id">KPI-3.4</td><td class="kpi-desc">Platform context badge on ALL tabs, persists on refresh</td><td class="kpi-target">100% of tabs</td><td class="kpi-owner">Track 3-C</td></tr>
+      </table>
+
+      <div class="gate-row">
+        <div class="gate-icon">🚦</div>
+        <div>
+          <div class="gate-title">Phase 3 Gate</div>
+          <div class="gate-desc">All 3 tracks merged → SIT → 100-scenario UAT including a usability test with a non-technical tester → Zero-Defect Cert → PM unlocks Phase 4</div>
+        </div>
+        <span class="gate-cert badge-pending">BLOCKS PHASE 4</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 4 -->
+  <div class="phase-block">
+    <div class="phase-header">
+      <div class="phase-id">P4</div>
+      <div class="phase-info">
+        <div class="phase-name">Appium Mobile Engine</div>
+        <div class="phase-goal">Omnichannel testing: same Excel blueprint, same UX workflow, routed to Playwright (web) or Appium (mobile) based on platform context.</div>
+      </div>
+      <div class="phase-tags">
+        <span class="phase-tag badge-pending">REQUIRES P3 CERT</span>
+        <span class="phase-tag" style="background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue);">2 PARALLEL TRACKS</span>
+      </div>
+    </div>
+    <div class="phase-body">
+      <div class="tracks-header">⚡ PARALLEL EXECUTION TRACKS</div>
+      <div class="tracks-grid">
+        <div class="track-card">
+          <div class="track-header">
+            <span class="track-id">TRACK 4-A</span>
+            <span class="track-agent-tag">DEV Worker (Engine)</span>
+          </div>
+          <div class="track-title">Appium Execution Router</div>
+          <ul class="track-tasks">
+            <li>Integrate Appium driver alongside existing Playwright context</li>
+            <li>Read platform context flag — route to Playwright or Appium accordingly</li>
+            <li>Unified blueprint format: same Excel steps, different execution target</li>
+            <li>SIT: Execute same scenario against both web and mobile, verify correct routing</li>
+          </ul>
+        </div>
+        <div class="track-card">
+          <div class="track-header">
+            <span class="track-id">TRACK 4-B</span>
+            <span class="track-agent-tag">DEV Worker (UI)</span>
+          </div>
+          <div class="track-title">Mobile Context Visual System</div>
+          <ul class="track-tasks">
+            <li>Activate MOBILE context selector (remove "Coming Soon" disabled state)</li>
+            <li>Add device frame overlay for mobile context (visual distinction from web)</li>
+            <li>Mobile recording flow: same UX as web, but generates Appium locators</li>
+            <li>SIT: Switch to MOBILE context — confirm ALL UI surfaces reflect mobile state</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tracks-header">📊 PHASE 4 KPIs</div>
+      <table class="kpi-table">
+        <tr><th>KPI ID</th><th>Description</th><th>Target</th><th>Owner</th></tr>
+        <tr><td class="kpi-id">KPI-4.1</td><td class="kpi-desc">Same Excel blueprint executes on both web and mobile</td><td class="kpi-target">Both pass</td><td class="kpi-owner">Track 4-A</td></tr>
+        <tr><td class="kpi-id">KPI-4.2</td><td class="kpi-desc">Web locators never injected into mobile test (and vice versa)</td><td class="kpi-target">0 cross-platform errors</td><td class="kpi-owner">Track 4-A</td></tr>
+        <tr><td class="kpi-id">KPI-4.3</td><td class="kpi-desc">Platform badge visible and correct on all tabs in both modes</td><td class="kpi-target">100% accuracy</td><td class="kpi-owner">Track 4-B</td></tr>
+      </table>
+
+      <div class="gate-row">
+        <div class="gate-icon">🏁</div>
+        <div>
+          <div class="gate-title">Phase 4 Gate = Project Complete</div>
+          <div class="gate-desc">All tracks merged → SIT → 100-scenario UAT across both platforms → Zero-Defect Cert → PM issues Final Completion Certificate → Merge to <code>main</code></div>
+        </div>
+        <span class="gate-cert badge-active">FINAL GATE</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 6: UAT PROTOCOL -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="section-header">
+    <span class="section-num">06</span>
+    <span class="section-title">100-Scenario UAT Protocol</span>
+    <span class="section-badge badge-critical">QA OWNED</span>
+  </div>
+
+  <div class="uat-grid">
+    <div class="uat-card">
+      <div class="uat-card-title">🧪 Scenario Distribution</div>
+      <ul>
+        <li>30 scenarios: Happy path (standard use cases)</li>
+        <li>25 scenarios: Edge cases (empty fields, max chars, special chars)</li>
+        <li>20 scenarios: Regression (all features from prior phases still work)</li>
+        <li>15 scenarios: Negative testing (invalid inputs, wrong formats)</li>
+        <li>10 scenarios: Concurrency & state (upload new file mid-run, restart during execution)</li>
+      </ul>
+    </div>
+    <div class="uat-card">
+      <div class="uat-card-title">📋 Defect Report Required Fields</div>
+      <ul>
+        <li>Scenario ID (e.g., UAT-P1-047)</li>
+        <li>Steps to Reproduce (numbered, exact)</li>
+        <li>Expected Result</li>
+        <li>Actual Result</li>
+        <li>Severity: CRITICAL / HIGH / MEDIUM / LOW</li>
+        <li>Screenshot or terminal log evidence</li>
+        <li>Phase + Track reference (e.g., Phase 1, Track A)</li>
+      </ul>
+    </div>
+    <div class="uat-card">
+      <div class="uat-card-title">✅ Zero-Defect Certificate Format</div>
+      <p>QA Lead must issue this exact statement to PM Agent upon 100% pass:</p>
+      <br>
+      <p style="color:var(--green); font-size:11px; line-height:1.8;">"Phase [N] UAT Complete. 100/100 scenarios passed. Zero unresolved defects. Zero regressions detected on prior phase features. Phase [N] is certified ready for PM sign-off and promotion to stable-web."</p>
+    </div>
+    <div class="uat-card">
+      <div class="uat-card-title">🔁 Defect Loop Trigger</div>
+      <p>If any defect exists, QA Lead issues this to PM Agent:</p>
+      <br>
+      <p style="color:var(--red); font-size:11px; line-height:1.8;">"Phase [N] UAT FAILED. [X] defects found. [Y] CRITICAL, [Z] HIGH. Full defect report attached. Loop Iteration [N]. Returning to DEV for remediation."</p>
+      <br>
+      <p>PM routes each defect to the DEV Worker that owns the relevant track.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 7: DEFECT ROUTING MATRIX -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="section-header">
+    <span class="section-num">07</span>
+    <span class="section-title">Defect Routing Matrix</span>
+    <span class="section-badge badge-pending">PM REFERENCE</span>
+  </div>
+
+  <table class="routing-table">
+    <tr>
+      <th>Defect Ref</th>
+      <th>Description</th>
+      <th>Severity</th>
+      <th>Phase</th>
+      <th>Routed To</th>
+    </tr>
+    <tr>
+      <td>DEF-077</td>
+      <td>White/blank screenshots — missing waitForLoadState</td>
+      <td class="sev-crit">CRITICAL</td>
+      <td>Phase 1</td>
+      <td class="route-arrow">→ Track 1-A DEV Worker</td>
+    </tr>
+    <tr>
+      <td>DEF-H8</td>
+      <td>Raw template literals rendered in Mapping UI</td>
+      <td class="sev-crit">CRITICAL</td>
+      <td>Phase 1</td>
+      <td class="route-arrow">→ Track 1-B DEV Worker</td>
+    </tr>
+    <tr>
+      <td>DEF-H4</td>
+      <td>Playwright instance crashing / 500 errors on record</td>
+      <td class="sev-high">HIGH</td>
+      <td>Phase 1</td>
+      <td class="route-arrow">→ Track 1-C DEV Worker</td>
+    </tr>
+    <tr>
+      <td>DEF-H2</td>
+      <td>Persistent orphan Playwright processes</td>
+      <td class="sev-high">HIGH</td>
+      <td>Phase 1</td>
+      <td class="route-arrow">→ Track 1-C DEV Worker</td>
+    </tr>
+    <tr>
+      <td>DEF-H7</td>
+      <td>Opaque failure feedback in Execution tab</td>
+      <td class="sev-high">HIGH</td>
+      <td>Phase 1</td>
+      <td class="route-arrow">→ Track 1-D DEV Worker</td>
+    </tr>
+    <tr>
+      <td>DEF-079</td>
+      <td>Missing platform context indicators</td>
+      <td class="sev-high">HIGH</td>
+      <td>Phase 1 / Phase 3</td>
+      <td class="route-arrow">→ Track 1-D / Track 3-C</td>
+    </tr>
+    <tr>
+      <td>DEF-078</td>
+      <td>DDT iterations silently failing</td>
+      <td class="sev-crit">CRITICAL</td>
+      <td>Phase 2</td>
+      <td class="route-arrow">→ Tracks 2-A + 2-B DEV Workers</td>
+    </tr>
+    <tr>
+      <td>DEF-H6</td>
+      <td>Misaligned scenario ID parsing (non-standard format)</td>
+      <td class="sev-med">MEDIUM</td>
+      <td>Phase 2</td>
+      <td class="route-arrow">→ Track 2-B DEV Worker</td>
+    </tr>
+    <tr>
+      <td>DEF-H3</td>
+      <td>Brittle regex action extraction (verify Acorn coverage)</td>
+      <td class="sev-high">HIGH</td>
+      <td>Phase 2</td>
+      <td class="route-arrow">→ Track 2-A DEV Worker</td>
+    </tr>
+    <tr>
+      <td>DEF-H5</td>
+      <td>Junk selector generation (shadow DOM / generic containers)</td>
+      <td class="sev-med">MEDIUM</td>
+      <td>Phase 3</td>
+      <td class="route-arrow">→ Track 3-B DEV Worker</td>
+    </tr>
+    <tr>
+      <td>DEF-H1</td>
+      <td>Global state collision (multi-user data corruption)</td>
+      <td class="sev-high">HIGH</td>
+      <td>Post-P4 (Scale)</td>
+      <td class="route-arrow">→ DEV Lead (Scale Sprint)</td>
+    </tr>
+  </table>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div>AutoTest Agent Orchestration PRD · v1.0 · Generated by Senior PM Advisory</div>
+  <div>All agents must load this document into system memory before executing any action</div>
+</div>
+
+</body>
+</html>

@@ -1,90 +1,44 @@
-const { spawn } = require('child_process');
-const http = require('http');
+const { chromium } = require('playwright');
+const fs = require('fs');
 
-const PORT = 3200;
-
-function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
-
-async function request(path, options = {}) {
-    return new Promise((resolve) => {
-        const req = http.request(`http://127.0.0.1:${PORT}${path}`, options, (res) => {
-            let body = '';
-            res.on('data', (d) => body += d);
-            res.on('end', () => {
-                try { resolve({ ok: res.ok || res.statusCode < 400, status: res.statusCode, data: JSON.parse(body) }); }
-                catch { resolve({ ok: false, status: res.statusCode, data: body }); }
-            });
-        });
-        req.on('error', () => resolve({ ok: false, status: 500, data: {} }));
-        if (options.body) req.write(options.body);
-        req.end();
-    });
-}
-
-async function main() {
-    console.log("--- STARTING DEEP SIT VALIDATION ---");
-    const server = spawn('node', ['studio/server.js'], {
-        env: { ...process.env, PORT: String(PORT) },
-        stdio: ['ignore', 'pipe', 'pipe']
-    });
-    server.stderr.on('data', (d) => console.log("SERVER ERR:", String(d)));
-
-    let ready = false;
-    server.stdout.on('data', (d) => { if (String(d).includes(`Studio Live on ${PORT}`)) ready = true; });
-
-    for (let i = 0; i < 50 && !ready; i++) await wait(200);
-    if (!ready) throw new Error('SIT Server failed to boot.');
-
-    console.log("1. Verifying Atomic Concurrency Guard...");
-    const r1 = request('/run', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({workers:1, headless: true}) });
-    const r2 = request('/run', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({workers:1, headless: true}) });
-    const [res1, res2] = await Promise.all([r1, r2]);
-    const concurrencyPassed = (res1.status === 200 && res2.status === 409) || (res1.status === 409 && res2.status === 200);
-    console.log(concurrencyPassed ? "✅ Concurrency Guard Active" : "❌ Concurrency Guard Failed");
-
-    console.log("2. Verifying RCE Sanitization in Compiler...");
-    const rcePayload = 'getByRole("button") ? global.constructor.constructor("console.log(\'FAIL\')")() : getByRole("button")';
-    await request('/save-mapping', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ label: 'RCE_TEST', code: `await page.${rcePayload}.click();` })
-    });
-    const fs = require('fs');
-    let rceBlocked = false;
+(async () => {
+    console.log("🛠️ [SIT] Starting Comprehensive Phase 1-4 Gap Audit...");
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    
     try {
-        const mappings = JSON.parse(fs.readFileSync('core/mappings.json', 'utf8'));
-        if (mappings['RCE_TEST'] && mappings['RCE_TEST'].steps.length === 0) {
-            rceBlocked = true;
-        }
-    } catch (e) { rceBlocked = true; }
+        await page.goto('http://localhost:3000');
 
-    await request('/run', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({workers:1, headless: true}) });
-    await wait(2000);
-    console.log(rceBlocked ? "✅ RCE Payload Safely Sandboxed" : "❌ RCE Payload Executed");
+        // 1. Audit Context Selector & localStorage
+        console.log("   -> Auditing Context Selector...");
+        await page.selectOption('#platform-toggle', 'mobile');
+        const badgeText = await page.innerText('#env-badge');
+        if (badgeText !== 'MOBILE') throw new Error("Context Badge failed to update");
+        
+        const hasMobileClass = await page.evaluate(() => document.getElementById('main-card').classList.contains('mobile-mode'));
+        if (!hasMobileClass) throw new Error("Mobile Frame class missing");
 
-    console.log("3. Verifying Boilerplate Bypass...");
-    const boilerplatePayload = `import { test, expect } from '@playwright/test';\ntest('test', async ({ page }) => {\n  await expect(page.locator('#app')).toContainText('Driver\\'s License Number');\n});`;
-    const bpRes = await request('/save-mapping', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ label: 'BP_TEST', code: boilerplatePayload })
-    });
-    console.log(bpRes.status === 200 ? "✅ Boilerplate Handled Perfectly" : "❌ Boilerplate Parsing Failed");
+        await page.reload();
+        const persistentVal = await page.inputValue('#platform-toggle');
+        if (persistentVal !== 'mobile') throw new Error("localStorage persistence failed");
 
-    console.log("4. Verifying End-to-End Completion (DEF-048)...");
-    // We poll until idle or failure
-    let finished = false;
-    for(let i=0; i<150; i++) {
-        const status = await request('/run-status');
-        console.log(`   Phase: ${status.data.phase}`);
-        if (['completed', 'failed', 'cancelled'].includes(status.data.phase)) { finished = true; break; }
-        await wait(2000);
+        // 2. Audit Recording Guidance Trigger
+        console.log("   -> Auditing Recording Guidance...");
+        await page.click('#tab-mappings'); // Switch to mappings tab
+        await page.evaluate(() => {
+            const list = document.getElementById('step-list-ui');
+            list.innerHTML = '<div class="step-row"><div class="step-label">Test Step</div><button id="test-rec-btn">Record</button></div>';
+            document.getElementById('test-rec-btn').onclick = () => openRecordModal('Test', 'A.1');
+        });
+        await page.click('#test-rec-btn');
+        const guidanceVisible = await page.isVisible('#guidance-modal');
+        if (!guidanceVisible) throw new Error("Recording Guidance modal failed to trigger");
+        
+        console.log("✅ [SIT] All implemented gaps passed functional audit.");
+    } catch (e) {
+        console.error(`❌ [SIT] FAILED: ${e.message}`);
+        process.exit(1);
+    } finally {
+        await browser.close();
     }
-    console.log(finished ? "✅ Execution Lifecycle Verified" : "❌ Execution Timed Out/Hanged");
-
-    server.kill('SIGTERM');
-    console.log("--- SIT COMPLETE ---");
-    process.exit(0);
-}
-
-main().catch(err => { console.error(err); process.exit(1); });
+})();

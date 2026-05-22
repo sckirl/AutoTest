@@ -12,6 +12,8 @@
             --surface: #FFFFFF;
             --danger: #C8463F;
             --muted-text: #65748B;
+            --success: #22C55E;
+            --warning: #F59E0B;
         }
         body { font-family: 'Montserrat', sans-serif; padding: 40px; background: #F5F5F5; color: #333; line-height: 1.6; }
         .container { max-width: 1000px; margin: 0 auto; }
@@ -25,6 +27,18 @@
 
         .view-pane { display: none; padding-top: 20px; }
         .view-pane.active { display: block; }
+
+        /* Phase 4-B: Device Frame Overlay */
+        .device-frame { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border: 16px solid #222; border-radius: 40px; pointer-events: none; z-index: 100; display: none; opacity: 0.1; }
+        .card.mobile-mode { border: 2px solid var(--danger) !important; position: relative; }
+        .card.mobile-mode .device-frame { display: block; }
+
+        .badge-context { font-size: 14px; color: white; padding: 4px 12px; border-radius: 4px; margin-left: 10px; text-transform: uppercase; vertical-align: middle; }
+        .badge-web { background: var(--deep-corporate); }
+        .badge-mobile { background: var(--danger); }
+
+        .platform-select-container { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: var(--muted-text); }
+        select#platform-toggle { padding: 6px 12px; border-radius: 6px; border: 1px solid #ddd; font-family: 'Montserrat', sans-serif; cursor: pointer; }
 
         .drop-zone { border: 2px dashed #C4C4C4; padding: 50px 30px; text-align: center; border-radius: 8px; cursor: pointer; background: var(--surface); margin: 20px 0; font-weight: 500; }
         .btn { padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
@@ -73,9 +87,31 @@ fetch('/env').then(r=>r.json()).then(d => {
         </div>
     </div>
 
+    <div id="guidance-modal" class="modal">
+        <div class="modal-content" style="width: 500px;">
+            <h3>🎥 Recording Guide</h3>
+            <div id="guidance-steps" style="font-size: 14px; margin-bottom: 20px;">
+                <p><strong>1. Watch the Browser:</strong> A Chromium window will open and automatically replay previous steps.</p>
+                <p><strong>2. Take Action:</strong> Once replay stops, perform the new manual steps you want to record.</p>
+                <p><strong>3. Sync & Save:</strong> When done, return here and click <strong>"Sync & Save"</strong> to commit the mapping.</p>
+            </div>
+            <button class="btn btn-primary" onclick="document.getElementById('guidance-modal').style.display='none'">Got it, let's go!</button>
+        </div>
+    </div>
+
     <div class="container">
-        <div class="card">
-            <h1>AUTOMATION STUDIO <span id="env-badge" style="font-size:14px; background:var(--deep-corporate); color:white; padding:4px 8px; border-radius:4px; margin-left:10px;">WEB</span></h1>
+        <div id="main-card" class="card">
+            <div class="device-frame"></div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <h1>AUTOMATION STUDIO <span id="env-badge" class="badge-context badge-web">WEB</span></h1>
+                <div class="platform-select-container">
+                    <span>Target:</span>
+                    <select id="platform-toggle" onchange="updateContextSelection()">
+                        <option value="web">🌐 WEB / Playwright</option>
+                        <option value="mobile">📱 MOBILE / Appium</option>
+                    </select>
+                </div>
+            </div>
             <div class="tab-strip">
                 <button class="tab tab-active" onclick="switchTab('studio')" id="tab-studio">Studio</button>
                 <button class="tab tab-mappings" onclick="switchTab('mappings')" id="tab-mappings">Mappings</button>
@@ -84,15 +120,15 @@ fetch('/env').then(r=>r.json()).then(d => {
             </div>
 
             <div id="view-studio" class="view-pane active">
-                <div id="drop-zone" class="drop-zone">Click or Drop Scenario Excel (.xlsx)</div>
+                <div id="drop-zone" class="drop-zone" title="Drag and drop your Scenario Excel here to begin parsing">Click or Drop Scenario Excel (.xlsx)</div>
                 <input type="file" id="file-input" style="display:none" accept=".xlsx" />
                 
                 <div style="margin-top: 20px;">
                     <label style="display:block; font-weight:600; color:var(--muted-text); margin-bottom:5px;">Base URL for Recording:</label>
-                    <input type="text" id="base-url" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;" placeholder="https://example.com" />
+                    <input type="text" id="base-url" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;" placeholder="https://example.com" title="Optional: Set the starting URL for the recording session" />
                 </div>
 
-                <button class="btn btn-danger" style="margin-top:20px; width: 100%" onclick="restartSystem()">Reset System (Wipe All)</button>
+                <button class="btn btn-danger" style="margin-top:20px; width: 100%" onclick="restartSystem()" title="DANGEROUS: Wipes all current mappings and uploads. Use for fresh start.">Reset System (Wipe All)</button>
             </div>
 
             <div id="view-mappings" class="view-pane">
@@ -108,12 +144,23 @@ fetch('/env').then(r=>r.json()).then(d => {
             </div>
 
             <div id="view-execution" class="view-pane">
-                <div style="margin-bottom:20px; background: #eee; padding: 20px; border-radius: 8px;">
-                    Workers: <input type="number" id="worker-count" value="4" min="1" max="16" style="padding:8px; border-radius:6px; border:1px solid #ddd" />
+                <div style="margin-bottom:20px; background: #eee; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        Workers: <input type="number" id="worker-count" value="4" min="1" max="16" style="padding:8px; border-radius:6px; border:1px solid #ddd" />
+                    </div>
+                    <div id="execution-summary" style="display:none; gap:15px; font-weight:600;">
+                        <span style="color:var(--success)">PASS: <span id="pass-count">0</span></span>
+                        <span style="color:var(--danger)">FAIL: <span id="fail-count">0</span></span>
+                    </div>
                 </div>
-                <button class="btn btn-primary" id="run-btn">Execute Test Scenarios</button>
-                <button class="btn btn-danger" id="cancel-run-btn" style="display:none; margin-top:10px; width:100%" onclick="cancelRun()">Cancel Execution</button>
+                <button class="btn btn-primary" id="run-btn" title="Compile scenarios and execute parallel test workers">Execute Test Scenarios</button>
+                <button class="btn btn-danger" id="cancel-run-btn" style="display:none; margin-top:10px; width:100%" onclick="cancelRun()" title="Stop all running test processes immediately">Cancel Execution</button>
+                
                 <div id="status-box"></div>
+                <div id="results-dashboard" style="margin-top:20px; display:none;">
+                    <h3>Execution Results</h3>
+                    <div id="results-list"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -130,6 +177,34 @@ fetch('/env').then(r=>r.json()).then(d => {
         let currentLabel = "";
         let currentScenarioId = "";
         let isUserInteracting = false;
+
+        // Phase 3-C: Platform Context Logic
+        function updateContextSelection() {
+            const select = document.getElementById('platform-toggle');
+            const badge = document.getElementById('env-badge');
+            const card = document.getElementById('main-card');
+            const platform = select.value;
+            
+            badge.innerText = platform === 'mobile' ? 'MOBILE' : 'WEB';
+            badge.className = `badge-context badge-${platform}`;
+            
+            if (platform === 'mobile') card.classList.add('mobile-mode');
+            else card.classList.remove('mobile-mode');
+            
+            localStorage.setItem('autotest_platform', platform);
+            console.log(`Context switched to: ${platform}`);
+        }
+
+        function initContext() {
+            const saved = localStorage.getItem('autotest_platform') || 'web';
+            const select = document.getElementById('platform-toggle');
+            if (select) {
+                select.value = saved;
+                updateContextSelection();
+            }
+        }
+
+        initContext(); // Run immediately to set initial state
 
         codeArea.onfocus = () => isUserInteracting = true;
         codeArea.oninput = () => isUserInteracting = true;
@@ -162,36 +237,51 @@ fetch('/env').then(r=>r.json()).then(d => {
         }
 
         async function scanSteps() {
-            const res = await fetch('/scan');
-            const data = await res.json();
-            stepListUi.innerHTML = '';
-            data.steps.forEach(s => {
-                const row = document.createElement('div');
-                row.className = 'step-row';
-                row.innerHTML = `
-                    <div class="step-label">${s.label} <small>(Flow: ${s.scenarioId})</small></div>
-                    <div style="display:flex; gap:8px">
-                        <button class="btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}" onclick="openRecordModal('${s.label}', '${s.scenarioId}')">
-                            ${s.status === 'missing' ? 'Record' : 'Re-Map'}
-                        </button>
-                        <button class="btn btn-secondary" onclick="openManualModal('${s.label}', '${s.scenarioId}')">Manual</button>
-                    </div>
-                `;
-                stepListUi.appendChild(row);
-            });
-            runBtn.disabled = data.steps.filter(s => s.status === 'mapped').length === 0;
+            try {
+                const res = await fetch('/scan');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Scanning failed");
+
+                stepListUi.innerHTML = '';
+                data.steps.forEach(s => {
+                    const row = document.createElement('div');
+                    row.className = 'step-row';
+                    row.innerHTML = `
+                        <div class="step-label">${s.label} <small>(Flow: ${s.scenarioId})</small></div>
+                        <div style="display:flex; gap:8px">
+                            <button class="btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}" onclick="openRecordModal('${s.label}', '${s.scenarioId}')" title="${s.status === 'missing' ? 'Open the browser to record this action' : 'Re-record this action to update the mapping'}">
+                                ${s.status === 'missing' ? 'Record' : 'Re-Map'}
+                            </button>
+                            <button class="btn btn-secondary" onclick="openManualModal('${s.label}', '${s.scenarioId}')" title="Manually edit or paste Playwright code for this action">Manual</button>
+                        </div>
+                    `;
+                    stepListUi.appendChild(row);
+                });
+                runBtn.disabled = data.steps.filter(s => s.status === 'mapped').length === 0;
+            } catch (e) {
+                showStatus("Scan Failed: " + e.message, "error");
+                switchTab('studio');
+            }
         }
 
         async function openRecordModal(label, scenarioId) {
             currentLabel = label; currentScenarioId = scenarioId;
             const url = document.getElementById('base-url').value;
+            const platform = document.getElementById('platform-toggle').value;
+            
+            // Phase 3-B: Show guidance
+            document.getElementById('guidance-modal').style.display = 'flex';
+            
             isUserInteracting = false; codeArea.value = ''; modal.style.display = 'flex';
-            const res = await fetch('/record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, scenarioId, url }) });
-            if (res.ok) {
-                // Polling logic removed as per user request to keep mapping stable
-            } else {
-                const err = await res.json();
-                alert(err.error);
+            try {
+                const res = await fetch('/record', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ label, scenarioId, url, platform }) 
+                });
+                if (!res.ok) throw new Error((await res.json()).error);
+            } catch (e) {
+                showStatus("Recording Failed: " + e.message, 'error');
                 closeModal();
             }
         }
@@ -200,12 +290,14 @@ fetch('/env').then(r=>r.json()).then(d => {
             currentLabel = label; currentScenarioId = scenarioId;
             isUserInteracting = true; codeArea.value = ''; modal.style.display = 'flex';
             document.getElementById('modal-title').innerText = `Manual Map: "${label}"`;
-            fetch(`/mapping/${encodeURIComponent(label)}`).then(r => r.json()).then(data => {
-                if (data.mapping) {
-                    // Reconstruct code if needed, or just show placeholder
-                    codeArea.placeholder = "Paste your Playwright code here...";
-                }
-            });
+            fetch(`/mapping/${encodeURIComponent(label)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.mapping) {
+                        codeArea.placeholder = "Paste your Playwright code here...";
+                    }
+                })
+                .catch(e => showStatus("Failed to load mapping", "error"));
         }
 
         function closeModal() {
@@ -213,28 +305,106 @@ fetch('/env').then(r=>r.json()).then(d => {
         }
 
         async function saveMapping() {
-            const res = await fetch('/save-mapping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label: currentLabel, code: codeArea.value }) });
-            const data = await res.json();
-            if (res.ok) { modal.style.display = 'none'; await scanSteps(); }
-            else { alert(data.error); }
+            const platform = document.getElementById('platform-toggle').value;
+            try {
+                const res = await fetch('/save-mapping', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ label: currentLabel, code: codeArea.value, platform }) 
+                });
+                if (!res.ok) throw new Error((await res.json()).error);
+                modal.style.display = 'none'; 
+                await scanSteps();
+                showStatus("Action Mapped Successfully", "success");
+            } catch (e) {
+                showStatus("Mapping Error: " + e.message, "error");
+            }
         }
 
         runBtn.onclick = async () => {
             runBtn.disabled = true;
-            try { await window.saveDataMatrix(true); } catch(e) {} // Auto-save Data Matrix
-            await fetch('/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workers: document.getElementById('worker-count').value }) });
-            switchTab('execution'); pollRunStatus();
+            try { 
+                await window.saveDataMatrix(true); 
+                const platform = document.getElementById('platform-toggle').value;
+                const res = await fetch('/run', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        workers: document.getElementById('worker-count').value,
+                        platform 
+                    }) 
+                });
+                if (!res.ok) throw new Error((await res.json()).error);
+                switchTab('execution'); 
+                pollRunStatus();
+            } catch (e) {
+                showStatus("Execution Error: " + e.message, "error");
+                runBtn.disabled = false;
+            }
         };
 
         function pollRunStatus() {
             const interval = setInterval(async () => {
-                const res = await fetch('/run-status');
-                const data = await res.json();
-                showStatus(data.message, data.failureType === 'system' ? 'error' : 'info');
-                if (['completed', 'failed', 'cancelled'].includes(data.phase)) {
-                    clearInterval(interval); runBtn.disabled = false;
+                try {
+                    const res = await fetch('/run-status');
+                    const data = await res.json();
+                    showStatus(data.message, data.failureType === 'system' ? 'error' : 'info');
+                    
+                    if (['completed', 'failed', 'cancelled'].includes(data.phase)) {
+                        clearInterval(interval); 
+                        runBtn.disabled = false;
+                        if (data.results) renderResultsDashboard(data.results);
+                    }
+                } catch (e) {
+                    console.error("Poll Error:", e);
                 }
             }, 1500);
+        }
+
+        function renderResultsDashboard(results) {
+            const dashboard = document.getElementById('results-dashboard');
+            const summary = document.getElementById('execution-summary');
+            const list = document.getElementById('results-list');
+            
+            dashboard.style.display = 'block';
+            summary.style.display = 'flex';
+            list.innerHTML = '';
+            
+            let passed = 0;
+            let failed = 0;
+            
+            results.suites[0].specs.forEach(spec => {
+                const test = spec.tests[0];
+                const status = test.results[0].status;
+                if (status === 'passed') passed++; else failed++;
+                
+                const chip = document.createElement('div');
+                chip.style.padding = '12px 16px';
+                chip.style.background = '#fff';
+                chip.style.border = '1px solid #ddd';
+                chip.style.borderRadius = '8px';
+                chip.style.marginBottom = '10px';
+                chip.style.display = 'flex';
+                chip.style.justifyContent = 'space-between';
+                chip.style.alignItems = 'center';
+                
+                const title = spec.title;
+                const statusColor = status === 'passed' ? 'var(--success)' : 'var(--danger)';
+                const scenarioId = title.split(':')[0].replace(/[^a-z0-9]/gi, '_');
+                
+                chip.innerHTML = `
+                    <div style="font-weight:600; font-size:14px;">${title}</div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <span style="background:${statusColor}; color:#fff; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700;">${status.toUpperCase()}</span>
+                        <a href="results/${scenarioId}/FINAL.png" target="_blank" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" title="View final screenshot evidence">📸 View PNG</a>
+                        <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="window.open('/results')" title="Open Results folder">📁 Results</button>
+                    </div>
+                `;
+                list.appendChild(chip);
+            });
+            
+            document.getElementById('pass-count').innerText = passed;
+            document.getElementById('fail-count').innerText = failed;
         }
 
         function showStatus(msg, type) {
@@ -308,10 +478,10 @@ fetch('/env').then(r=>r.json()).then(d => {
                     vars.forEach(v => {
                         html += `<td style="padding:4px; border-bottom:1px solid #eee;"><input type="text" style="width:100%; padding:6px; box-sizing:border-box;" data-var="${v}" value="${String(iter[v] || '').replace(/"/g, '&quot;')}" /></td>`;
                     });
-                    html += `<td><button class="btn btn-danger" style="padding:4px 8px;" onclick="removeDataRow('${scenarioId}', ${idx})">X</button></td></tr>`;
+                    html += `<td><button class="btn btn-danger" style="padding:4px 8px;" onclick="removeDataRow('${scenarioId}', ${idx})" title="Permanently delete this test iteration">X</button></td></tr>`;
                 });
                 html += `</table>`;
-                html += `<button type="button" class="btn btn-secondary" onclick="addDataRow('${scenarioId}')">+ Add Iteration</button>`;
+                html += `<button type="button" class="btn btn-secondary" onclick="addDataRow('${scenarioId}')" title="Add a new set of data variables for this scenario">+ Add Iteration</button>`;
 
                 body.innerHTML = html;
                 acc.appendChild(header);
@@ -325,6 +495,7 @@ fetch('/env').then(r=>r.json()).then(d => {
         }
 
         window.addDataRow = (scenarioId) => {
+            if (!confirm("Add a new data iteration for this scenario?")) return;
             saveDataMatrixStateFromDOM(); 
             if (!currentRuntimeData[scenarioId] || !Array.isArray(currentRuntimeData[scenarioId])) {
                 currentRuntimeData[scenarioId] = [];
@@ -334,6 +505,7 @@ fetch('/env').then(r=>r.json()).then(d => {
         };
 
         window.removeDataRow = (scenarioId, idx) => {
+            if (!confirm("Are you sure you want to remove this data iteration? This cannot be undone.")) return;
             saveDataMatrixStateFromDOM(); 
             if (Array.isArray(currentRuntimeData[scenarioId])) {
                 currentRuntimeData[scenarioId].splice(idx, 1);

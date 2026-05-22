@@ -9,6 +9,40 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 
 let activeRun = null;
+let globalBrowser = null; 
+let lastActivity = Date.now();
+
+// Phase 1-C: Inactivity Timeout (10 minutes)
+setInterval(() => {
+    if (globalBrowser && (Date.now() - lastActivity > 600000)) {
+        console.log("🕒 Inactivity timeout: Closing global browser...");
+        globalBrowser.close().catch(() => {});
+        globalBrowser = null;
+    }
+}, 60000);
+
+function updateActivity() { lastActivity = Date.now(); }
+
+// Phase 1-C: Process Cleanup Hook
+process.on('exit', () => {
+    if (globalBrowser) {
+        try { globalBrowser.close(); } catch (e) {}
+    }
+});
+
+// Phase 1-C: Retry logic for shell commands
+async function execWithRetry(cmd, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return execSync(cmd, { stdio: 'inherit' });
+        } catch (e) {
+            if (i === retries - 1) throw e;
+            console.log(`⚠️ Command failed, retrying (${i + 1}/${retries})...`);
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -43,7 +77,22 @@ app.get('/data-matrix', (req, res) => {
 app.post('/data-matrix', (req, res) => {
     try {
         const payload = req.body;
-        if (typeof payload !== 'object' || payload === null) return res.status(400).json({ error: "Invalid payload." });
+        // Phase 2-A: Strict Validation
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload) || Object.keys(payload).length === 0) {
+            if (payload && Object.keys(payload).length === 0) {
+                 // Empty object is allowed for clearing overrides
+                 fs.writeFileSync(RUNTIME_DATA_PATH, JSON.stringify({}, null, 2));
+                 return res.json({ message: "Cleared." });
+            }
+            return res.status(400).json({ error: "Invalid payload: Expected a JSON object mapping ScenarioIDs to data arrays." });
+        }
+        
+        for (const [scenId, iterations] of Object.entries(payload)) {
+            if (!Array.isArray(iterations)) {
+                return res.status(400).json({ error: `Invalid format for scenario ${scenId}: Expected an array of iterations.` });
+            }
+        }
+
         fs.writeFileSync(RUNTIME_DATA_PATH, JSON.stringify(payload, null, 2));
         res.json({ message: "Saved." });
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -58,6 +107,16 @@ app.get('/scan', (req, res) => {
         const workbook = XLSX.readFile(UPLOADED_EXCEL);
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        
+        // Negative Scenario: Malformed Template Validation (Phase 1-D / Track H)
+        if (rows.length < 2) {
+             return res.status(400).json({ error: "Malformed Template: Excel file is empty or missing data rows." });
+        }
+        
+        // Ensure required columns (Index 1: Scenario ID/Num, Index 2: Step Label) exist in header
+        if (!rows[0][1] || !rows[0][2]) {
+             return res.status(400).json({ error: "Malformed Template: Header row missing required columns at index 1 (Scenario) or 2 (Label)." });
+        }
         
         const stepMap = new Map();
         const scenarios = [];
@@ -159,15 +218,17 @@ app.post('/record', async (req, res) => {
                             locatorStr = `page.locator(\`${target}\`)`;
                         }
 
-                        if (action.type === 'goto') scriptContent += `    await page.goto('${action.target}');\n`;
-                        else if (action.type === 'click') scriptContent += `    await ${locatorStr}.click();\n`;
+                        if (action.type === 'goto') scriptContent += `    await page.goto('${action.target}', { waitUntil: 'networkidle' });\n`;
+                        else if (action.type === 'click') scriptContent += `    await Promise.all([page.waitForNavigation({ timeout: 5000, waitUntil: 'networkidle' }).catch(() => {}), ${locatorStr}.click()]);\n`;
                         else if (action.type === 'fill') scriptContent += `    await ${locatorStr}.fill(\`${val}\`);\n`;
                         else if (action.type === 'press') scriptContent += `    await ${locatorStr}.press(\`${val || 'Enter'}\`);\n`;
                     }
+                    scriptContent += `    await page.waitForTimeout(500);\n`; // Buffer after each step
                 }
             }
         }
         
+        scriptContent += `  await page.waitForLoadState('networkidle');\n`;
         scriptContent += `  console.log('--- REPLAY COMPLETE. INSPECTOR OPENING FOR: ${label} ---');\n`;
         scriptContent += `  await page.pause();\n`; 
         scriptContent += `  await browser.close();\n})();`;
@@ -200,34 +261,58 @@ app.post('/save-mapping', (req, res) => {
 
 // ... existing code ...
 
-app.post('/run', (req, res) => {
+app.post('/run', async (req, res) => {
+    const { workers, headless, platform } = req.body;
+
+    if (platform === 'mobile') {
+        try { require.resolve('webdriverio'); } catch (e) {
+            return res.status(400).json({ error: "Missing Dependency: 'webdriverio' is not installed." });
+        }
+    }
+    if (platform) process.env.AUTOTEST_PLATFORM = platform;
+
     if (activeRun) {
         return res.status(409).json({ error: "Execution already in progress." });
     }
     try {
         activeRun = { phase: 'compiling' };
-        const workers = req.body.workers || 2;
+        const numWorkers = workers || 2;
         console.log("🚀 Generating blueprint...");
-        execSync(`node core/scenario_parser.js ${UPLOADED_EXCEL}`, { stdio: 'inherit' });
-        
-        console.log("🔨 Compiling scenarios into explicit code...");
-        execSync(`node core/compiler.js`, { stdio: 'inherit' });
+        await execWithRetry(`node core/scenario_parser.js ${UPLOADED_EXCEL}`);
 
-        console.log(`🏃 Launching Playwright UI with ${workers} workers...`);
+        console.log("🔨 Compiling scenarios into explicit code...");
+        await execWithRetry(`node core/compiler.js`);
+
+        console.log(`🏃 Launching Playwright UI with ${numWorkers} workers...`);
         
         const isHeadless = req.body.headless ? '1' : '0';
-        const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--workers', String(workers)], {
+        const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'], {
             env: { ...process.env, PW_HEADLESS: isHeadless },
             shell: true
         });
 
-        pw.stdout.on('data', (data) => console.log(`[PW] ${data}`));
+        let reportData = "";
+        pw.stdout.on('data', (data) => {
+            reportData += data.toString();
+            console.log(`[PW] ${data}`);
+        });
         pw.stderr.on('data', (data) => console.error(`[PW ERROR] ${data}`));
 
         pw.on('close', (code) => {
-            console.log(`✅ Playwright UI process closed with code ${code}`);
-            if (activeRun) activeRun.phase = code === 0 ? 'completed' : 'failed';
-            setTimeout(() => { activeRun = null; }, 5000);
+            console.log(`✅ Playwright process closed with code ${code}`);
+            if (activeRun) {
+                activeRun.phase = code === 0 ? 'completed' : 'failed';
+                try {
+                    // Extract JSON report from stdout if possible
+                    const startJson = reportData.indexOf('{');
+                    const endJson = reportData.lastIndexOf('}');
+                    if (startJson !== -1 && endJson !== -1) {
+                        const jsonStr = reportData.substring(startJson, endJson + 1);
+                        activeRun.results = JSON.parse(jsonStr);
+                    }
+                } catch (e) { console.error("Report Parsing Error:", e); }
+            }
+            setTimeout(() => { activeRun = null; }, 60000); // Keep results for 1 min
         });
         
         res.json({ 

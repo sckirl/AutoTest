@@ -10,36 +10,18 @@
   "Input Username": {
     "steps": [
       {
-        "type": "click",
-        "target": "getByRole('textbox', { name: 'Username' })"
-      },
-      {
         "type": "fill",
-        "target": "getByRole('textbox', { name: 'Username' })",
-        "value": "{}"
-      },
-      {
-        "type": "press",
-        "target": "getByRole('textbox', { name: 'Username' })",
-        "value": "ArrowLeft"
-      },
-      {
-        "type": "fill",
-        "target": "getByRole('textbox', { name: 'Username' })",
-        "value": "{Username}"
+        "target": "getByPlaceholder(\"Username\")",
+        "value": "{username}"
       }
     ]
   },
   "Input Password": {
     "steps": [
       {
-        "type": "click",
-        "target": "getByRole('textbox', { name: 'Password' })"
-      },
-      {
         "type": "fill",
-        "target": "getByRole('textbox', { name: 'Password' })",
-        "value": "admin123"
+        "target": "getByPlaceholder(\"Password\")",
+        "value": "{password}"
       }
     ]
   },
@@ -47,85 +29,11 @@
     "steps": [
       {
         "type": "click",
-        "target": "getByRole('button', { name: 'Login' })"
+        "target": "getByRole(\"button\", \"name\")"
       }
     ]
   },
-  "Click My Info Tab": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "getByRole('textbox', { name: 'Type for hints...' })"
-      },
-      {
-        "type": "fill",
-        "target": "getByRole('textbox', { name: 'Type for hints...' })",
-        "value": "{}"
-      },
-      {
-        "type": "press",
-        "target": "getByRole('textbox', { name: 'Type for hints...' })",
-        "value": "ArrowLeft"
-      },
-      {
-        "type": "fill",
-        "target": "getByRole('textbox', { name: 'Type for hints...' })",
-        "value": "{name}"
-      }
-    ]
-  },
-  "Verify Personal Details Header": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "getByRole('link', { name: 'Contact Details' })"
-      }
-    ]
-  },
-  "Verify Login Error Message": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "getByRole('menuitem', { name: 'Logout' })"
-      },
-      {
-        "type": "click",
-        "target": "getByRole('textbox', { name: 'Username' })"
-      },
-      {
-        "type": "fill",
-        "target": "getByRole('textbox', { name: 'Username' })",
-        "value": "salahsa"
-      },
-      {
-        "type": "click",
-        "target": "getByRole('textbox', { name: 'Password' })"
-      },
-      {
-        "type": "fill",
-        "target": "getByRole('textbox', { name: 'Username' })",
-        "value": "salahsal"
-      },
-      {
-        "type": "fill",
-        "target": "getByRole('textbox', { name: 'Password' })",
-        "value": "ahsalah"
-      },
-      {
-        "type": "press",
-        "target": "getByRole('textbox', { name: 'Password' })",
-        "value": "Enter"
-      },
-      {
-        "type": "click",
-        "target": "getByRole('button', { name: 'Login' })"
-      }
-    ]
-  },
-  "RCE_TEST": {
-    "steps": []
-  },
-  "BP_TEST": {
+  "Verify Dashboard": {
     "steps": []
   }
 }
