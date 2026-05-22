@@ -260,8 +260,10 @@ app.post('/record', async (req, res) => {
         
         fs.writeFileSync(replayScriptPath, scriptContent);
 
-        // 2. Execute the script with better logging
-        const child = exec(`node ${replayScriptPath}`, (err, stdout, stderr) => {
+        // 2. Execute the script with better logging (Phase 1-C Hardening)
+        const child = exec(`node ${replayScriptPath}`, {
+            env: { ...process.env, PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' }
+        }, (err, stdout, stderr) => {
             if (err) console.error(`❌ Execution Error: ${err.message}`);
             if (stderr) console.error(`⚠️ Stderr: ${stderr}`);
             console.log(`ℹ️ Stdout: ${stdout}`);
@@ -312,8 +314,13 @@ app.post('/run', async (req, res) => {
         
         const isHeadless = req.body.headless ? '1' : '0';
         const bundledPath = getBundledBrowserPath();
-        const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'], {
-            env: { ...process.env, PW_HEADLESS: isHeadless, BROWSER_PATH: bundledPath || '' },
+        const pw = spawn(path.join(__dirname, '../node_modules/.bin/playwright'), ['test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'], {
+            env: { 
+                ...process.env, 
+                PW_HEADLESS: isHeadless, 
+                BROWSER_PATH: bundledPath || '',
+                PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' // CRITICAL: Bypass version validation checks
+            },
             shell: true
         });
 
