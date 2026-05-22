@@ -11,6 +11,8 @@ replay_*.js
 core/blueprint.json
 core/executed.spec.ts
 .current_upload
+DPR TEMPLATE.xlsx
+test_dump.csv
 
 # Logs
 *.log
