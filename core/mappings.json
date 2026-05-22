@@ -11,7 +11,7 @@
     "steps": [
       {
         "type": "fill",
-        "target": "getByPlaceholder(\"Username\")",
+        "target": "getByPlaceholder('Username')",
         "value": "{username}"
       }
     ]
@@ -20,7 +20,7 @@
     "steps": [
       {
         "type": "fill",
-        "target": "getByPlaceholder(\"Password\")",
+        "target": "getByPlaceholder('Password')",
         "value": "{password}"
       }
     ]
@@ -29,11 +29,32 @@
     "steps": [
       {
         "type": "click",
-        "target": "getByRole(\"button\", \"name\")"
+        "target": "getByRole('button', { name: 'Login' })"
       }
     ]
   },
-  "Verify Dashboard": {
-    "steps": []
+  "Click My Info Tab": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "getByRole('link', { name: 'My Info' })"
+      }
+    ]
+  },
+  "Verify Personal Details Header": {
+    "steps": [
+      {
+        "type": "assertVisible",
+        "target": "getByRole('heading', { name: 'Personal Details' })"
+      }
+    ]
+  },
+  "Verify Login Error Message": {
+    "steps": [
+      {
+        "type": "assertVisible",
+        "target": "getByText('Invalid credentials')"
+      }
+    ]
   }
 }
