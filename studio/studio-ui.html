@@ -61,18 +61,7 @@
         .modal-content { background: #FFFFFF; padding: 30px; border-radius: 8px; width: 750px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
         textarea { width: 100%; height: 400px; margin: 15px 0; padding: 12px; border: 1px solid #C4C4C4; border-radius: 8px; font-family: 'Open Sans', monospace; font-size: 13px; box-sizing: border-box; resize: none; }
     </style>
-<script>
-fetch('/env').then(r=>r.json()).then(d => {
-    const badge = document.getElementById('env-badge');
-    if (d.platform === 'mobile') {
-        badge.innerText = 'MOBILE';
-        badge.style.background = '#e74c3c';
-    } else {
-        badge.innerText = 'WEB';
-        badge.style.background = 'var(--deep-corporate)';
-    }
-});
-</script></head>
+</head>
 <body>
     <div id="record-modal" class="modal">
         <div class="modal-content">
@@ -251,6 +240,11 @@ fetch('/env').then(r=>r.json()).then(d => {
                 if (!res.ok) throw new Error(data.error || "Scanning failed");
 
                 stepListUi.innerHTML = '';
+                if (!data.steps || data.steps.length === 0) {
+                    stepListUi.innerHTML = '<p style="color:var(--muted-text); text-align:center; padding: 20px;">No scenarios found. Please upload a valid Excel file in the Studio tab first.</p>';
+                    return;
+                }
+
                 data.steps.forEach(s => {
                     const row = document.createElement('div');
                     row.className = 'step-row';
@@ -268,7 +262,6 @@ fetch('/env').then(r=>r.json()).then(d => {
                 runBtn.disabled = data.steps.filter(s => s.status === 'mapped').length === 0;
             } catch (e) {
                 showStatus("Scan Failed: " + e.message, "error");
-                switchTab('studio');
             }
         }
 
