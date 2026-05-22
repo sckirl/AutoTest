@@ -237,24 +237,31 @@ fetch('/env').then(r=>r.json()).then(d => {
         }
 
         async function scanSteps() {
-            const res = await fetch('/scan');
-            const data = await res.json();
-            stepListUi.innerHTML = '';
-            data.steps.forEach(s => {
-                const row = document.createElement('div');
-                row.className = 'step-row';
-                row.innerHTML = `
-                    <div class="step-label">${s.label} <small>(Flow: ${s.scenarioId})</small></div>
-                    <div style="display:flex; gap:8px">
-                        <button class="btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}" onclick="openRecordModal('${s.label}', '${s.scenarioId}')" title="${s.status === 'missing' ? 'Open the browser to record this action' : 'Re-record this action to update the mapping'}">
-                            ${s.status === 'missing' ? 'Record' : 'Re-Map'}
-                        </button>
-                        <button class="btn btn-secondary" onclick="openManualModal('${s.label}', '${s.scenarioId}')" title="Manually edit or paste Playwright code for this action">Manual</button>
-                    </div>
-                `;
-                stepListUi.appendChild(row);
-            });
-            runBtn.disabled = data.steps.filter(s => s.status === 'mapped').length === 0;
+            try {
+                const res = await fetch('/scan');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Scanning failed");
+
+                stepListUi.innerHTML = '';
+                data.steps.forEach(s => {
+                    const row = document.createElement('div');
+                    row.className = 'step-row';
+                    row.innerHTML = `
+                        <div class="step-label">${s.label} <small>(Flow: ${s.scenarioId})</small></div>
+                        <div style="display:flex; gap:8px">
+                            <button class="btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}" onclick="openRecordModal('${s.label}', '${s.scenarioId}')" title="${s.status === 'missing' ? 'Open the browser to record this action' : 'Re-record this action to update the mapping'}">
+                                ${s.status === 'missing' ? 'Record' : 'Re-Map'}
+                            </button>
+                            <button class="btn btn-secondary" onclick="openManualModal('${s.label}', '${s.scenarioId}')" title="Manually edit or paste Playwright code for this action">Manual</button>
+                        </div>
+                    `;
+                    stepListUi.appendChild(row);
+                });
+                runBtn.disabled = data.steps.filter(s => s.status === 'mapped').length === 0;
+            } catch (e) {
+                showStatus("Scan Failed: " + e.message, "error");
+                switchTab('studio');
+            }
         }
 
         async function openRecordModal(label, scenarioId) {

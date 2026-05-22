@@ -108,13 +108,14 @@ app.get('/scan', (req, res) => {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
         
-        // Negative Scenario: Malformed Template Validation
+        // Negative Scenario: Malformed Template Validation (Phase 1-D / Track H)
         if (rows.length < 2) {
              return res.status(400).json({ error: "Malformed Template: Excel file is empty or missing data rows." });
         }
-        const headers = rows[0].map(h => String(h).trim());
-        if (!headers.includes('Label')) {
-             return res.status(400).json({ error: "Malformed Template: Missing required 'Label' column." });
+        
+        // Ensure required columns (Index 1: Scenario ID/Num, Index 2: Step Label) exist in header
+        if (!rows[0][1] || !rows[0][2]) {
+             return res.status(400).json({ error: "Malformed Template: Header row missing required columns at index 1 (Scenario) or 2 (Label)." });
         }
         
         const stepMap = new Map();
@@ -217,15 +218,17 @@ app.post('/record', async (req, res) => {
                             locatorStr = `page.locator(\`${target}\`)`;
                         }
 
-                        if (action.type === 'goto') scriptContent += `    await page.goto('${action.target}');\n`;
-                        else if (action.type === 'click') scriptContent += `    await ${locatorStr}.click();\n`;
+                        if (action.type === 'goto') scriptContent += `    await page.goto('${action.target}', { waitUntil: 'networkidle' });\n`;
+                        else if (action.type === 'click') scriptContent += `    await Promise.all([page.waitForNavigation({ timeout: 5000, waitUntil: 'networkidle' }).catch(() => {}), ${locatorStr}.click()]);\n`;
                         else if (action.type === 'fill') scriptContent += `    await ${locatorStr}.fill(\`${val}\`);\n`;
                         else if (action.type === 'press') scriptContent += `    await ${locatorStr}.press(\`${val || 'Enter'}\`);\n`;
                     }
+                    scriptContent += `    await page.waitForTimeout(500);\n`; // Buffer after each step
                 }
             }
         }
         
+        scriptContent += `  await page.waitForLoadState('networkidle');\n`;
         scriptContent += `  console.log('--- REPLAY COMPLETE. INSPECTOR OPENING FOR: ${label} ---');\n`;
         scriptContent += `  await page.pause();\n`; 
         scriptContent += `  await browser.close();\n})();`;

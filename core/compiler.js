@@ -17,6 +17,24 @@ function compile() {
     }
 
     const q = (v) => JSON.stringify(String(v ?? ''));
+    
+    function translateToMobileLocator(pwLocator, finalValue) {
+        if (!pwLocator) return "";
+        if (pwLocator.startsWith('/') || pwLocator.startsWith('#') || pwLocator.startsWith('.')) return pwLocator;
+
+        const roleMatch = pwLocator.match(/getByRole\(['"](.*?)['"],\s*\{\s*name:\s*['"](.*?)['"]\s*\}\)/);
+        if (roleMatch) return `//*[@text="${roleMatch[2]}" or @content-desc="${roleMatch[2]}"]`;
+
+        const textMatch = pwLocator.match(/getByText\(['"](.*?)['"]\)/);
+        if (textMatch) return `//*[@text="${textMatch[1]}" or @content-desc="${textMatch[1]}"]`;
+
+        const labelMatch = pwLocator.match(/getByLabel\(['"](.*?)['"]\)/);
+        if (labelMatch) return `//*[@text="${labelMatch[1]}" or @content-desc="${labelMatch[1]}"]`;
+
+        if (finalValue && !finalValue.includes('{')) return `//*[@text="${finalValue}" or @content-desc="${finalValue}"]`;
+        return pwLocator;
+    }
+
     const safeGetBy = (target) => {
         if (typeof target !== 'string') return null;
         const m = target.match(/^getBy(Role|Label|Placeholder|Text|AltText|Title|TestId|DisplayValue)\((.*)\)$/);
@@ -94,21 +112,25 @@ function compile() {
                     for (const action of mapping.steps) {
                         const finalTarget = interpolate(action.target, iterData, step.Data);
                         const finalValue = interpolate(action.value, iterData, step.Data);
-                        const getByTarget = safeGetBy(finalTarget);
                         
                         if (isMobile) {
-                            // Simple translation: convert getByRole to XPath
-                            let target = finalTarget;
-                            if (target.includes('getByRole')) target = `//*[@text=${q(finalValue || finalTarget)}]`;
-                            const loc = `driver.$(${q(target)})`;
+                            const mobileTarget = translateToMobileLocator(finalTarget, finalValue);
+                            const loc = `driver.$(${q(mobileTarget)})`;
                             
-                            if (action.type === 'click') code += `        await ${loc}.click();\n`;
+                            if (action.type === 'goto') code += `        await driver.url(${q(finalTarget)});\n`;
+                            else if (action.type === 'click') code += `        await ${loc}.click();\n`;
                             else if (action.type === 'fill') code += `        await ${loc}.setValue(${q(finalValue)});\n`;
+                            else if (action.type === 'press') code += `        await driver.keys(${q(finalValue || 'Enter')});\n`;
                         } else {
+                            const getByTarget = safeGetBy(finalTarget);
                             const loc = getByTarget ? `page.${getByTarget}` : `page.locator(${q(finalTarget)})`;
                             if (action.type === 'goto') code += `        await page.goto(${q(finalTarget)}, { waitUntil: 'networkidle' });\n`;
-                            else if (action.type === 'click') code += `        await markLocator(${loc}); await ${loc}.click();\n`;
+                            else if (action.type === 'click') {
+                                code += `        await markLocator(${loc});\n`;
+                                code += `        await Promise.all([page.waitForNavigation({ timeout: 5000, waitUntil: 'networkidle' }).catch(() => {}), ${loc}.click()]);\n`;
+                            }
                             else if (action.type === 'fill') code += `        await markLocator(${loc}); await ${loc}.fill(${q(finalValue)});\n`;
+                            else if (action.type === 'press') code += `        await markLocator(${loc}); await ${loc}.press(${q(finalValue || 'Enter')});\n`;
                         }
                     }
                     
