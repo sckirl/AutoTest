@@ -1,0 +1,10 @@
+node_modules
+.pw_data
+server.log
+internal_sit.js
+internal_stress_test.js
+test_ui.js
+.git
+*.xlsx
+!demo_blueprint.xlsx
+!scenario_uploaded.xlsx
