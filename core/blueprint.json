@@ -1,7 +1,12 @@
 [
   {
+    "Scenario_ID": "A",
+    "Role": "OrangeHRM Standard Flows",
+    "Flow": []
+  },
+  {
     "Scenario_ID": "A.1",
-    "Role": "OrangeHRM Admin Login",
+    "Role": "Successful Admin Login",
     "Flow": [
       {
         "Mapping_Key": "Navigate to OrangeHRM",
@@ -9,18 +14,82 @@
       },
       {
         "Mapping_Key": "Input Username",
-        "Data": {}
+        "Data": {
+          "username": "Admin"
+        }
       },
       {
         "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
         "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "A.2",
+    "Role": "Navigate to My Info",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Admin"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "admin123"
+        }
       },
       {
         "Mapping_Key": "Click Login Button",
         "Data": {}
       },
       {
-        "Mapping_Key": "Verify Dashboard",
+        "Mapping_Key": "Click My Info Tab",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Personal Details Header",
+        "Data": {}
+      }
+    ]
+  },
+  {
+    "Scenario_ID": "B.1",
+    "Role": "Invalid Login Attempt",
+    "Flow": [
+      {
+        "Mapping_Key": "Navigate to OrangeHRM",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "Invalid"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "Wrong123"
+        }
+      },
+      {
+        "Mapping_Key": "Click Login Button",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Login Error Message",
         "Data": {}
       }
     ]

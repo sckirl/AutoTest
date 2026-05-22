@@ -10,9 +10,13 @@
   "Input Username": {
     "steps": [
       {
+        "type": "click",
+        "target": "getByRole(\"textbox\", \"name\")"
+      },
+      {
         "type": "fill",
-        "target": "getByPlaceholder('Username')",
-        "value": "{username}"
+        "target": "getByRole(\"textbox\", \"name\")",
+        "value": "{user}"
       }
     ]
   },

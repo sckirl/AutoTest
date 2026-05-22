@@ -1,0 +1,12 @@
+{
+  "A.1": [
+    {
+      "user": "admin",
+      "password": "admin123"
+    },
+    {
+      "user": "spv",
+      "password": "spv123"
+    }
+  ]
+}

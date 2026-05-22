@@ -1,49 +1,127 @@
-import { test, expect } from '@playwright/test';
-import * as path from 'path';
-import * as fs from 'fs';
+const { remote } = require('webdriverio');
+const path = require('path');
+const fs = require('fs');
 
-async function markLocator(locator) {
-    try {
-        await locator.first().evaluate((el) => {
-            el.style.outline = '3px solid #ff1f1f'; el.style.boxShadow = '0 0 0 4px rgba(255,31,31,0.25)';
-        });
-    } catch (e) {}
-}
+describe('Automated UAT Execution (Mobile)', function() {
+  let driver;
+  before(async () => {
+    driver = await remote({ capabilities: { platformName: 'Android', 'appium:automationName': 'UiAutomator2' } });
+  });
+  after(async () => {
+    if (driver) await driver.deleteSession();
+  });
 
-test.describe('Automated UAT Execution', () => {
-  test('Scenario A.1: OrangeHRM Admin Login', async ({ page }) => {
-    const resultsDir = path.join(process.cwd(), 'results', 'A_1');
+  it('Scenario A: OrangeHRM Standard Flows', async () => {
+    const resultsDir = path.join(process.cwd(), 'results', 'A');
     if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
 
     try {
-      await test.step('Navigate to OrangeHRM', async () => {
-        await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", { waitUntil: 'networkidle' });
-      await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
-      await page.screenshot({ path: path.join(resultsDir, 'STEP_1.png'), fullPage: true });
-      });
-      await test.step('Input Username', async () => {
-        await markLocator(page.getByPlaceholder("Username")); await page.getByPlaceholder("Username").fill("");
-      await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
-      await page.screenshot({ path: path.join(resultsDir, 'STEP_2.png'), fullPage: true });
-      });
-      await test.step('Input Password', async () => {
-        await markLocator(page.getByPlaceholder("Password")); await page.getByPlaceholder("Password").fill("");
-      await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
-      await page.screenshot({ path: path.join(resultsDir, 'STEP_3.png'), fullPage: true });
-      });
-      await test.step('Click Login Button', async () => {
-        await markLocator(page.getByRole("button", "name"));
-        await Promise.all([page.waitForNavigation({ timeout: 5000, waitUntil: 'networkidle' }).catch(() => {}), page.getByRole("button", "name").click()]);
-      await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
-      await page.screenshot({ path: path.join(resultsDir, 'STEP_4.png'), fullPage: true });
-      });
-      await test.step('Verify Dashboard', async () => {
-      await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
-      await page.screenshot({ path: path.join(resultsDir, 'STEP_5.png'), fullPage: true });
-      });
     } finally {
-      await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
-      await page.screenshot({ path: path.join(resultsDir, 'FINAL.png'), fullPage: true });
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));
+    }
+  });
+
+  it('Scenario A.1 - Iteration 1: Successful Admin Login', async () => {
+    const resultsDir = path.join(process.cwd(), 'results', 'A_1_Iter1');
+    if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
+
+    try {
+        await driver.url("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login");
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_1.png'));
+        await driver.$("getByRole(\"textbox\", \"name\")").click();
+        await driver.$("//*[@text=\"admin\" or @content-desc=\"admin\"]").setValue("admin");
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_2.png'));
+        await driver.$("//*[@text=\"admin123\" or @content-desc=\"admin123\"]").setValue("admin123");
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_3.png'));
+        await driver.$("//*[@text=\"Login\" or @content-desc=\"Login\"]").click();
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_4.png'));
+    } finally {
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));
+    }
+  });
+
+  it('Scenario A.1 - Iteration 2: Successful Admin Login', async () => {
+    const resultsDir = path.join(process.cwd(), 'results', 'A_1_Iter2');
+    if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
+
+    try {
+        await driver.url("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login");
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_1.png'));
+        await driver.$("getByRole(\"textbox\", \"name\")").click();
+        await driver.$("//*[@text=\"spv\" or @content-desc=\"spv\"]").setValue("spv");
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_2.png'));
+        await driver.$("//*[@text=\"spv123\" or @content-desc=\"spv123\"]").setValue("spv123");
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_3.png'));
+        await driver.$("//*[@text=\"Login\" or @content-desc=\"Login\"]").click();
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_4.png'));
+    } finally {
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));
+    }
+  });
+
+  it('Scenario A.2: Navigate to My Info', async () => {
+    const resultsDir = path.join(process.cwd(), 'results', 'A_2');
+    if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
+
+    try {
+        await driver.url("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login");
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_1.png'));
+        await driver.$("getByRole(\"textbox\", \"name\")").click();
+        await driver.$("getByRole(\"textbox\", \"name\")").setValue("");
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_2.png'));
+        await driver.$("//*[@text=\"admin123\" or @content-desc=\"admin123\"]").setValue("admin123");
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_3.png'));
+        await driver.$("//*[@text=\"Login\" or @content-desc=\"Login\"]").click();
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_4.png'));
+        await driver.$("//*[@text=\"My Info\" or @content-desc=\"My Info\"]").click();
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_5.png'));
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_6.png'));
+    } finally {
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));
+    }
+  });
+
+  it('Scenario B.1: Invalid Login Attempt', async () => {
+    const resultsDir = path.join(process.cwd(), 'results', 'B_1');
+    if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
+
+    try {
+        await driver.url("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login");
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_1.png'));
+        await driver.$("getByRole(\"textbox\", \"name\")").click();
+        await driver.$("getByRole(\"textbox\", \"name\")").setValue("");
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_2.png'));
+        await driver.$("//*[@text=\"Wrong123\" or @content-desc=\"Wrong123\"]").setValue("Wrong123");
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_3.png'));
+        await driver.$("//*[@text=\"Login\" or @content-desc=\"Login\"]").click();
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_4.png'));
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'STEP_5.png'));
+    } finally {
+      await driver.pause(800);
+      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));
     }
   });
 
