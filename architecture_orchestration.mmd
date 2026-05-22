@@ -1,39 +1,86 @@
 graph TD
-    subgraph Roles
-        User((User / PM))
-        DevAgent{"DEV Agent (Codex)"}
-        QAAgent{"QA Agent (150 IQ Zero-Trust)"}
+    %% Global Styles & Classes
+    classDef supervisor fill:#0D5CAB,stroke:#014C8B,color:#fff,stroke-width:4px;
+    classDef pm fill:#ffa500,stroke:#f57f17,color:#000,font-weight:bold;
+    classDef dev fill:#2979FF,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef qa fill:#FF1744,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef infra fill:#121212,stroke:#333,stroke-width:1px,color:#888,stroke-dasharray: 5 5;
+    classDef data fill:#f5f5f5,stroke:#ddd,color:#333;
+    classDef engine fill:#00E676,stroke:#000,stroke-width:1px,color:#000;
+
+    %% 1. ORCHESTRATION LAYER (Control Plane)
+    subgraph Control_Plane ["fa:fa-user-tie COMMAND & CONTROL"]
+        PM["ELITE PM ORCHESTRATOR<br/>(Zero-Defect Mandate)"]:::pm
+        UI_SPA["STUDIO UI (SPA)<br/>Montserrat/OpenSans DNA"]:::supervisor
+        SELECTOR["PLATFORM SELECTOR<br/>(Dynamic Toggle)"]:::dev
+        UI_SPA --- SELECTOR
     end
 
-    subgraph Project Workspace
-        Codebase[AutoTest Codebase<br/>studio/, core/, etc.]
-        ChangesMD[changes.md<br/>Changelog & Fixes]
-        DefectMD[defect.md<br/>Defect Tracker]
-        SIT_UAT_Env[Local Port :3000<br/>SIT/UAT Environment]
+    %% 2. INGESTION & PARSING (Track 1)
+    subgraph Ingestion_Layer ["fa:fa-file-excel BLUEPRINT INGESTION"]
+        direction TB
+        EXCEL["DPR TEMPLATE.xlsx"]:::data
+        PARSER["SCENARIO PARSER<br/>(Dynamic Header Detection)"]:::engine
+        BLUEPRINT["BLUEPRINT JSON<br/>(Hierarchical Data)"]:::data
+        
+        EXCEL -->|"Upload"| PARSER
+        PARSER --> BLUEPRINT
     end
 
-    %% User Interactions
-    User -->|Directs feature development & fixes| DevAgent
-    User -->|Commands zero-trust audits| QAAgent
+    %% 3. MAPPING & AST ANALYSIS (Track 2)
+    subgraph Mapping_Core ["fa:fa-code ACTION MAPPING ENGINE"]
+        direction LR
+        REC_WEB["PLAYWRIGHT RECORDER<br/>(Web Context)"]:::dev
+        REC_MOB["APPIUM INSPECTOR<br/>(Mobile Stub)"]:::dev
+        AST["AST PARSER (ACORN)<br/>Boilerplate Stripper"]:::engine
+        MAPPINGS["MAPPINGS.JSON<br/>(Unique Action Store)"]:::data
+        
+        REC_WEB & REC_MOB -->|"Raw Code"| AST
+        AST --> MAPPINGS
+    end
 
-    %% Dev Agent Workflow
-    DevAgent -->|Builds & Patches| Codebase
-    DevAgent -->|Documents applied changes| ChangesMD
-    DevAgent -.->|Reads for next fixes| DefectMD
+    %% 4. DDT & STABILITY (Track 3 / 6)
+    subgraph Stabilization_Layer ["fa:fa-shield-alt DATA & STABILITY"]
+        MATRIX["DATA MATRIX UI<br/>(localStorage Persistent)"]:::dev
+        RUNTIME["RUNTIME_DATA.JSON<br/>(Override Store)"]:::data
+        SYNC["STABILITY INJECTOR<br/>(Navigation Awareness)"]:::engine
+        
+        MATRIX --> RUNTIME
+        RUNTIME & SYNC --- COMPILER
+    end
 
-    %% QA Agent Workflow
-    QAAgent -->|Monitors for new patches| ChangesMD
-    QAAgent -->|Performs Static Analysis| Codebase
-    QAAgent -->|Executes Dynamic Audits & UI Testing| SIT_UAT_Env
-    QAAgent -->|Logs discovered vulnerabilities & bugs| DefectMD
+    %% 5. COMPILER & ROUTER (Track 4 / 5)
+    subgraph Compiler_Core ["fa:fa-microchip EXECUTION ROUTER"]
+        direction TB
+        COMPILER["CORE COMPILER<br/>(Parallel Loop Gen)"]:::engine
+        TRANSLATOR["LOCATOR TRANSLATOR<br/>(PW -> Mobile XPath)"]:::engine
+        
+        COMPILER -->|"Web Branch"| PW_TEST["PLAYWRIGHT WORKERS<br/>(Chromium Native)"]:::dev
+        COMPILER -->|"Mobile Branch"| WDIO_TEST["WEBDRIVERIO WORKERS<br/>(Appium Remote)"]:::dev
+        TRANSLATOR -.-> WDIO_TEST
+    end
 
-    %% Styling
-    classDef human fill:#d1c4e9,stroke:#388e3c,stroke-width:2px;
-    classDef agent fill:#ffecb3,stroke:#512da8,stroke-width:2px;
-    classDef artifact fill:#e3f2fd,stroke:#1976d2,stroke-width:1px;
-    classDef env fill:#ffcdd2,stroke:#d32f2f,stroke-width:1px;
+    %% 6. VALIDATION & DELIVERY (Certification)
+    subgraph Validation_Gates ["fa:fa-certificate FINAL CERTIFICATION"]
+        direction TB
+        RESULTS["RESULTS DASHBOARD<br/>(Pass/Fail Chips)"]:::supervisor
+        ARTIFACTS["HIGH-FIDELITY ARTIFACTS<br/>(800ms Rendered PNGs)"]:::data
+        UAT["100-SCENARIO UAT<br/>(Zero-Defect Stress Test)"]:::qa
+        
+        PW_TEST & WDIO_TEST --> ARTIFACTS
+        ARTIFACTS --> RESULTS
+        RESULTS --> UAT
+        UAT ==>|"KPI CERTIFIED"| RELEASE("PRODUCTION MASTER"):::pm
+    end
 
-    class User human;
-    class DevAgent,QAAgent agent;
-    class Codebase,ChangesMD,DefectMD artifact;
-    class SIT_UAT_Env env;
+    %% WORKFLOW FLOWS
+    PM ==> Control_Plane
+    Control_Plane ==> Ingestion_Layer
+    Ingestion_Layer ==> Mapping_Core
+    Mapping_Core ==> Stabilization_Layer
+    Stabilization_Layer ==> Compiler_Core
+    Compiler_Core ==> Validation_Gates
+
+    %% MANDATES
+    Note1["fa:fa-soul SOUL MANDATE:<br/>1. MINIMAL CHANGES TO WORKING CODE<br/>2. 100% DPR TEMPLATE COMPLIANCE<br/>3. ZERO WHITE PNG ARTIFACTS"]
+    Note1 --- PM
