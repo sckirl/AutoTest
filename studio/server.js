@@ -12,6 +12,24 @@ let activeRun = null;
 let globalBrowser = null; 
 let lastActivity = Date.now();
 
+// Helper to detect bundled/portable browser
+function getBundledBrowserPath() {
+    const paths = [
+        path.join(__dirname, '../bin/chrome-win/chrome.exe'),
+        path.join(__dirname, '../bin/chrome-win/Chrome.exe'),
+        path.join(__dirname, '../bin/Chrome.exe'),
+        path.join(__dirname, '../bin/chrome.exe'),
+        path.join(__dirname, '../Chrome.exe'),
+        path.join(__dirname, '../chrome.exe'),
+        path.join(__dirname, '../bin/chrome-linux/chrome'),
+        path.join(__dirname, '../bin/chrome-mac/Chromium.app/Contents/MacOS/Chromium')
+    ];
+    for (const p of paths) {
+        if (fs.existsSync(p)) return p;
+    }
+    return null;
+}
+
 // Phase 1-C: Inactivity Timeout (10 minutes)
 setInterval(() => {
     if (globalBrowser && (Date.now() - lastActivity > 600000)) {
@@ -187,9 +205,12 @@ app.post('/record', async (req, res) => {
 
         // 1. Generate Replay Script
         const replayScriptPath = path.join(ROOT_DIR, `replay_${Date.now()}.js`);
+        const bundledPath = getBundledBrowserPath();
+        const launchOptions = bundledPath ? `{ headless: false, executablePath: '${bundledPath.replace(/\\/g, '\\\\')}' }` : `{ headless: false }`;
+
         let scriptContent = `const { chromium } = require('playwright');\n(async () => {\n`;
         scriptContent += `  console.log('🚀 Launching Browser...');\n`;
-        scriptContent += `  const browser = await chromium.launch({ headless: false });\n`;
+        scriptContent += `  const browser = await chromium.launch(${launchOptions});\n`;
         scriptContent += `  const context = await browser.newContext();\n`;
         scriptContent += `  const page = await context.newPage();\n`;
         
@@ -287,11 +308,12 @@ app.post('/run', async (req, res) => {
         console.log("🔨 Compiling scenarios into explicit code...");
         await execWithRetry(`node core/compiler.js`);
 
-        console.log(`🏃 Launching Playwright UI with ${numWorkers} workers...`);
+        console.log(`🏃 Launching Playwright with ${numWorkers} workers...`);
         
         const isHeadless = req.body.headless ? '1' : '0';
+        const bundledPath = getBundledBrowserPath();
         const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'], {
-            env: { ...process.env, PW_HEADLESS: isHeadless },
+            env: { ...process.env, PW_HEADLESS: isHeadless, BROWSER_PATH: bundledPath || '' },
             shell: true
         });
 

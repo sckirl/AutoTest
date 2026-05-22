@@ -12,6 +12,8 @@ export default defineConfig({
     headless: process.env.PW_HEADLESS === '1',
     screenshot: 'off',
     trace: 'off',
+    // Support for bundled/portable chromium
+    executablePath: process.env.BROWSER_PATH || undefined,
   },
   projects: [
     {
