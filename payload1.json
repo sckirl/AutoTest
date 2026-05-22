@@ -1,0 +1,4 @@
+{
+  "label": "Navigate",
+  "code": "import { test, expect } from '@playwright/test';\ntest('test', async ({ page }) => {\n  await page.goto('https://practicetestautomation.com/practice-test-login/');\n});"
+}

@@ -1,26 +1,26 @@
 [
   {
     "Scenario_ID": "A.1",
-    "Role": "Successful Login Demo",
+    "Role": "OrangeHRM Admin Login",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to Practice Site",
+        "Mapping_Key": "Navigate to OrangeHRM",
         "Data": {}
       },
       {
-        "Mapping_Key": "Input Demo Username",
+        "Mapping_Key": "Input Username",
         "Data": {}
       },
       {
-        "Mapping_Key": "Input Demo Password",
+        "Mapping_Key": "Input Password",
         "Data": {}
       },
       {
-        "Mapping_Key": "Submit Login",
+        "Mapping_Key": "Click Login Button",
         "Data": {}
       },
       {
-        "Mapping_Key": "Verify Success Message",
+        "Mapping_Key": "Verify Dashboard",
         "Data": {}
       }
     ]

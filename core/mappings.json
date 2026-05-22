@@ -1,31 +1,31 @@
 {
-  "Navigate to Practice Site": {
+  "Navigate to OrangeHRM": {
     "steps": [
       {
         "type": "goto",
-        "target": "https://practicetestautomation.com/practice-test-login/"
+        "target": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login"
       }
     ]
   },
-  "Input Demo Username": {
+  "Input Username": {
     "steps": [
       {
         "type": "fill",
-        "target": "getByLabel(\"Username\")",
-        "value": "{Username}"
+        "target": "getByPlaceholder(\"Username\")",
+        "value": "{username}"
       }
     ]
   },
-  "Input Demo Password": {
+  "Input Password": {
     "steps": [
       {
         "type": "fill",
-        "target": "getByLabel(\"Password\")",
-        "value": "{Password}"
+        "target": "getByPlaceholder(\"Password\")",
+        "value": "{password}"
       }
     ]
   },
-  "Submit Login": {
+  "Click Login Button": {
     "steps": [
       {
         "type": "click",
@@ -33,7 +33,7 @@
       }
     ]
   },
-  "Verify Success Message": {
+  "Verify Dashboard": {
     "steps": []
   }
 }

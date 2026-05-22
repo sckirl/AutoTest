@@ -1,0 +1,4 @@
+{
+  "label": "Verify",
+  "code": "import { test, expect } from '@playwright/test';\ntest('test', async ({ page }) => {\n  await expect(page.getByText('Logged In Successfully')).toBeVisible();\n});"
+}
