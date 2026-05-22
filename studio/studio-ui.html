@@ -179,6 +179,13 @@ fetch('/env').then(r=>r.json()).then(d => {
         let isUserInteracting = false;
 
         // Phase 3-C: Platform Context Logic
+        function safeStorageGet(key) {
+            try { return localStorage.getItem(key); } catch (e) { return null; }
+        }
+        function safeStorageSet(key, val) {
+            try { localStorage.setItem(key, val); } catch (e) {}
+        }
+
         function updateContextSelection() {
             const select = document.getElementById('platform-toggle');
             const badge = document.getElementById('env-badge');
@@ -191,12 +198,12 @@ fetch('/env').then(r=>r.json()).then(d => {
             if (platform === 'mobile') card.classList.add('mobile-mode');
             else card.classList.remove('mobile-mode');
             
-            localStorage.setItem('autotest_platform', platform);
+            safeStorageSet('autotest_platform', platform);
             console.log(`Context switched to: ${platform}`);
         }
 
         function initContext() {
-            const saved = localStorage.getItem('autotest_platform') || 'web';
+            const saved = safeStorageGet('autotest_platform') || 'web';
             const select = document.getElementById('platform-toggle');
             if (select) {
                 select.value = saved;
@@ -225,6 +232,7 @@ fetch('/env').then(r=>r.json()).then(d => {
             document.getElementById(`tab-${tabId}`).classList.remove('tab-inactive');
             document.getElementById(`tab-${tabId}`).classList.add('tab-active');
             if (tabId === 'data-matrix') initDataMatrix();
+            if (tabId === 'mappings') scanSteps();
         }
 
         dropZone.onclick = () => fileInput.click();

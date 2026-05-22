@@ -128,7 +128,7 @@ app.get('/scan', (req, res) => {
             const scenarioNum = String(rows[r][1] || "").trim();
             const label = String(rows[r][2] || "").trim();
 
-            if (scenarioNum.match(/^[A-Z]\.\d+/)) {
+            if (scenarioNum.match(/^[A-Z](\.\d+)?$/)) {
                 currentScenario = scenarioNum;
                 scenarios.push(currentScenario);
                 scenarioVariables[currentScenario] = new Set();
