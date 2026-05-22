@@ -108,14 +108,18 @@ app.get('/scan', (req, res) => {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
         
-        // Negative Scenario: Malformed Template Validation (Phase 1-D / Track H)
         if (rows.length < 2) {
              return res.status(400).json({ error: "Malformed Template: Excel file is empty or missing data rows." });
         }
-        
-        // Ensure required columns (Index 1: Scenario ID/Num, Index 2: Step Label) exist in header
-        if (!rows[0][1] || !rows[0][2]) {
-             return res.status(400).json({ error: "Malformed Template: Header row missing required columns at index 1 (Scenario) or 2 (Label)." });
+
+        // Dynamic Header Detection
+        const headers = rows[0].map(h => String(h || '').toLowerCase());
+        const scenarioIdx = headers.findIndex(h => h.includes('scenario number') || h.includes('scenario id'));
+        const labelIdx = headers.findIndex(h => h.includes('scenario name') || h.includes('label'));
+        const testDataIdx = headers.findIndex(h => h.includes('test data'));
+
+        if (scenarioIdx === -1 || labelIdx === -1) {
+             return res.status(400).json({ error: "Malformed Template: Could not find 'Scenario Number' and 'Scenario Name' columns." });
         }
         
         const stepMap = new Map();
@@ -125,8 +129,8 @@ app.get('/scan', (req, res) => {
 
         // Hierarchical Parser: Detects A.1, A.2 and their steps
         for (let r = 1; r < rows.length; r++) {
-            const scenarioNum = String(rows[r][1] || "").trim();
-            const label = String(rows[r][2] || "").trim();
+            const scenarioNum = String(rows[r][scenarioIdx] || "").trim();
+            const label = String(rows[r][labelIdx] || "").trim();
 
             if (scenarioNum.match(/^[A-Z](\.\d+)?$/)) {
                 currentScenario = scenarioNum;

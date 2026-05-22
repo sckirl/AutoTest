@@ -13,7 +13,7 @@ function generateBlueprintFromExcel(excelPath) {
     }
 
     const workbook = XLSX.readFile(excelPath);
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const sheet = workbook.Sheets[workbook.SheetNames[0]]; // Only read first sheet
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
     const blueprint = [];
@@ -22,18 +22,22 @@ function generateBlueprintFromExcel(excelPath) {
         throw new Error('❌ Invalid Excel structure: expected scenario matrix with at least 3 columns.');
     }
 
-    const headerScanRows = rows.slice(0, 5).map(r => r.map(c => String(c || '').toLowerCase()));
-    const hasScenarioHint = headerScanRows.some(r => r.some(c => c.includes('scenario')));
-    if (!hasScenarioHint) {
-        throw new Error('❌ Invalid Excel header: missing "Scenario" marker in first 5 rows.');
+    // Dynamic Header Detection
+    const headers = rows[0].map(h => String(h || '').toLowerCase());
+    const scenarioIdx = headers.findIndex(h => h.includes('scenario number') || h.includes('scenario id'));
+    const labelIdx = headers.findIndex(h => h.includes('scenario name') || h.includes('label'));
+    const testDataIdx = headers.findIndex(h => h.includes('test data'));
+
+    if (scenarioIdx === -1 || labelIdx === -1) {
+        throw new Error('❌ Malformed Template: Could not find required columns.');
     }
 
     for (let r = 1; r < rows.length; r++) {
-        const scenarioNum = String(rows[r][1] || "").trim();
-        const labelOrTitle = String(rows[r][2] || "").trim();
-        const testDataRaw = String(rows[r][13] || "").trim();
+        const scenarioNum = String(rows[r][scenarioIdx] || "").trim();
+        const labelOrTitle = String(rows[r][labelIdx] || "").trim();
+        const testDataRaw = testDataIdx !== -1 ? String(rows[r][testDataIdx] || "").trim() : "";
 
-        if (scenarioNum.match(/^[A-Z]\.\d+/)) {
+        if (scenarioNum.match(/^[A-Z](\.\d+)?$/)) {
             // Start of a new scenario
             currentScenario = {
                 Scenario_ID: scenarioNum,
