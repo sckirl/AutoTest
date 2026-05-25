@@ -22,6 +22,21 @@ const XLSX = require('xlsx');
 let activeRun = null;
 let globalBrowser = null; 
 let lastActivity = Date.now();
+const trackedProcesses = new Set();
+
+function cleanupAll() {
+    console.log("\n🛑 Shutdown signal received. Killing all tracked processes...");
+    for (const proc of trackedProcesses) {
+        try { proc.kill('SIGKILL'); } catch (e) {}
+    }
+    if (globalBrowser) {
+        try { globalBrowser.close().catch(() => {}); } catch (e) {}
+    }
+    process.exit(0);
+}
+
+process.on('SIGINT', cleanupAll);
+process.on('SIGTERM', cleanupAll);
 
 // Helper to detect bundled/portable browser
 function getBundledBrowserPath() {
@@ -286,10 +301,13 @@ app.post('/record', async (req, res) => {
             shell: true
         });
 
+        trackedProcesses.add(child);
+
         child.stdout.on('data', (data) => console.log(`[RECORD] ${data}`));
         child.stderr.on('data', (data) => console.error(`[RECORD ERROR] ${data}`));
 
         child.on('close', () => {
+            trackedProcesses.delete(child);
             if (fs.existsSync(replayScriptPath)) fs.unlinkSync(replayScriptPath);
         });
 
@@ -355,6 +373,8 @@ app.post('/run', async (req, res) => {
             shell: true
         });
 
+        trackedProcesses.add(pw);
+
         let reportData = "";
         pw.stdout.on('data', (data) => {
             reportData += data.toString();
@@ -363,6 +383,7 @@ app.post('/run', async (req, res) => {
         pw.stderr.on('data', (data) => console.error(`[PW ERROR] ${data}`));
 
         pw.on('close', (code) => {
+            trackedProcesses.delete(pw);
             console.log(`✅ Playwright process closed with code ${code}`);
             if (activeRun) {
                 activeRun.phase = code === 0 ? 'completed' : 'failed';
