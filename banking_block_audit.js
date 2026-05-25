@@ -15,7 +15,7 @@ if (fs.existsSync(driversModules)) {
 
 // 2. Binary Path Check
 const serverCode = fs.readFileSync('studio/server.js', 'utf8');
-if (serverCode.includes('DRIVERS/node_modules/.bin/playwright')) {
+if (serverCode.includes('playwrightBin = path.resolve(DRIVERS_PATH')) {
     console.log("✅ [QA] Execution Engine re-routed to DRIVERS/ binary.");
 } else {
     console.error("❌ [QA] Execution Engine STILL pointing to root node_modules!");
@@ -31,10 +31,26 @@ if (serverCode.includes('PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD')) {
 }
 
 // 4. Browser Detector Verification
-if (serverCode.includes('DRIVERS/ms-playwright')) {
+if (serverCode.includes('MS_PLAYWRIGHT_PATH')) {
     console.log("✅ [QA] Browser Detector searching DRIVERS/ folder.");
 } else {
     console.error("❌ [QA] Browser Detector IGNORING DRIVERS/ folder!");
+    process.exit(1);
+}
+
+// 6. Absolute Path Check
+if (serverCode.includes('path.resolve')) {
+    console.log("✅ [QA] Absolute Path resolution active.");
+} else {
+    console.error("❌ [QA] Relative paths detected! May fail on Windows.");
+    process.exit(1);
+}
+
+// 7. Discovery Override Check
+if (serverCode.includes('PLAYWRIGHT_BROWSERS_PATH')) {
+    console.log("✅ [QA] Discovery Override Active (PLAYWRIGHT_BROWSERS_PATH).");
+} else {
+    console.error("❌ [QA] Discovery Override MISSING!");
     process.exit(1);
 }
 

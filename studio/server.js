@@ -1,10 +1,13 @@
 // High-Security Banking Compliance: Strict DRIVERS/ Resolution
 const fs = require('fs');
 const path = require('path');
-const DRIVERS_PATH = path.join(__dirname, '../DRIVERS/node_modules');
+const DRIVERS_PATH = path.resolve(__dirname, '../DRIVERS/node_modules');
+const MS_PLAYWRIGHT_PATH = path.resolve(__dirname, '../DRIVERS/ms-playwright');
+
 if (fs.existsSync(DRIVERS_PATH)) {
     module.paths.unshift(DRIVERS_PATH);
     process.env.NODE_PATH = DRIVERS_PATH;
+    process.env.PLAYWRIGHT_BROWSERS_PATH = MS_PLAYWRIGHT_PATH; // CRITICAL: Tell playwright EXACTLY where to look
     require('module').Module._initPaths();
 }
 
@@ -23,11 +26,11 @@ let lastActivity = Date.now();
 // Helper to detect bundled/portable browser
 function getBundledBrowserPath() {
     const paths = [
-        path.join(__dirname, '../DRIVERS/ms-playwright/chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'),
-        path.join(__dirname, '../DRIVERS/ms-playwright/chromium-1223/chrome-win/chrome.exe'),
-        path.join(__dirname, '../DRIVERS/ms-playwright/chromium-1223/chrome-linux/chrome'),
-        path.join(__dirname, '../bin/chrome-win/chrome.exe'),
-        path.join(__dirname, '../bin/chrome-win/Chrome.exe')
+        path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'),
+        path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-win/chrome.exe'),
+        path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-linux/chrome'),
+        path.resolve(__dirname, '../bin/chrome-win/chrome.exe'),
+        path.resolve(__dirname, '../bin/chrome-win/Chrome.exe')
     ];
     for (const p of paths) {
         if (fs.existsSync(p)) {
@@ -266,7 +269,7 @@ app.post('/record', async (req, res) => {
         fs.writeFileSync(replayScriptPath, scriptContent);
 
         // 2. Execute the script via local playwright test (Strict Banking Block)
-        const playwrightBin = path.join(__dirname, '../DRIVERS/node_modules/.bin/playwright');
+        const playwrightBin = path.resolve(DRIVERS_PATH, '.bin/playwright');
 
         if (!fs.existsSync(playwrightBin)) {
             return res.status(500).json({ error: "Banking Block Violation: Playwright binary not found in DRIVERS/ folder." });
@@ -277,6 +280,7 @@ app.post('/record', async (req, res) => {
                 ...process.env, 
                 BROWSER_PATH: bundledPath || '',
                 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
+                PLAYWRIGHT_BROWSERS_PATH: MS_PLAYWRIGHT_PATH,
                 NODE_PATH: DRIVERS_PATH
             },
             shell: true
@@ -333,7 +337,7 @@ app.post('/run', async (req, res) => {
         
         const isHeadless = req.body.headless ? '1' : '0';
         const bundledPath = getBundledBrowserPath();
-        const playwrightBin = path.join(__dirname, '../DRIVERS/node_modules/.bin/playwright');
+        const playwrightBin = path.resolve(DRIVERS_PATH, '.bin/playwright');
 
         if (!fs.existsSync(playwrightBin)) {
             return res.status(500).json({ error: "Banking Block Violation: Playwright binary not found in DRIVERS/ folder." });
@@ -345,6 +349,7 @@ app.post('/run', async (req, res) => {
                 PW_HEADLESS: isHeadless, 
                 BROWSER_PATH: bundledPath || '',
                 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
+                PLAYWRIGHT_BROWSERS_PATH: MS_PLAYWRIGHT_PATH,
                 NODE_PATH: DRIVERS_PATH
             },
             shell: true
