@@ -1,8 +1,16 @@
+// High-Security Banking Compliance: Strict DRIVERS/ Resolution
+const fs = require('fs');
+const path = require('path');
+const DRIVERS_PATH = path.join(__dirname, '../DRIVERS/node_modules');
+if (fs.existsSync(DRIVERS_PATH)) {
+    module.paths.unshift(DRIVERS_PATH);
+    process.env.NODE_PATH = DRIVERS_PATH;
+    require('module').Module._initPaths();
+}
+
 const acorn = require('acorn');
 const walk = require('acorn-walk');
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const cors = require('cors');
 const { exec, execSync, spawn } = require('child_process');
 const multer = require('multer');
@@ -257,17 +265,19 @@ app.post('/record', async (req, res) => {
         
         fs.writeFileSync(replayScriptPath, scriptContent);
 
-        // 2. Execute the script via local playwright test
-        const playwrightBin = fs.existsSync(path.join(__dirname, '../DRIVERS/node_modules/.bin/playwright')) 
-            ? path.join(__dirname, '../DRIVERS/node_modules/.bin/playwright')
-            : path.join(__dirname, '../node_modules/.bin/playwright');
+        // 2. Execute the script via local playwright test (Strict Banking Block)
+        const playwrightBin = path.join(__dirname, '../DRIVERS/node_modules/.bin/playwright');
+
+        if (!fs.existsSync(playwrightBin)) {
+            return res.status(500).json({ error: "Banking Block Violation: Playwright binary not found in DRIVERS/ folder." });
+        }
 
         const child = spawn(playwrightBin, ['test', replayScriptPath, '--headed'], {
             env: { 
                 ...process.env, 
                 BROWSER_PATH: bundledPath || '',
                 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
-                NODE_PATH: path.join(__dirname, '../DRIVERS/node_modules')
+                NODE_PATH: DRIVERS_PATH
             },
             shell: true
         });
@@ -323,9 +333,11 @@ app.post('/run', async (req, res) => {
         
         const isHeadless = req.body.headless ? '1' : '0';
         const bundledPath = getBundledBrowserPath();
-        const playwrightBin = fs.existsSync(path.join(__dirname, '../DRIVERS/node_modules/.bin/playwright')) 
-            ? path.join(__dirname, '../DRIVERS/node_modules/.bin/playwright')
-            : path.join(__dirname, '../node_modules/.bin/playwright');
+        const playwrightBin = path.join(__dirname, '../DRIVERS/node_modules/.bin/playwright');
+
+        if (!fs.existsSync(playwrightBin)) {
+            return res.status(500).json({ error: "Banking Block Violation: Playwright binary not found in DRIVERS/ folder." });
+        }
 
         const pw = spawn(playwrightBin, ['test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'], {
             env: { 
@@ -333,7 +345,7 @@ app.post('/run', async (req, res) => {
                 PW_HEADLESS: isHeadless, 
                 BROWSER_PATH: bundledPath || '',
                 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
-                NODE_PATH: path.join(__dirname, '../DRIVERS/node_modules')
+                NODE_PATH: DRIVERS_PATH
             },
             shell: true
         });
