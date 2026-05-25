@@ -26,9 +26,11 @@ studio_audit.log
 .idea/
 .vscode/
 
-# Allow bundled binaries
+# Allow bundled binaries and drivers
 !bin/
 !bin/**/
+!DRIVERS/
+!DRIVERS/**/
 
 
 # Temporary files

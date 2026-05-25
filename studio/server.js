@@ -15,18 +15,19 @@ let lastActivity = Date.now();
 // Helper to detect bundled/portable browser
 function getBundledBrowserPath() {
     const paths = [
+        path.join(__dirname, '../DRIVERS/ms-playwright/chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'),
+        path.join(__dirname, '../DRIVERS/ms-playwright/chromium-1223/chrome-win/chrome.exe'),
+        path.join(__dirname, '../DRIVERS/ms-playwright/chromium-1223/chrome-linux/chrome'),
         path.join(__dirname, '../bin/chrome-win/chrome.exe'),
-        path.join(__dirname, '../bin/chrome-win/Chrome.exe'),
-        path.join(__dirname, '../bin/Chrome.exe'),
-        path.join(__dirname, '../bin/chrome.exe'),
-        path.join(__dirname, '../Chrome.exe'),
-        path.join(__dirname, '../chrome.exe'),
-        path.join(__dirname, '../bin/chrome-linux/chrome'),
-        path.join(__dirname, '../bin/chrome-mac/Chromium.app/Contents/MacOS/Chromium')
+        path.join(__dirname, '../bin/chrome-win/Chrome.exe')
     ];
     for (const p of paths) {
-        if (fs.existsSync(p)) return p;
+        if (fs.existsSync(p)) {
+            console.log(`✅ FOUND bundled Chromium: ${p}`);
+            return p;
+        }
     }
+    console.log(`⚠️ NO bundled browser found in DRIVERS/. Using system Playwright defaults.`);
     return null;
 }
 
@@ -203,19 +204,16 @@ app.post('/record', async (req, res) => {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-        // 1. Generate Replay Script
-        const replayScriptPath = path.join(ROOT_DIR, `replay_${Date.now()}.js`);
+                // 1. Generate Replay Script (Phase 1-B Hardening)
+        const replayScriptPath = path.join(ROOT_DIR, `replay_${Date.now()}.spec.js`);
         const bundledPath = getBundledBrowserPath();
-        const launchOptions = bundledPath ? `{ headless: false, executablePath: '${bundledPath.replace(/\\/g, '\\\\')}' }` : `{ headless: false }`;
 
-        let scriptContent = `const { chromium } = require('playwright');\n(async () => {\n`;
-        scriptContent += `  console.log('🚀 Launching Browser...');\n`;
-        scriptContent += `  const browser = await chromium.launch(${launchOptions});\n`;
-        scriptContent += `  const context = await browser.newContext();\n`;
-        scriptContent += `  const page = await context.newPage();\n`;
+        let scriptContent = `const { test, expect } = require('@playwright/test');\n\n`;
+        scriptContent += `test('Manual Mapping Replay', async ({ page }) => {\n`;
+        scriptContent += `  console.log('🚀 Launching Browser via local playwright...');\n`;
         
         if (url) {
-            scriptContent += `  await page.goto('${url}');\n`;
+            scriptContent += `  await page.goto('${url}', { waitUntil: 'networkidle' });\n`;
         }
 
         // Find steps for this scenario up to the current label
@@ -224,7 +222,7 @@ app.post('/record', async (req, res) => {
             const scenarioNum = String(rows[r][1] || "").trim();
             const stepLabel = String(rows[r][2] || "").trim();
 
-            if (scenarioNum.match(/^[A-Z]\.\d+/)) {
+            if (scenarioNum.match(/^[A-Z](\.\d+)?$/)) {
                 currentScen = scenarioNum;
             } else if (currentScen === scenarioId && scenarioNum.match(/^\d+$/) && stepLabel) {
                 if (stepLabel === label) break;
@@ -235,7 +233,6 @@ app.post('/record', async (req, res) => {
                         const val = action.value || "";
                         const target = action.target;
                         
-                        // Intelligent Locator String Generation
                         let locatorStr = "";
                         if (target.startsWith('getBy')) {
                             locatorStr = `page.${target}`;
@@ -244,11 +241,11 @@ app.post('/record', async (req, res) => {
                         }
 
                         if (action.type === 'goto') scriptContent += `    await page.goto('${action.target}', { waitUntil: 'networkidle' });\n`;
-                        else if (action.type === 'click') scriptContent += `    await Promise.all([page.waitForNavigation({ timeout: 5000, waitUntil: 'networkidle' }).catch(() => {}), ${locatorStr}.click()]);\n`;
+                        else if (action.type === 'click') scriptContent += `    await Promise.all([page.waitForNavigation({ timeout: 5000, waitUntil: 'networkidle' }).catch(() => {}), page.${target}.click()]);\n`;
                         else if (action.type === 'fill') scriptContent += `    await ${locatorStr}.fill(\`${val}\`);\n`;
                         else if (action.type === 'press') scriptContent += `    await ${locatorStr}.press(\`${val || 'Enter'}\`);\n`;
                     }
-                    scriptContent += `    await page.waitForTimeout(500);\n`; // Buffer after each step
+                    scriptContent += `    await page.waitForTimeout(500);\n`;
                 }
             }
         }
@@ -256,17 +253,29 @@ app.post('/record', async (req, res) => {
         scriptContent += `  await page.waitForLoadState('networkidle');\n`;
         scriptContent += `  console.log('--- REPLAY COMPLETE. INSPECTOR OPENING FOR: ${label} ---');\n`;
         scriptContent += `  await page.pause();\n`; 
-        scriptContent += `  await browser.close();\n})();`;
+        scriptContent += `});`;
         
         fs.writeFileSync(replayScriptPath, scriptContent);
 
-        // 2. Execute the script with better logging (Phase 1-C Hardening)
-        const child = exec(`node ${replayScriptPath}`, {
-            env: { ...process.env, PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' }
-        }, (err, stdout, stderr) => {
-            if (err) console.error(`❌ Execution Error: ${err.message}`);
-            if (stderr) console.error(`⚠️ Stderr: ${stderr}`);
-            console.log(`ℹ️ Stdout: ${stdout}`);
+        // 2. Execute the script via local playwright test
+        const playwrightBin = fs.existsSync(path.join(__dirname, '../DRIVERS/node_modules/.bin/playwright')) 
+            ? path.join(__dirname, '../DRIVERS/node_modules/.bin/playwright')
+            : path.join(__dirname, '../node_modules/.bin/playwright');
+
+        const child = spawn(playwrightBin, ['test', replayScriptPath, '--headed'], {
+            env: { 
+                ...process.env, 
+                BROWSER_PATH: bundledPath || '',
+                PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
+                NODE_PATH: path.join(__dirname, '../DRIVERS/node_modules')
+            },
+            shell: true
+        });
+
+        child.stdout.on('data', (data) => console.log(`[RECORD] ${data}`));
+        child.stderr.on('data', (data) => console.error(`[RECORD ERROR] ${data}`));
+
+        child.on('close', () => {
             if (fs.existsSync(replayScriptPath)) fs.unlinkSync(replayScriptPath);
         });
 
@@ -314,12 +323,17 @@ app.post('/run', async (req, res) => {
         
         const isHeadless = req.body.headless ? '1' : '0';
         const bundledPath = getBundledBrowserPath();
-        const pw = spawn(path.join(__dirname, '../node_modules/.bin/playwright'), ['test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'], {
+        const playwrightBin = fs.existsSync(path.join(__dirname, '../DRIVERS/node_modules/.bin/playwright')) 
+            ? path.join(__dirname, '../DRIVERS/node_modules/.bin/playwright')
+            : path.join(__dirname, '../node_modules/.bin/playwright');
+
+        const pw = spawn(playwrightBin, ['test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'], {
             env: { 
                 ...process.env, 
                 PW_HEADLESS: isHeadless, 
                 BROWSER_PATH: bundledPath || '',
-                PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' // CRITICAL: Bypass version validation checks
+                PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
+                NODE_PATH: path.join(__dirname, '../DRIVERS/node_modules')
             },
             shell: true
         });
