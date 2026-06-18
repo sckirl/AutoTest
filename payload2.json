@@ -1,4 +1,0 @@
-{
-  "label": "Input User",
-  "code": "import { test, expect } from '@playwright/test';\ntest('test', async ({ page }) => {\n  await page.locator('#username').fill('{Username}');\n});"
-}

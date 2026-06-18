@@ -1,55 +1,64 @@
-# 🚀 Automation Studio: Peer Run Guide
+# 🚀 AutoTest Studio: Zero-Trust Orchestration Guide
 
-This project is a **No-Code Playwright Engine** that translates UAT Excel matrices into automated tests.
-
----
-
-### 📋 Step 1: Prerequisites
-Ensure you have the following installed:
-1.  **Node.js** (v18 or higher)
-2.  **Chrome Browser**
+AutoTest Studio is a **Zero-Install, Air-Gapped, Data-Driven Playwright Engine** built specifically for hardened corporate and banking environments. It completely decouples Playwright logic from UAT Excel matrices, allowing manual testers to build dynamic test suites entirely from the UI without writing code.
 
 ---
 
-### 📂 Step 2: Project Setup
-1.  **Place your Excel file** anywhere in the project root folder. 
-    *   *Validation:* The engine will automatically find it if it contains a column with **"Scenario"** or headers like **"A.1"**.
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    npx playwright install chromium
-    ```
+## 🛠️ Step 1: Environment & Setup (Zero-Install)
+This engine requires **NO** internet access and **NO** `npx` execution. Everything is self-contained.
+
+1. **Prerequisites**: Ensure you have `Node.js` installed. 
+2. **Local Drivers**: Playwright dependencies and Chromium binaries are bundled in the `DRIVERS/` directory. The system automatically routes execution through these internal binaries.
+3. **Start the Studio Server**:
+   ```bash
+   # From the project root
+   node studio/server.js
+   ```
+   *You should see `✅ FOUND bundled Chromium` in the terminal logs.*
+4. **Access the Application**: Open your browser and navigate to `http://localhost:3000`.
 
 ---
 
-### 🖥️ Step 3: Launching the Studio (UI-First)
-1.  **Start the Backend Server:**
-    ```bash
-    node studio/server.js
-    ```
-2.  **Open the UI:**
-    Open `studio/studio-ui.html` in your Chrome browser.
+## 📂 Step 2: The E2E Workflow (Human Usage Guide)
+
+### 1. Uploading the Blueprint (UAT Matrix)
+- Prepare your UAT Excel file (e.g., `DPR TEMPLATE.xlsx` or `orangehrm_blueprint.xlsx`). The parser supports hierarchical flows (e.g., Scenario A.1, A.2) and will dynamically find "Scenario ID", "Step Label", and "Test Data" headers.
+- Drag and drop your Excel file into the **"Upload Matrix"** dropzone in the UI. 
+- The system will automatically scan the file, generate a unified `blueprint.json`, and navigate you to the **Mappings** tab.
+
+### 2. Mapping Steps (Playwright Codegen)
+For every unique step found in your Excel file, you must map it to Playwright actions:
+- Click the **"Record"** button next to an unmapped step. This launches an isolated Playwright Inspector.
+- Perform the action in the browser. 
+- Copy the generated locator code (e.g., `await page.getByRole('button', { name: 'Login' }).click();`).
+- Click the **"Manual"** button on the step in the UI and paste the code into the text area. 
+- **Parameterization (DDT)**: If the step requires dynamic variables from the Excel's "Test Data" column, replace literal values with `{variable_name}` syntax (e.g., `fill('{username}')`).
+- Click **"Sync & Save Action"**. The step will turn blue ✅. The system's AST engine securely extracts and validates your target commands automatically.
+
+### 3. Configuring Data Matrix
+- Navigate to the **Data Matrix** tab. The UI will automatically pull dynamic `{variables}` from your mapped scripts and map them to scenarios that use those steps.
+- Ensure the data injected from your Excel matrix overrides is populated properly. You can modify runtime data here.
+
+### 4. Test Execution
+- Navigate to the **Execution** tab.
+- Click **"Execute Test Scenarios"**. 
+- The Compiler dynamically stitches your Playwright mappings with the Data Matrix payloads to create transient test scripts, which are routed to the bundled Playwright test runner.
+- **Auto-Healing**: The engine safely extracts targets to ensure execution won't break if Playwright wrapped the locator awkwardly, and dynamically waits for `networkidle` paint-states to prevent white, blank screenshots.
 
 ---
 
-### ▶️ Step 4: Execution
-1.  **Click "Start Intelligent Replay"** in the UI.
-    *   *What happens:* The system reads your Excel, matches the labels to the `core/mappings.json` library, and launches a **Headed Browser**.
-2.  **Handling "Auto-Healing":**
-    If a step fails (UI changed) or is missing, the browser will **pause**.
-    *   *Action:* Use the Playwright Inspector to record the fix, or manually update `core/mappings.json`.
+## 📊 Step 3: Audit & Evidence
+Once the test finishes, verification artifacts are stored natively for auditors.
+
+- **Check the `results/` folder.** Every scenario (e.g., `HRM_01/`) gets its own isolated directory.
+- **Evidence Images**: Inside, you'll find perfect `STEP_X.png` images for each action, and `FINAL.png` for the completion state. Locators clicked are marked with a red target box.
+- **Playwright Traces**: Open the `trace.zip` in [trace.playwright.dev](https://trace.playwright.dev) for a full DOM snapshot reconstruction.
 
 ---
 
-### 🗑️ Step 5: The "Restart" Workflow
-If you want a clean slate for a new project:
-1.  Click **"Restart (Wipe All)"** in the UI.
-2.  *What happens:* It deletes all existing results and clears the action library.
-
----
-
-### 📊 Step 6: Interpreting Results
-After execution, check the `results/` folder:
-*   **Separated Folders:** Each scenario (A.1, A.2) has its own folder.
-*   **Visual Trace:** Open the `.zip` file in [trace.playwright.dev](https://trace.playwright.dev/) to see the **click-marks (dots)** on the screen.
-*   **Screenshots:** `final_result.png` shows the end state.
+## 🗑️ Step 4: Resetting the System
+When moving to a completely new project, click the **"Reset System"** button on the top right of the application. This securely wipes:
+1. All generated scripts.
+2. The `mappings.json` library.
+3. The `blueprint.json` cache.
+4. Old uploaded Excel configurations.

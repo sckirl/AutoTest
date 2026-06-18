@@ -1,1 +1,52 @@
-{}
+{
+  "Navigate to PracticeTest": {
+    "steps": [
+      {
+        "type": "goto",
+        "target": "https://practicetestautomation.com/practice-test-login/"
+      }
+    ]
+  },
+  "Input Username": {
+    "steps": [
+      {
+        "type": "fill",
+        "target": "locator('#username')",
+        "value": "{username}"
+      }
+    ]
+  },
+  "Input Password": {
+    "steps": [
+      {
+        "type": "fill",
+        "target": "locator('#password')",
+        "value": "{password}"
+      }
+    ]
+  },
+  "Submit Login": {
+    "steps": [
+      {
+        "type": "click",
+        "target": "locator('#submit')"
+      }
+    ]
+  },
+  "Verify Login Success": {
+    "steps": [
+      {
+        "type": "toBeVisible",
+        "target": "locator('h1.post-title')"
+      }
+    ]
+  },
+  "Verify Error Message": {
+    "steps": [
+      {
+        "type": "toBeVisible",
+        "target": "locator('#error')"
+      }
+    ]
+  }
+}

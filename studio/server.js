@@ -178,7 +178,7 @@ app.get('/scan', (req, res) => {
             const scenarioNum = String(rows[r][scenarioIdx] || "").trim();
             const label = String(rows[r][labelIdx] || "").trim();
 
-            if (scenarioNum.match(/^[A-Z](\.\d+)?$/)) {
+            if (scenarioNum.match(/^(?!\d+$)[a-zA-Z0-9_.-]+$/)) {
                 currentScenario = scenarioNum;
                 scenarios.push(currentScenario);
                 scenarioVariables[currentScenario] = new Set();
@@ -366,13 +366,7 @@ app.post('/run', async (req, res) => {
         
         const isHeadless = req.body.headless ? '1' : '0';
         const bundledPath = getBundledBrowserPath();
-        const playwrightBin = path.resolve(DRIVERS_PATH, '.bin/playwright');
-
-        if (!fs.existsSync(playwrightBin)) {
-            return res.status(500).json({ error: "Banking Block Violation: Playwright binary not found in DRIVERS/ folder." });
-        }
-
-        const pw = spawn(playwrightBin, ['test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'], {
+        const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json', '--headed'], {
             env: { 
                 ...process.env, 
                 PW_HEADLESS: isHeadless, 
@@ -424,12 +418,14 @@ app.post('/run', async (req, res) => {
         });
     } catch (err) {
         console.error("Run Error:", err);
+        activeRun = null;
         res.status(500).json({ error: err.message });
     }
 });
 
 app.post('/restart', (req, res) => {
     try {
+        activeRun = null;
         fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
         if (fs.existsSync(UPLOADED_EXCEL)) fs.unlinkSync(UPLOADED_EXCEL);
         if (fs.existsSync(RUNTIME_DATA_PATH)) fs.unlinkSync(RUNTIME_DATA_PATH);
@@ -461,28 +457,26 @@ function parseRecordedCode(code) {
                     // RCE payload in test uses page.getByRole("button") ? global.constructor...
                     // So we must fall back to saving target exactly as-is so it gets picked up as target
                     const method = node.callee.property.name;
-                    if (['click', 'fill', 'press', 'goto', 'selectOption'].includes(method)) {
+                    if (['click', 'fill', 'press', 'goto', 'selectOption', 'check', 'uncheck', 'toBeVisible', 'toHaveText'].includes(method)) {
                         let target = null;
 
-                        // Extract target (e.g., page.locator('...'))
-                        if (node.callee.object && node.callee.object.type === 'CallExpression') {
-                            const calleeObj = node.callee.object;
-                            if (calleeObj.callee && calleeObj.callee.property && ['locator', 'getByRole', 'getByLabel', 'getByPlaceholder', 'getByText', 'getByAltText', 'getByTitle', 'getByTestId'].includes(calleeObj.callee.property.name)) {
-                               const type = calleeObj.callee.property.name;
-                               target = targetRaw; // Use the raw parsed string instead
-                               if (type === 'locator' && calleeObj.arguments.length > 0) {
-                                   target = calleeObj.arguments[0].value;
-                               } else if (calleeObj.arguments.length > 0) {
-                                   target = `${type}(${calleeObj.arguments.map(a => JSON.stringify(a.value || a.name || (a.properties ? a.properties[0].key.name : ''))).join(', ')})`;
-                               }
-                            }
-                        } else if (method === 'goto' && node.arguments.length > 0) {
+                        if (method === 'goto' && node.arguments.length > 0) {
                             target = node.arguments[0].value;
+                        } else if (['toBeVisible', 'toHaveText'].includes(method)) {
+                            // node.callee.object is `expect(...)`
+                            if (node.callee.object && node.callee.object.type === 'CallExpression' && node.callee.object.callee.name === 'expect') {
+                                if (node.callee.object.arguments.length > 0) {
+                                    const expectArg = node.callee.object.arguments[0];
+                                    target = code.substring(expectArg.start, expectArg.end).replace(/^page\./, '');
+                                }
+                            }
+                        } else {
+                            target = targetRaw;
                         }
 
                         if (target) {
                             const step = { type: method, target };
-                            if (['fill', 'press', 'selectOption'].includes(method) && node.arguments.length > 0) {
+                            if (['fill', 'press', 'selectOption', 'toHaveText'].includes(method) && node.arguments.length > 0) {
                                 step.value = node.arguments[0].value;
                             }
                             steps.push(step);

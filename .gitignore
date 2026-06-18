@@ -45,3 +45,4 @@ studio_audit.log
 .env
 .env.*
 !.env.example
+DRIVERS/ms-playwright/

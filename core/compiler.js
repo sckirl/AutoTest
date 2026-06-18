@@ -43,13 +43,10 @@ function compile() {
         return pwLocator;
     }
 
-    const safeGetBy = (target) => {
+    const isSafeChain = (target) => {
         if (typeof target !== 'string') return null;
-        const m = target.match(/^getBy(Role|Label|Placeholder|Text|AltText|Title|TestId|DisplayValue)\((.*)\)$/);
-        if (!m) return null;
-        const args = m[2];
-        if (!/^[a-zA-Z0-9\s\-#\.\:\{\},\[\]\=_\/'"`]*$/.test(args.trim())) return null;
-        if (/\b(require|exec|eval|process|import|global|constructor|window|document)\b/.test(args)) return null;
+        if (!target.match(/^(getBy|locator|frameLocator)/)) return null;
+        if (/\b(require|exec|eval|process|import|global|constructor|window|document)\b/.test(target)) return null;
         return target;
     };
 
@@ -134,15 +131,17 @@ function compile() {
                             else if (action.type === 'fill') code += `        await ${loc}.setValue(${q(finalValue)});\n`;
                             else if (action.type === 'press') code += `        await driver.keys(${q(finalValue || 'Enter')});\n`;
                         } else {
-                            const getByTarget = safeGetBy(finalTarget);
-                            const loc = getByTarget ? `page.${getByTarget}` : `page.locator(${q(finalTarget)})`;
+                            const safeTarget = isSafeChain(finalTarget);
+                            const loc = safeTarget ? `page.${safeTarget}` : `page.locator(${q(finalTarget)})`;
                             if (action.type === 'goto') code += `        await page.goto(${q(finalTarget)}, { waitUntil: 'networkidle' });\n`;
                             else if (action.type === 'click') {
                                 code += `        await markLocator(${loc});\n`;
-                                code += `        await Promise.all([page.waitForNavigation({ timeout: 5000, waitUntil: 'networkidle' }).catch(() => {}), ${loc}.click()]);\n`;
+                                code += `        await ${loc}.click();\n`;
                             }
                             else if (action.type === 'fill') code += `        await markLocator(${loc}); await ${loc}.fill(${q(finalValue)});\n`;
                             else if (action.type === 'press') code += `        await markLocator(${loc}); await ${loc}.press(${q(finalValue || 'Enter')});\n`;
+                            else if (action.type === 'toBeVisible') code += `        await markLocator(${loc}); await expect(${loc}).toBeVisible();\n`;
+                            else if (action.type === 'toHaveText') code += `        await markLocator(${loc}); await expect(${loc}).toHaveText(${q(finalValue)});\n`;
                         }
                     }
                     
@@ -150,7 +149,7 @@ function compile() {
                         code += `      await driver.pause(800);\n`;
                         code += `      await driver.saveScreenshot(path.join(resultsDir, 'STEP_${i + 1}.png'));\n`;
                     } else {
-                        code += `      await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);\n`;
+                        code += `      await page.waitForTimeout(1000); await page.waitForLoadState('networkidle').catch(() => {});\n`;
                         code += `      await page.screenshot({ path: path.join(resultsDir, 'STEP_${i + 1}.png'), fullPage: true });\n`;
                         code += `      });\n`;
                     }
@@ -161,7 +160,7 @@ function compile() {
                 code += `      await driver.pause(800);\n`;
                 code += `      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));\n`;
             } else {
-                code += `      await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);\n`;
+                code += `      await page.waitForTimeout(1000); await page.waitForLoadState('networkidle').catch(() => {});\n`;
                 code += `      await page.screenshot({ path: path.join(resultsDir, 'FINAL.png'), fullPage: true });\n`;
                 // DEF-NEW-004 FIX: Stop tracing and save trace.zip per scenario
                 code += `      await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') });\n`;
