@@ -40,9 +40,9 @@ If you are deploying this in an Air-Gapped Banking Environment where `npx` is bl
 Once the binaries are placed in the `DRIVERS` folder, simply start the server:
 ```bash
 # From the project root directory
-node studio/server.js
+npm start
 ```
-*You will see a console confirmation that the bundled local Chromium driver was successfully located.*
+*If binaries are missing and internet is available, it will automatically attempt to fallback and install them for you.*
 
 ### 2. Access the Application
 Open your browser and navigate to: **`http://localhost:3000`**
