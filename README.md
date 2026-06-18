@@ -30,7 +30,14 @@ This framework was engineered with a strict "Air-Gapped" ideology.
 
 Because AutoTest Studio is entirely self-contained, no installation is required assuming you have Node.js installed.
 
-### 1. Start the Studio
+### 1. Start the Studio & Handle Binaries
+Because GitHub prevents uploading files larger than 100MB, the Playwright Chromium binary (~217MB) is not tracked in version control. 
+
+If you are deploying this in an Air-Gapped Banking Environment where `npx` is blocked:
+1. Obtain the `ms-playwright` folder via your internal artifact repository (e.g., Nexus, Artifactory) or an approved USB transfer.
+2. Place the folder directly into `DRIVERS/ms-playwright/`.
+
+Once the binaries are placed in the `DRIVERS` folder, simply start the server:
 ```bash
 # From the project root directory
 node studio/server.js
