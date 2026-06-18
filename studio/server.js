@@ -23,6 +23,7 @@ let activeRun = null;
 let globalBrowser = null; 
 let lastActivity = Date.now();
 const trackedProcesses = new Set();
+let activePlatform = 'web'; // DEF-079 FIX: server-side platform state
 
 function cleanupAll() {
     console.log("\n🛑 Shutdown signal received. Killing all tracked processes...");
@@ -320,9 +321,16 @@ app.post('/record', async (req, res) => {
 
 app.post('/save-mapping', (req, res) => {
     const { label, code } = req.body;
+    // DEF-NEW-003 FIX: Validate label — prevent empty/null key corruption in mappings.json
+    if (!label || typeof label !== 'string' || label.trim() === '') {
+        return res.status(400).json({ error: 'Invalid label: must be a non-empty string.' });
+    }
+    if (!code || typeof code !== 'string') {
+        return res.status(400).json({ error: 'Invalid code: must be a non-empty string.' });
+    }
     const steps = parseRecordedCode(code);
     const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
-    mappings[label] = { steps };
+    mappings[label.trim()] = { steps };
     fs.writeFileSync(MAPPINGS_PATH, JSON.stringify(mappings, null, 2));
     res.json({ message: "Saved." });
 });
@@ -337,7 +345,10 @@ app.post('/run', async (req, res) => {
             return res.status(400).json({ error: "Missing Dependency: 'webdriverio' is not installed." });
         }
     }
-    if (platform) process.env.AUTOTEST_PLATFORM = platform;
+    if (platform) {
+        process.env.AUTOTEST_PLATFORM = platform;
+        activePlatform = platform; // DEF-079 FIX: persist platform for /env
+    }
 
     if (activeRun) {
         return res.status(409).json({ error: "Execution already in progress." });
@@ -380,13 +391,20 @@ app.post('/run', async (req, res) => {
             reportData += data.toString();
             console.log(`[PW] ${data}`);
         });
-        pw.stderr.on('data', (data) => console.error(`[PW ERROR] ${data}`));
+        let errorData = "";
+        pw.stderr.on('data', (data) => {
+            errorData += data.toString();
+            console.error(`[PW ERROR] ${data}`);
+        });
 
         pw.on('close', (code) => {
             trackedProcesses.delete(pw);
             console.log(`✅ Playwright process closed with code ${code}`);
             if (activeRun) {
                 activeRun.phase = code === 0 ? 'completed' : 'failed';
+                if (code !== 0) {
+                    activeRun.error = errorData || reportData || "Unknown execution error";
+                }
                 try {
                     // Extract JSON report from stdout if possible
                     const startJson = reportData.indexOf('{');
@@ -401,8 +419,8 @@ app.post('/run', async (req, res) => {
         });
         
         res.json({ 
-            message: "Playwright UI launched. Check your local desktop for the Trace Viewer window.",
-            instruction: "In the Playwright UI, click 'Run all' or select specific scenarios to see parallel execution."
+            message: "Test execution started in background. Traces (trace.zip) and screenshots are saved to the results/ folder.",
+            instruction: "In the Playwright UI, click 'Run all' or wait for background execution to complete."
         });
     } catch (err) {
         console.error("Run Error:", err);
@@ -495,7 +513,20 @@ function extractLocator(line) {
 }
 
 
-app.get('/env', (req, res) => { res.json({ platform: process.env.AUTOTEST_PLATFORM }); });
+app.get("/env", (req, res) => { res.json({ platform: activePlatform }); });
+
+// DEF-079 FIX: Return persisted server-side platform + env var
+
+// Allow UI to set platform explicitly without triggering a run
+app.post('/set-platform', (req, res) => {
+    const { platform } = req.body;
+    if (!['web', 'mobile'].includes(platform)) {
+        return res.status(400).json({ error: 'Invalid platform. Use "web" or "mobile".' });
+    }
+    activePlatform = platform;
+    process.env.AUTOTEST_PLATFORM = platform;
+    res.json({ message: `Platform set to ${platform}.` });
+});
 
 app.get('/run-status', (req, res) => {
     if (!activeRun) return res.json({ phase: 'idle' });
@@ -506,6 +537,31 @@ app.post('/record-cancel', (req, res) => {
     res.json({ message: "Cancelled." });
 });
 
+// DEF-NEW-005 FIX: /run-cancel endpoint — kills tracked Playwright process
+app.post('/run-cancel', (req, res) => {
+    if (!activeRun) return res.json({ message: 'No active run to cancel.' });
+    console.log('🛑 Run cancellation requested.');
+    for (const proc of trackedProcesses) {
+        try { proc.kill('SIGKILL'); } catch (e) {}
+    }
+    activeRun.phase = 'cancelled';
+    activeRun.message = 'Run cancelled by user.';
+    setTimeout(() => { activeRun = null; }, 5000);
+    res.json({ message: 'Cancelled.' });
+});
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`🚀 Studio Live on ${port}`));
+app.listen(port, () => {
+    console.log(`🚀 Studio Live on ${port}`);
+
+    // DEF-NEW-002 FIX: Startup cleanup — delete orphaned replay scripts from prior crashes
+    const replayGlob = fs.readdirSync(ROOT_DIR).filter(f =>
+        (f.startsWith('replay_') && (f.endsWith('.js') || f.endsWith('.spec.js')))
+    );
+    if (replayGlob.length > 0) {
+        replayGlob.forEach(f => {
+            try { fs.unlinkSync(path.join(ROOT_DIR, f)); } catch (e) {}
+        });
+        console.log(`🧹 Startup cleanup: removed ${replayGlob.length} orphaned replay script(s).`);
+    }
+});

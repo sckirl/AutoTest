@@ -29,7 +29,7 @@
         .view-pane.active { display: block; }
 
         /* Phase 4-B: Device Frame Overlay */
-        .device-frame { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border: 16px solid #222; border-radius: 40px; pointer-events: none; z-index: 100; display: none; opacity: 0.1; }
+        .device-frame { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border: 16px solid #222; border-radius: 40px; pointer-events: none; z-index: 100; display: none; opacity: 0.5; }
         .card.mobile-mode { border: 2px solid var(--danger) !important; position: relative; }
         .card.mobile-mode .device-frame { display: block; }
 
@@ -248,15 +248,34 @@
                 data.steps.forEach(s => {
                     const row = document.createElement('div');
                     row.className = 'step-row';
-                    row.innerHTML = `
-                        <div class="step-label">${s.label} <small>(Flow: ${s.scenarioId})</small></div>
-                        <div style="display:flex; gap:8px">
-                            <button class="btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}" onclick="openRecordModal('${s.label}', '${s.scenarioId}')" title="${s.status === 'missing' ? 'Open the browser to record this action' : 'Re-record this action to update the mapping'}">
-                                ${s.status === 'missing' ? 'Record' : 'Re-Map'}
-                            </button>
-                            <button class="btn btn-secondary" onclick="openManualModal('${s.label}', '${s.scenarioId}')" title="Manually edit or paste Playwright code for this action">Manual</button>
-                        </div>
-                    `;
+
+                    // --- DEF-H8 FIX: Safe DOM construction — NO innerHTML with user data ---
+                    const labelDiv = document.createElement('div');
+                    labelDiv.className = 'step-label';
+                    labelDiv.textContent = s.label;                    // safe — no HTML injection
+                    const flowSmall = document.createElement('small');
+                    flowSmall.textContent = ` (Flow: ${s.scenarioId})`; // safe — textContent
+                    labelDiv.appendChild(flowSmall);
+
+                    const btnGroup = document.createElement('div');
+                    btnGroup.style.cssText = 'display:flex; gap:8px';
+
+                    const recBtn = document.createElement('button');
+                    recBtn.className = `btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}`;
+                    recBtn.textContent = s.status === 'missing' ? 'Record' : 'Re-Map';
+                    recBtn.title = s.status === 'missing' ? 'Open the browser to record this action' : 'Re-record this action to update the mapping';
+                    recBtn.addEventListener('click', () => openRecordModal(s.label, s.scenarioId));
+
+                    const manBtn = document.createElement('button');
+                    manBtn.className = 'btn btn-secondary';
+                    manBtn.textContent = 'Manual';
+                    manBtn.title = 'Manually edit or paste Playwright code for this action';
+                    manBtn.addEventListener('click', () => openManualModal(s.label, s.scenarioId));
+
+                    btnGroup.appendChild(recBtn);
+                    btnGroup.appendChild(manBtn);
+                    row.appendChild(labelDiv);
+                    row.appendChild(btnGroup);
                     stepListUi.appendChild(row);
                 });
                 runBtn.disabled = data.steps.filter(s => s.status === 'mapped').length === 0;
@@ -324,6 +343,7 @@
 
         runBtn.onclick = async () => {
             runBtn.disabled = true;
+            document.getElementById('cancel-run-btn').style.display = 'block';
             try { 
                 await window.saveDataMatrix(true); 
                 const platform = document.getElementById('platform-toggle').value;
@@ -341,8 +361,19 @@
             } catch (e) {
                 showStatus("Execution Error: " + e.message, "error");
                 runBtn.disabled = false;
+                document.getElementById('cancel-run-btn').style.display = 'none';
             }
         };
+
+        async function cancelRun() {
+            try {
+                await fetch('/run-cancel', { method: 'POST' });
+                showStatus("Execution cancelled by user.", "warning");
+                document.getElementById('cancel-run-btn').style.display = 'none';
+            } catch (e) {
+                console.error("Cancel Error:", e);
+            }
+        }
 
         function pollRunStatus() {
             const interval = setInterval(async () => {
@@ -354,7 +385,15 @@
                     if (['completed', 'failed', 'cancelled'].includes(data.phase)) {
                         clearInterval(interval); 
                         runBtn.disabled = false;
-                        if (data.results) renderResultsDashboard(data.results);
+                        document.getElementById('cancel-run-btn').style.display = 'none';
+                        if (data.error && !data.results) {
+                            const dashboard = document.getElementById('results-dashboard');
+                            const list = document.getElementById('results-list');
+                            dashboard.style.display = 'block';
+                            list.innerHTML = `<div style="background: #FFF5F4; color: var(--danger); padding: 16px; border: 1px solid var(--danger); border-radius: 8px; white-space: pre-wrap; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto;">${data.error}</div>`;
+                        } else if (data.results) {
+                            renderResultsDashboard(data.results);
+                        }
                     }
                 } catch (e) {
                     console.error("Poll Error:", e);

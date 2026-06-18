@@ -8,6 +8,7 @@ test-results/
 blob-report/
 scenario_uploaded*.xlsx
 replay_*.js
+replay_*.spec.js
 core/blueprint.json
 core/executed.spec.ts
 .current_upload

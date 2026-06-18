@@ -108,6 +108,10 @@ function compile() {
             
             code += `    const resultsDir = path.join(process.cwd(), 'results', '${scenarioIdClean}');\n`;
             code += `    if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });\n\n`;
+            // DEF-NEW-004 FIX: Start per-scenario Playwright tracing for UAT evidence
+            if (!isMobile) {
+                code += `    await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });\n`;
+            }
             code += `    try {\n`;
 
             for (let i = 0; i < scenario.Flow.length; i++) {
@@ -159,6 +163,8 @@ function compile() {
             } else {
                 code += `      await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);\n`;
                 code += `      await page.screenshot({ path: path.join(resultsDir, 'FINAL.png'), fullPage: true });\n`;
+                // DEF-NEW-004 FIX: Stop tracing and save trace.zip per scenario
+                code += `      await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') });\n`;
             }
             code += `    }\n  });\n\n`;
         }

@@ -46,7 +46,7 @@ function generateBlueprintFromExcel(excelPath) {
         const labelOrTitle = String(rows[r][labelIdx] || "").trim();
         const testDataRaw = testDataIdx !== -1 ? String(rows[r][testDataIdx] || "").trim() : "";
 
-        if (scenarioNum.match(/^[A-Z](\.\d+)?$/)) {
+        if (scenarioNum.match(/^(?!\d+$)[a-zA-Z0-9_.-]+$/)) {
             // Start of a new scenario
             currentScenario = {
                 Scenario_ID: scenarioNum,
