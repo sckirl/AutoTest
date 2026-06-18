@@ -19,6 +19,9 @@ Any agent modifying the system must abide by these hard-coded architectural deci
 3. **Data-Driven Parameterization (DDT)**: AutoTest uses `{variable_name}` syntax, **not** JavaScript template literals (`${variable}`). The compiler looks for `{}` and safely injects variables from the Data Matrix JSON override.
 4. **Screenshot Synchronization (Zero-Blank Pages)**: In modern SPAs, `networkidle` returns instantly. The compiler enforces `await page.waitForTimeout(1000)` BEFORE `await page.waitForLoadState('networkidle')` to guarantee full DOM paint prior to screenshot captures.
 5. **Regex Uniformity**: Both `core/scenario_parser.js` and `studio/server.js`'s `/scan` route use `^(?!\d+$)[a-zA-Z0-9_.-]+$` to differentiate between Scenario IDs (e.g., `HRM_01`) and Step Labels (e.g., `"1"`).
+6. **Assertion Support (Negative Testing)**: The AST securely unpacks `expect(locator).toBeVisible()` and `toHaveText()` by extracting the locator payload inside the assertion, enabling deep negative and verification testing flows.
+7. **DPR Template Standard**: The engine natively parses complex, 10-column UAT matrices (including Pre-Condition, Expected Results, and Types) while extracting exactly what it needs for execution.
+8. **GitHub Air-Gap Fallback (`start.js`)**: Because Chromium binaries exceed GitHub's 100MB limit, the project utilizes a fallback wrapper (`npm start`) that dynamically checks for missing local binaries in `DRIVERS/` and auto-installs them if internet is available, gracefully preserving the air-gapped structure.
 
 ---
 
