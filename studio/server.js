@@ -232,7 +232,7 @@ app.post('/record', async (req, res) => {
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
                 // 1. Generate Replay Script (Phase 1-B Hardening)
-        const replayScriptPath = path.join(ROOT_DIR, `replay_${Date.now()}.spec.js`);
+        const replayScriptPath = path.join(ROOT_DIR, 'core', `replay_${Date.now()}.spec.js`);
         const bundledPath = getBundledBrowserPath();
 
         let scriptContent = `const { test, expect } = require('@playwright/test');\n\n`;
@@ -285,10 +285,13 @@ app.post('/record', async (req, res) => {
         fs.writeFileSync(replayScriptPath, scriptContent);
 
         // 2. Execute the script via local playwright test (Strict Banking Block)
-        const playwrightBin = path.resolve(DRIVERS_PATH, '.bin/playwright');
+        let playwrightBin = path.resolve(ROOT_DIR, 'node_modules/.bin/playwright');
+        if (!fs.existsSync(playwrightBin)) {
+            playwrightBin = path.resolve(DRIVERS_PATH, '.bin/playwright');
+        }
 
         if (!fs.existsSync(playwrightBin)) {
-            return res.status(500).json({ error: "Banking Block Violation: Playwright binary not found in DRIVERS/ folder." });
+            return res.status(500).json({ error: "Banking Block Violation: Playwright binary not found in DRIVERS/ or root folder." });
         }
 
         const child = spawn(playwrightBin, ['test', replayScriptPath, '--headed'], {
