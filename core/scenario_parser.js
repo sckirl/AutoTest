@@ -79,7 +79,7 @@ function generateBlueprintFromExcel(excelPath) {
         }
     }
 
-    const outputPath = path.join(process.cwd(), 'core/blueprint.json');
+    const outputPath = path.join(process.cwd(), 'core', 'blueprint.json');
     if (blueprint.length === 0) {
         throw new Error('❌ No scenarios parsed from the uploaded file.');
     }

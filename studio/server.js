@@ -284,17 +284,8 @@ app.post('/record', async (req, res) => {
         
         fs.writeFileSync(replayScriptPath, scriptContent);
 
-        // 2. Execute the script via local playwright test (Strict Banking Block)
-        let playwrightBin = path.resolve(ROOT_DIR, 'node_modules/.bin/playwright');
-        if (!fs.existsSync(playwrightBin)) {
-            playwrightBin = path.resolve(DRIVERS_PATH, '.bin/playwright');
-        }
-
-        if (!fs.existsSync(playwrightBin)) {
-            return res.status(500).json({ error: "Banking Block Violation: Playwright binary not found in DRIVERS/ or root folder." });
-        }
-
-        const child = spawn(playwrightBin, ['test', replayScriptPath, '--headed'], {
+        // 2. Execute the script via local playwright test
+        const child = spawn('npx', ['playwright', 'test', replayScriptPath, '--headed'], {
             env: { 
                 ...process.env, 
                 BROWSER_PATH: bundledPath || '',
@@ -531,6 +522,10 @@ app.get('/run-status', (req, res) => {
 });
 
 app.post('/record-cancel', (req, res) => {
+    console.log('🛑 Record cancellation requested. Closing inspector...');
+    for (const proc of trackedProcesses) {
+        try { proc.kill('SIGKILL'); } catch (e) {}
+    }
     res.json({ message: "Cancelled." });
 });
 

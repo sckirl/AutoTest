@@ -320,8 +320,9 @@
                 .catch(e => showStatus("Failed to load mapping", "error"));
         }
 
-        function closeModal() {
+        async function closeModal() {
             modal.style.display = 'none';
+            try { await fetch('/record-cancel', { method: 'POST' }); } catch(e) {}
         }
 
         async function saveMapping() {
