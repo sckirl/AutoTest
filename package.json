@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/sckirl/AutoTest#readme",
   "dependencies": {
-    "@playwright/test": "^1.60.0",
+    "@playwright/test": "^1.61.0",
     "acorn": "^8.16.0",
     "acorn-walk": "^8.3.5",
     "cors": "^2.8.6",

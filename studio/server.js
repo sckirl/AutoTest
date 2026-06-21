@@ -76,18 +76,7 @@ process.on('exit', () => {
     }
 });
 
-// Phase 1-C: Retry logic for shell commands
-async function execWithRetry(cmd, retries = 3) {
-    for (let i = 0; i < retries; i++) {
-        try {
-            return execSync(cmd, { stdio: 'inherit' });
-        } catch (e) {
-            if (i === retries - 1) throw e;
-            console.log(`⚠️ Command failed, retrying (${i + 1}/${retries})...`);
-            await new Promise(r => setTimeout(r, 1000));
-        }
-    }
-}
+
 
 const app = express();
 app.use(cors({ origin: ['http://localhost:3000', 'http://127.0.0.1:3000'] }));
@@ -221,97 +210,66 @@ app.get('/scan', (req, res) => {
 });
 
 // --- FIXED RECORDING ENDPOINT ---
-app.post('/record', async (req, res) => {
+// POST /record — launches playwright codegen (the actual recorder, NOT inspector)
+// ponytail: spawn codegen with --output tmpfile; client polls /codegen-result/:id
+app.post('/record', (req, res) => {
     const { label, url, scenarioId } = req.body;
-    console.log(`\n🎬 Recording started for label: "${label}" in scenario: "${scenarioId}"`);
-    
+    console.log(`\n🎬 Codegen launched for: "${label}" in scenario: "${scenarioId}"`);
+
+    const sessionId = Date.now().toString();
+    const outputPath = path.join(CORE_DIR, `codegen_${sessionId}.js`);
+    const bundledPath = getBundledBrowserPath();
+
+    // Build the target URL: use provided url, fall back to about:blank
+    const targetUrl = (url && url.startsWith('http')) ? url : 'about:blank';
+
+    // Spawn codegen: opens a headed Chromium with live code recorder panel.
+    // --output writes the generated Playwright code to a file when the browser is closed.
+    // windowsHide:false ensures the browser window is actually visible on Windows.
+    const child = spawn('npx', ['playwright', 'codegen', targetUrl, '--output', outputPath], {
+        env: {
+            ...process.env,
+            PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
+            PLAYWRIGHT_BROWSERS_PATH: MS_PLAYWRIGHT_PATH,
+            ...(bundledPath ? { BROWSER_PATH: bundledPath } : {})
+        },
+        shell: true,
+        windowsHide: false,   // ponytail: MUST be false — this is what shows the GUI window
+        detached: false
+    });
+
+    trackedProcesses.add(child);
+    child.stdout.on('data', d => console.log(`[CODEGEN] ${d}`));
+    child.stderr.on('data', d => {
+        const msg = d.toString();
+        // Filter noise — chromium startup warnings are expected
+        if (!msg.includes('DevTools listening') && !msg.includes('GPU process')) {
+            console.error(`[CODEGEN ERR] ${msg}`);
+        }
+    });
+    child.on('close', code => {
+        trackedProcesses.delete(child);
+        console.log(`[CODEGEN] process closed (code ${code}), output: ${outputPath}`);
+    });
+    child.on('error', err => console.error('[CODEGEN SPAWN ERROR]', err.message));
+
+    res.json({ sessionId, message: 'Codegen launched — record in the browser, then close it.' });
+});
+
+// GET /codegen-result/:sessionId — returns recorded code once codegen writes the file
+// Client polls this every 1.5s after /record. File deleted after first read.
+app.get('/codegen-result/:sessionId', (req, res) => {
+    const outputPath = path.join(CORE_DIR, `codegen_${req.params.sessionId}.js`);
+    if (!fs.existsSync(outputPath)) return res.json({ ready: false });
     try {
-        const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
-        const workbook = XLSX.readFile(UPLOADED_EXCEL);
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
-                // 1. Generate Replay Script (Phase 1-B Hardening)
-        const replayScriptPath = path.join(ROOT_DIR, 'core', `replay_${Date.now()}.spec.js`);
-        const bundledPath = getBundledBrowserPath();
-
-        let scriptContent = `const { test, expect } = require('@playwright/test');\n\n`;
-        scriptContent += `test('Manual Mapping Replay', async ({ page }) => {\n`;
-        scriptContent += `  console.log('🚀 Launching Browser via local playwright...');\n`;
-        
-        if (url) {
-            scriptContent += `  await page.goto('${url}', { waitUntil: 'networkidle' });\n`;
-        }
-
-        // Find steps for this scenario up to the current label
-        let currentScen = null;
-        for (let r = 1; r < rows.length; r++) {
-            const scenarioNum = String(rows[r][1] || "").trim();
-            const stepLabel = String(rows[r][2] || "").trim();
-
-            if (scenarioNum.match(/^[A-Z](\.\d+)?$/)) {
-                currentScen = scenarioNum;
-            } else if (currentScen === scenarioId && scenarioNum.match(/^\d+$/) && stepLabel) {
-                if (stepLabel === label) break;
-                
-                if (mappings[stepLabel]) {
-                    console.log(`   Replaying step: ${stepLabel}`);
-                    for (const action of mappings[stepLabel].steps) {
-                        const val = action.value || "";
-                        const target = action.target;
-                        
-                        let locatorStr = "";
-                        if (target.startsWith('getBy')) {
-                            locatorStr = `page.${target}`;
-                        } else {
-                            locatorStr = `page.locator(\`${target}\`)`;
-                        }
-
-                        if (action.type === 'goto') scriptContent += `    await page.goto('${action.target}', { waitUntil: 'networkidle' });\n`;
-                        else if (action.type === 'click') scriptContent += `    await Promise.all([page.waitForNavigation({ timeout: 5000, waitUntil: 'networkidle' }).catch(() => {}), page.${target}.click()]);\n`;
-                        else if (action.type === 'fill') scriptContent += `    await ${locatorStr}.fill(\`${val}\`);\n`;
-                        else if (action.type === 'press') scriptContent += `    await ${locatorStr}.press(\`${val || 'Enter'}\`);\n`;
-                    }
-                    scriptContent += `    await page.waitForTimeout(500);\n`;
-                }
-            }
-        }
-        
-        scriptContent += `  await page.waitForLoadState('networkidle');\n`;
-        scriptContent += `  console.log('--- REPLAY COMPLETE. INSPECTOR OPENING FOR: ${label} ---');\n`;
-        scriptContent += `  await page.pause();\n`; 
-        scriptContent += `});`;
-        
-        fs.writeFileSync(replayScriptPath, scriptContent);
-
-        // 2. Execute the script via local playwright test
-        const child = spawn('npx', ['playwright', 'test', replayScriptPath, '--headed'], {
-            env: { 
-                ...process.env, 
-                BROWSER_PATH: bundledPath || '',
-                PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
-                PLAYWRIGHT_BROWSERS_PATH: MS_PLAYWRIGHT_PATH,
-                NODE_PATH: DRIVERS_PATH
-            },
-            shell: true
-        });
-
-        trackedProcesses.add(child);
-
-        child.stdout.on('data', (data) => console.log(`[RECORD] ${data}`));
-        child.stderr.on('data', (data) => console.error(`[RECORD ERROR] ${data}`));
-
-        child.on('close', () => {
-            trackedProcesses.delete(child);
-            if (fs.existsSync(replayScriptPath)) fs.unlinkSync(replayScriptPath);
-        });
-
-        res.json({ message: "Replay started. Look for the browser window." });
+        const raw = fs.readFileSync(outputPath, 'utf8');
+        fs.unlinkSync(outputPath);
+        res.json({ ready: true, code: raw });
     } catch (err) {
-        console.error("Record Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
+
 
 app.post('/save-mapping', (req, res) => {
     const { label, code } = req.body;
@@ -351,16 +309,19 @@ app.post('/run', async (req, res) => {
         activeRun = { phase: 'compiling' };
         const numWorkers = workers || 2;
         console.log("🚀 Generating blueprint...");
-        await execWithRetry(`node core/scenario_parser.js ${UPLOADED_EXCEL}`);
+        execSync(`node core/scenario_parser.js ${UPLOADED_EXCEL}`, { stdio: 'inherit' });
 
         console.log("🔨 Compiling scenarios into explicit code...");
-        await execWithRetry(`node core/compiler.js`);
+        execSync(`node core/compiler.js`, { stdio: 'inherit' });
 
         console.log(`🏃 Launching Playwright with ${numWorkers} workers...`);
         
-        const isHeadless = req.body.headless ? '1' : '0';
+        // Use headless from request body; default false (headed) for UAT evidence
+        const isHeadless = headless ? '1' : '0';
         const bundledPath = getBundledBrowserPath();
-        const pw = spawn('npx', ['playwright', 'test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json', '--headed'], {
+        const pwArgs = ['playwright', 'test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'];
+        if (!headless) pwArgs.push('--headed');
+        const pw = spawn('npx', pwArgs, {
             env: { 
                 ...process.env, 
                 PW_HEADLESS: isHeadless, 
@@ -483,22 +444,67 @@ function parseRecordedCode(code) {
     return steps;
 }
 
-function extractLocator(line) {
-    // Matches: page.locator('...'), page.getByRole('...', { ... }), etc.
-    const m = line.match(/page\.(locator|getByRole|getByLabel|getByPlaceholder|getByText|getByAltText|getByTitle|getByTestId)\((.*?)\)/);
-    if (!m) return null;
-    
-    const method = m[1];
-    const args = m[2];
-    
-    if (method === 'locator') {
-        // Strip quotes for simple locators
-        return args.replace(/^['"`]|['"`]$/g, '');
-    }
-    
-    // For getBy*, keep the full method call string (without 'page.')
-    return `${method}(${args})`;
-}
+// GET /mapping/:label — returns current saved mapping for a step label
+app.get('/mapping/:label', (req, res) => {
+    try {
+        const label = decodeURIComponent(req.params.label);
+        if (!fs.existsSync(MAPPINGS_PATH)) return res.json({ mapping: null });
+        const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
+        res.json({ mapping: mappings[label] || null });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /preview/:label — reconstructs readable Playwright code from stored steps
+// ponytail: one function, no class, no template engine
+app.get('/preview/:label', (req, res) => {
+    try {
+        const label = decodeURIComponent(req.params.label);
+        if (!fs.existsSync(MAPPINGS_PATH)) return res.json({ code: '' });
+        const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
+        const mapping = mappings[label];
+        if (!mapping) return res.json({ code: '// Not mapped yet' });
+        const lines = mapping.steps.map(s => {
+            const loc = s.target && s.target.match(/^(getBy|locator|frameLocator)/) ? `page.${s.target}` : `page.locator('${s.target}')`;
+            if (s.type === 'goto')       return `await page.goto('${s.target}');`;
+            if (s.type === 'click')      return `await ${loc}.click();`;
+            if (s.type === 'fill')       return `await ${loc}.fill('${s.value || ''}');`;
+            if (s.type === 'press')      return `await ${loc}.press('${s.value || 'Enter'}');`;
+            if (s.type === 'toBeVisible') return `await expect(${loc}).toBeVisible();`;
+            if (s.type === 'toHaveText') return `await expect(${loc}).toHaveText('${s.value || ''}');`;
+            return `// ${s.type}: ${s.target}`;
+        });
+        res.json({ code: lines.join('\n') });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /preview-scenario/:scenarioId — all steps for a scenario in execution order
+app.get('/preview-scenario/:scenarioId', (req, res) => {
+    try {
+        const scenarioId = decodeURIComponent(req.params.scenarioId);
+        if (!fs.existsSync(path.join(CORE_DIR, 'blueprint.json'))) return res.json({ code: '// No blueprint. Upload and parse Excel first.' });
+        const blueprint = JSON.parse(fs.readFileSync(path.join(CORE_DIR, 'blueprint.json'), 'utf8'));
+        const mappings = fs.existsSync(MAPPINGS_PATH) ? JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8')) : {};
+        const scenario = blueprint.find(s => s.Scenario_ID === scenarioId);
+        if (!scenario) return res.json({ code: `// Scenario '${scenarioId}' not found in blueprint.` });
+        const lines = [`// Scenario: ${scenario.Scenario_ID} — ${scenario.Role}`, ''];
+        for (const step of scenario.Flow) {
+            lines.push(`// Step: ${step.Mapping_Key}`);
+            const m = mappings[step.Mapping_Key];
+            if (!m) { lines.push('// ⚠️  NOT MAPPED YET', ''); continue; }
+            for (const s of m.steps) {
+                const loc = s.target && s.target.match(/^(getBy|locator|frameLocator)/) ? `page.${s.target}` : `page.locator('${s.target}')`;
+                if (s.type === 'goto')        lines.push(`await page.goto('${s.target}');`);
+                else if (s.type === 'click')  lines.push(`await ${loc}.click();`);
+                else if (s.type === 'fill')   lines.push(`await ${loc}.fill('${s.value || ''}');`);
+                else if (s.type === 'press')  lines.push(`await ${loc}.press('${s.value || 'Enter'}');`);
+                else if (s.type === 'toBeVisible') lines.push(`await expect(${loc}).toBeVisible();`);
+                else if (s.type === 'toHaveText')  lines.push(`await expect(${loc}).toHaveText('${s.value || ''}');`);
+            }
+            lines.push('');
+        }
+        res.json({ code: lines.join('\n') });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 
 app.get("/env", (req, res) => { res.json({ platform: activePlatform }); });

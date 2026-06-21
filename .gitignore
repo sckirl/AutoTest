@@ -11,6 +11,7 @@ replay_*.js
 replay_*.spec.js
 core/blueprint.json
 core/executed.spec.ts
+core/runtime_data.json
 .current_upload
 DPR TEMPLATE.xlsx
 test_dump.csv

@@ -60,6 +60,10 @@
         .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; }
         .modal-content { background: #FFFFFF; padding: 30px; border-radius: 8px; width: 750px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
         textarea { width: 100%; height: 400px; margin: 15px 0; padding: 12px; border: 1px solid #C4C4C4; border-radius: 8px; font-family: 'Open Sans', monospace; font-size: 13px; box-sizing: border-box; resize: none; }
+        .btn-preview { background: #F0FDF4; color: #16A34A; border: 1px solid #16A34A; }
+        #preview-modal .modal-content { max-height: 80vh; overflow-y: auto; }
+        #preview-code { background: #1e1e1e; color: #d4d4d4; border: none; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.6; }
+        .scenario-header { background: #E8F0FE; padding: 10px 16px; border-radius: 6px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--deep-corporate); }
     </style>
 </head>
 <body>
@@ -76,15 +80,30 @@
         </div>
     </div>
 
-    <div id="guidance-modal" class="modal">
-        <div class="modal-content" style="width: 500px;">
-            <h3>🎥 Recording Guide</h3>
-            <div id="guidance-steps" style="font-size: 14px; margin-bottom: 20px;">
-                <p><strong>1. Watch the Browser:</strong> A Chromium window will open and automatically replay previous steps.</p>
-                <p><strong>2. Take Action:</strong> Once replay stops, perform the new manual steps you want to record.</p>
-                <p><strong>3. Sync & Save:</strong> When done, return here and click <strong>"Sync & Save"</strong> to commit the mapping.</p>
+    <!-- Preview Modal (read-only) -->
+    <div id="preview-modal" class="modal">
+        <div class="modal-content" style="width:780px;">
+            <h3 id="preview-title" style="margin-top:0;">🔍 Mapping Preview</h3>
+            <p style="font-size:12px;color:var(--muted-text);margin-top:-10px;">Read-only view of what the AI mapped. If wrong, click Manual or Re-Map on that step.</p>
+            <textarea id="preview-code" readonly></textarea>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="copyPreview()">📋 Copy to Clipboard</button>
+                <button class="btn btn-primary" style="width:auto;" onclick="document.getElementById('preview-modal').style.display='none'">Close</button>
             </div>
-            <button class="btn btn-primary" onclick="document.getElementById('guidance-modal').style.display='none'">Got it, let's go!</button>
+        </div>
+    </div>
+
+        <div id="guidance-modal" class="modal">
+        <div class="modal-content" style="width: 520px;">
+            <h3>🎥 Codegen Recording Guide</h3>
+            <div style="font-size: 14px; margin-bottom: 20px; line-height:1.7;">
+                <p><strong>Step 1 — Browser opens:</strong> A Chromium window opens with a <em>live code recorder panel</em>. This is <strong>Playwright Codegen</strong> — the real recorder, not the debugger.</p>
+                <p><strong>Step 2 — Record your actions:</strong> Click, type, and navigate in the browser. Every action is captured as Playwright code automatically in real-time.</p>
+                <p><strong>Step 3 — Close the browser:</strong> When you have finished recording, <strong>close the Chromium window</strong>. The code is auto-saved.</p>
+                <p><strong>Step 4 — Code auto-fills:</strong> The recorded code appears in the textarea below <em>automatically</em>. Review it, then click <strong>"Sync &amp; Save Action"</strong>.</p>
+                <p style="background:#FEF9C3;padding:8px;border-radius:4px;font-size:12px;">💡 You can also paste codegen output manually into the textarea at any time.</p>
+            </div>
+            <button class="btn btn-primary" onclick="document.getElementById('guidance-modal').style.display='none'">Got it — open the browser!</button>
         </div>
     </div>
 
@@ -144,6 +163,13 @@
                 </div>
                 <button class="btn btn-primary" id="run-btn" title="Compile scenarios and execute parallel test workers">Execute Test Scenarios</button>
                 <button class="btn btn-danger" id="cancel-run-btn" style="display:none; margin-top:10px; width:100%" onclick="cancelRun()" title="Stop all running test processes immediately">Cancel Execution</button>
+                <div style="margin-top:12px; display:flex; align-items:center; gap:10px;">
+                    <label style="font-size:13px; font-weight:600; color:var(--muted-text); cursor:pointer; display:flex; align-items:center; gap:6px;">
+                        <input type="checkbox" id="headless-toggle" title="Uncheck to see the browser window during test execution (headed mode)" />
+                        Headless (hide browser)
+                    </label>
+                    <span style="font-size:11px; color:var(--muted-text);">Uncheck = headed (browser visible for monitoring)</span>
+                </div>
                 
                 <div id="status-box"></div>
                 <div id="results-dashboard" style="margin-top:20px; display:none;">
@@ -244,8 +270,26 @@
                     stepListUi.innerHTML = '<p style="color:var(--muted-text); text-align:center; padding: 20px;">No scenarios found. Please upload a valid Excel file in the Studio tab first.</p>';
                     return;
                 }
-
+                let lastScenario = null;
                 data.steps.forEach(s => {
+                    // Group steps by scenario — add scenario header when it changes
+                    if (s.scenarioId !== lastScenario) {
+                        lastScenario = s.scenarioId;
+                        const scenHdr = document.createElement('div');
+                        scenHdr.className = 'scenario-header';
+                        const scenTitle = document.createElement('span');
+                        scenTitle.textContent = `📋 Scenario: ${s.scenarioId}`;
+                        const previewScenBtn = document.createElement('button');
+                        previewScenBtn.className = 'btn btn-preview';
+                        previewScenBtn.style.cssText = 'padding:4px 12px;font-size:12px;';
+                        previewScenBtn.textContent = '👁 Preview Scenario';
+                        previewScenBtn.title = 'View the full mapped Playwright script for this scenario';
+                        previewScenBtn.addEventListener('click', () => previewScenario(s.scenarioId));
+                        scenHdr.appendChild(scenTitle);
+                        scenHdr.appendChild(previewScenBtn);
+                        stepListUi.appendChild(scenHdr);
+                    }
+
                     const row = document.createElement('div');
                     row.className = 'step-row';
 
@@ -253,12 +297,18 @@
                     const labelDiv = document.createElement('div');
                     labelDiv.className = 'step-label';
                     labelDiv.textContent = s.label;                    // safe — no HTML injection
-                    const flowSmall = document.createElement('small');
-                    flowSmall.textContent = ` (Flow: ${s.scenarioId})`; // safe — textContent
-                    labelDiv.appendChild(flowSmall);
 
                     const btnGroup = document.createElement('div');
                     btnGroup.style.cssText = 'display:flex; gap:8px';
+
+                    if (s.status === 'mapped') {
+                        const previewBtn = document.createElement('button');
+                        previewBtn.className = 'btn btn-preview';
+                        previewBtn.textContent = '👁';
+                        previewBtn.title = 'Preview what this step does — verify the AI mapping is correct';
+                        previewBtn.addEventListener('click', () => previewStep(s.label));
+                        btnGroup.appendChild(previewBtn);
+                    }
 
                     const recBtn = document.createElement('button');
                     recBtn.className = `btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}`;
@@ -284,25 +334,67 @@
             }
         }
 
+        let codegenPollTimer = null;
+
+        // Extracts only the Playwright test body lines from codegen --output file
+        // ponytail: regex not parser — drops import/test() boilerplate, keeps await lines
+        function extractCodegenBody(raw) {
+            const match = raw.match(/async\s*\(\{\s*page\s*\}\)\s*=>\s*\{([\s\S]*?)\}\s*\)\s*;?\s*$/);
+            if (match) return match[1].replace(/^\n/, '').replace(/\n$/, '').trim();
+            // Fallback: return everything after the first '{'
+            const brace = raw.indexOf('{');
+            return brace >= 0 ? raw.slice(brace + 1, raw.lastIndexOf('}')).trim() : raw;
+        }
+
+        function startCodegenPoll(sessionId) {
+            let attempts = 0;
+            const MAX = 200; // 5 minutes @ 1.5s
+            codegenPollTimer = setInterval(async () => {
+                if (attempts++ > MAX) {
+                    clearInterval(codegenPollTimer);
+                    showStatus('⏰ Codegen session timed out. Paste your code manually above.', 'warning');
+                    return;
+                }
+                try {
+                    const r = await fetch(`/codegen-result/${sessionId}`);
+                    const d = await r.json();
+                    if (d.ready && d.code) {
+                        clearInterval(codegenPollTimer);
+                        const body = extractCodegenBody(d.code);
+                        codeArea.value = body;
+                        isUserInteracting = true;
+                        showStatus('✅ Codegen captured! Review the code and click "Sync & Save Action".', 'success');
+                    }
+                } catch (e) { /* network blip — keep polling */ }
+            }, 1500);
+        }
+
         async function openRecordModal(label, scenarioId) {
             currentLabel = label; currentScenarioId = scenarioId;
+            isUserInteracting = false;
+            codeArea.value = '';
+            codeArea.placeholder = '⏳ Waiting for Chromium Codegen to open...\n\nRecord your actions in the browser, then close it.\nThe code will appear here automatically.';
+            modal.style.display = 'flex';
+            document.getElementById('modal-title').innerText = `🎬 Record: "${label}"`;
+
+            // Show the updated guidance modal
+            document.getElementById('guidance-modal').style.display = 'flex';
+
             const url = document.getElementById('base-url').value;
             const platform = document.getElementById('platform-toggle').value;
-            
-            // Phase 3-B: Show guidance
-            document.getElementById('guidance-modal').style.display = 'flex';
-            
-            isUserInteracting = false; codeArea.value = ''; modal.style.display = 'flex';
+
             try {
-                const res = await fetch('/record', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ label, scenarioId, url, platform }) 
+                const res = await fetch('/record', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label, scenarioId, url, platform })
                 });
-                if (!res.ok) throw new Error((await res.json()).error);
+                if (!res.ok) throw new Error((await res.json()).error || 'Server error');
+                const data = await res.json();
+                showStatus('🎬 Codegen launched — record in the browser, then close it.', 'warning');
+                if (data.sessionId) startCodegenPoll(data.sessionId);
             } catch (e) {
-                showStatus("Recording Failed: " + e.message, 'error');
-                closeModal();
+                showStatus('❌ Failed to launch Codegen: ' + e.message, 'error');
             }
         }
 
@@ -310,17 +402,15 @@
             currentLabel = label; currentScenarioId = scenarioId;
             isUserInteracting = true; codeArea.value = ''; modal.style.display = 'flex';
             document.getElementById('modal-title').innerText = `Manual Map: "${label}"`;
-            fetch(`/mapping/${encodeURIComponent(label)}`)
+            // ponytail: load existing code into textarea so human can see + edit it
+            fetch(`/preview/${encodeURIComponent(label)}`)
                 .then(r => r.json())
-                .then(data => {
-                    if (data.mapping) {
-                        codeArea.placeholder = "Paste your Playwright code here...";
-                    }
-                })
-                .catch(e => showStatus("Failed to load mapping", "error"));
+                .then(data => { if (data.code && !data.code.startsWith('// Not')) codeArea.value = data.code; })
+                .catch(() => {});
         }
 
         async function closeModal() {
+            clearInterval(codegenPollTimer);
             modal.style.display = 'none';
             try { await fetch('/record-cancel', { method: 'POST' }); } catch(e) {}
         }
@@ -346,13 +436,15 @@
             runBtn.disabled = true;
             document.getElementById('cancel-run-btn').style.display = 'block';
             try { 
-                await window.saveDataMatrix(true); 
+                await window.saveDataMatrix();
                 const platform = document.getElementById('platform-toggle').value;
+                const headless = document.getElementById('headless-toggle').checked;
                 const res = await fetch('/run', { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify({ 
                         workers: document.getElementById('worker-count').value,
+                        headless,
                         platform 
                     }) 
                 });
@@ -413,8 +505,14 @@
             
             let passed = 0;
             let failed = 0;
+
+            const specs = results && results.suites && results.suites[0] && results.suites[0].specs;
+            if (!specs || specs.length === 0) {
+                list.innerHTML = '<p style="color:var(--muted-text); text-align:center; padding:20px;">No test results to display.</p>';
+                return;
+            }
             
-            results.suites[0].specs.forEach(spec => {
+            specs.forEach(spec => {
                 const test = spec.tests[0];
                 const status = test.results[0].status;
                 if (status === 'passed') passed++; else failed++;
@@ -450,6 +548,30 @@
 
         function showStatus(msg, type) {
             statusBox.innerText = msg; statusBox.style.display = 'block'; statusBox.className = `status-${type}`;
+        }
+
+        // --- PREVIEW FUNCTIONS ---
+        async function previewStep(label) {
+            const res = await fetch(`/preview/${encodeURIComponent(label)}`);
+            const data = await res.json();
+            document.getElementById('preview-title').textContent = `\uD83D\uDD0D Preview: "${label}"`;
+            document.getElementById('preview-code').value = data.code || '// No code';
+            document.getElementById('preview-modal').style.display = 'flex';
+        }
+
+        async function previewScenario(scenarioId) {
+            const res = await fetch(`/preview-scenario/${encodeURIComponent(scenarioId)}`);
+            const data = await res.json();
+            document.getElementById('preview-title').textContent = `\uD83D\uDCCB Full Scenario: ${scenarioId}`;
+            document.getElementById('preview-code').value = data.code || '// No code';
+            document.getElementById('preview-modal').style.display = 'flex';
+        }
+
+        async function copyPreview() {
+            try {
+                await navigator.clipboard.writeText(document.getElementById('preview-code').value);
+                showStatus('Copied to clipboard!', 'success');
+            } catch (e) { showStatus('Copy failed — select text manually.', 'error'); }
         }
 
         async function restartSystem() {
@@ -568,14 +690,14 @@
             });
         }
 
-        window.saveDataMatrix = async () => {
+        window.saveDataMatrix = async (silent = false) => {
             saveDataMatrixStateFromDOM();
             const res = await fetch('/data-matrix', { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify(currentRuntimeData) 
             });
-            if (res.ok) showStatus("Saved!", "success");
+            if (res.ok && !silent) showStatus('Saved!', 'success');
         };
     </script>
 </body>

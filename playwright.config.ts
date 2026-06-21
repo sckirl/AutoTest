@@ -7,6 +7,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   workers: Number(process.env.AUTOTEST_WORKERS || 2),
+  // Reporter is overridden by --reporter=json CLI arg during /run execution
   reporter: 'list',
   use: {
     headless: process.env.PW_HEADLESS === '1',
