@@ -90,6 +90,7 @@ app.use(express.static(path.join(__dirname)));
 const CORE_DIR = path.join(__dirname, '../core');
 const RESULTS_DIR = path.join(__dirname, '../results');
 const ROOT_DIR = path.join(__dirname, '../');
+app.use('/results', express.static(RESULTS_DIR));
 const MAPPINGS_PATH = path.join(CORE_DIR, 'mappings.json');
 const UPLOADED_EXCEL = path.join(ROOT_DIR, 'scenario_uploaded.xlsx');
 const RUNTIME_DATA_PATH = path.join(CORE_DIR, 'runtime_data.json');
@@ -103,6 +104,74 @@ const upload = multer({
     limits: { fileSize: 5 * 1024 * 1024 } // DEF-MED-011 FIX: 5MB strict limit
 });
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'studio-ui.html')));
+app.get('/results', (req, res) => {
+    try {
+        if (!fs.existsSync(RESULTS_DIR)) {
+            return res.send('<h1>No results directory found</h1>');
+        }
+        const dirs = fs.readdirSync(RESULTS_DIR).filter(d => fs.statSync(path.join(RESULTS_DIR, d)).isDirectory());
+        
+        let html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>AutoTest Studio: Results Directory Listing</title>
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; background: #fafafa; color: #333; }
+                h1 { color: #111; margin-bottom: 20px; font-weight: 700; font-size: 24px; }
+                .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+                .folder-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; }
+                .folder-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+                .folder-title { font-weight: 600; font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+                .file-list { list-style: none; padding: 0; margin: 0; }
+                .file-list li { margin-bottom: 8px; font-size: 14px; }
+                .file-list a { color: #2563eb; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+                .file-list a:hover { text-decoration: underline; }
+                .empty { color: #6b7280; font-style: italic; }
+            </style>
+        </head>
+        <body>
+            <h1>📁 AutoTest Studio: Results Directory Listing</h1>
+            <a href="/" style="color:#2563eb; text-decoration:none; font-size:14px;">&larr; Back to Studio UI</a>
+            <div class="grid">
+        `;
+        
+        if (dirs.length === 0) {
+            html += `<p class="empty">No scenario runs found. Execute test scenarios to populate results.</p>`;
+        }
+        
+        for (const dir of dirs) {
+            const files = fs.readdirSync(path.join(RESULTS_DIR, dir)).filter(f => !f.startsWith('.'));
+            html += `
+                <div class="folder-card">
+                    <div class="folder-title">📁 ${dir}</div>
+                    <ul class="file-list">
+            `;
+            if (files.length === 0) {
+                html += `<li class="empty">No artifacts</li>`;
+            } else {
+                files.forEach(f => {
+                    const ext = path.extname(f).toLowerCase();
+                    const icon = ext === '.png' ? '📷' : ext === '.zip' ? '📦' : '📄';
+                    html += `<li><a href="/results/${dir}/${f}" target="_blank">${icon} ${f}</a></li>`;
+                });
+            }
+            html += `
+                    </ul>
+                </div>
+            `;
+        }
+        
+        html += `
+            </div>
+        </body>
+        </html>
+        `;
+        res.send(html);
+    } catch (err) {
+        res.status(500).send('Error reading results: ' + err.message);
+    }
+});
 app.post('/upload', upload.single('excel'), (req, res) => {
     if (fs.existsSync(RUNTIME_DATA_PATH)) fs.unlinkSync(RUNTIME_DATA_PATH);
     if (req.body.keepMappings === 'false') {
@@ -314,7 +383,7 @@ app.post('/record', (req, res) => {
                     const safeTarget = isSafeChain(finalTarget);
                     const loc = safeTarget ? `page.${safeTarget}` : `page.locator(${q(finalTarget)})`;
                     
-                    if (action.type === 'goto') replayCode += `  await page.goto(${q(finalTarget)}, { waitUntil: 'networkidle' });\n`;
+                    if (action.type === 'goto') replayCode += `  await page.goto(${q(finalTarget)});\n`;
                     else if (action.type === 'click') replayCode += `  await ${loc}.click();\n`;
                     else if (action.type === 'fill') replayCode += `  await ${loc}.fill(${q(finalValue)});\n`;
                     else if (action.type === 'press') replayCode += `  await ${loc}.press(${q(finalValue || 'Enter')});\n`;

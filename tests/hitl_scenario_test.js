@@ -54,6 +54,7 @@ async function runAllScenarios() {
   const browser = await chromium.launch({ headless: true });
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
+  page.on('dialog', async d => { await d.accept(); });
 
   // ── S01: Fresh start, verify UI loads completely ──────────────────────────
   console.log('\n[S01] Fresh UI load & tab structure');
@@ -159,7 +160,7 @@ async function runAllScenarios() {
     for (const code of steps) {
       const manualBtns = await page.$$('button:has-text("Manual")');
       if (manualBtns.length === 0) break;
-      await manualBtns[0].click();
+      await manualBtns[mapped + 1].click();
       await page.waitForSelector('#record-modal', { state: 'visible' });
       const area = page.locator('#recorded-code');
       await area.click({ clickCount: 3 }); await area.fill(code);
@@ -233,7 +234,6 @@ async function runAllScenarios() {
   console.log('\n[S11] Add an iteration row in Data Matrix');
   try {
     // Find first Add Iteration button and click it
-    page.on('dialog', d => d.accept()); // auto-accept confirm dialogs
     const addBtn = page.locator('button:has-text("+ Add Iteration")').first();
     await addBtn.click();
     await page.waitForTimeout(500);
@@ -409,7 +409,6 @@ async function runAllScenarios() {
   try {
     await page.goto(BASE, { waitUntil: 'networkidle' });
     // Accept the confirm dialog that restartSystem() triggers
-    page.on('dialog', async d => { if (d.type() === 'confirm') await d.accept(); });
     await page.click('button:has-text("Reset System (Wipe All)")');
     await page.waitForTimeout(1500);
     // After reset + reload: should be on Studio tab, no steps

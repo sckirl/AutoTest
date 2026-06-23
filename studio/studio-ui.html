@@ -112,12 +112,15 @@
             <div class="device-frame"></div>
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <h1>AUTOMATION STUDIO <span id="env-badge" class="badge-context badge-web">WEB</span></h1>
-                <div class="platform-select-container">
-                    <span>Target:</span>
-                    <select id="platform-toggle" onchange="updateContextSelection()">
-                        <option value="web">🌐 WEB / Playwright</option>
-                        <option value="mobile">📱 MOBILE / Appium</option>
-                    </select>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <div class="platform-select-container" style="margin-bottom: 0;">
+                        <span>Target:</span>
+                        <select id="platform-toggle" onchange="updateContextSelection()">
+                            <option value="web">🌐 WEB / Playwright</option>
+                            <option value="mobile">📱 MOBILE / Appium</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-danger" onclick="restartSystem()" style="margin-top: 0; width: auto; padding: 10px 14px;" title="DANGEROUS: Wipes all current mappings and uploads. Use for fresh start.">Reset System (Wipe All)</button>
                 </div>
             </div>
             <div class="tab-strip">
@@ -136,7 +139,6 @@
                     <input type="text" id="base-url" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;" placeholder="https://example.com" title="Optional: Set the starting URL for the recording session" />
                 </div>
 
-                <button class="btn btn-danger" style="margin-top:20px; width: 100%" onclick="restartSystem()" title="DANGEROUS: Wipes all current mappings and uploads. Use for fresh start.">Reset System (Wipe All)</button>
             </div>
 
             <div id="view-mappings" class="view-pane">
@@ -285,7 +287,7 @@
                         const scenTitle = document.createElement('span');
                         scenTitle.textContent = `📋 Scenario: ${s.scenarioId}`;
                         const previewScenBtn = document.createElement('button');
-                        previewScenBtn.className = 'btn btn-preview';
+                        previewScenBtn.className = 'btn btn-scen-preview';
                         previewScenBtn.style.cssText = 'padding:4px 12px;font-size:12px;';
                         previewScenBtn.textContent = '👁 Preview Scenario';
                         previewScenBtn.title = 'View the full mapped Playwright script for this scenario';
@@ -575,7 +577,17 @@
                 
                 const title = spec.title;
                 const statusColor = status === 'passed' ? 'var(--success)' : 'var(--danger)';
-                const scenarioId = title.split(':')[0].replace(/[^a-z0-9]/gi, '_');
+                
+                // Consistently parse Scenario ID and Iteration suffix to match compiler's folder names
+                const matchScen = title.match(/^Scenario\s+(.*?)(?:\s+-\s+Iteration\s+(\d+))?\s*:\s*(.*)$/);
+                let scenarioId = '';
+                if (matchScen) {
+                    const rawScenId = matchScen[1];
+                    const iterNum = matchScen[2];
+                    scenarioId = rawScenId.replace(/[^a-z0-9]/gi, '_') + (iterNum ? `_Iter${iterNum}` : '');
+                } else {
+                    scenarioId = title.split(':')[0].replace(/[^a-z0-9]/gi, '_');
+                }
                 
                 // DEF-CRIT-003 FIX: safe DOM — no innerHTML with spec title from server
                 const titleEl = document.createElement('div');
@@ -609,6 +621,7 @@
                 actionsEl.appendChild(folderBtn);
                 chip.appendChild(titleEl);
                 chip.appendChild(actionsEl);
+                list.appendChild(chip);
             });
             
             document.getElementById('pass-count').innerText = passed;

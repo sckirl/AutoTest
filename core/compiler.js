@@ -133,7 +133,7 @@ function compile() {
                         } else {
                             const safeTarget = isSafeChain(finalTarget);
                             const loc = safeTarget ? `page.${safeTarget}` : `page.locator(${q(finalTarget)})`;
-                            if (action.type === 'goto') code += `        await page.goto(${q(finalTarget)}, { waitUntil: 'networkidle' });\n`;
+                            if (action.type === 'goto') code += `        await page.goto(${q(finalTarget)});\n`;
                             else if (action.type === 'click') {
                                 code += `        await markLocator(${loc});\n`;
                                 code += `        await ${loc}.click();\n`;

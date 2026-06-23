@@ -1,27 +1,27 @@
 [
   {
-    "Scenario_ID": "HRM.A",
-    "Role": "Authentication Module",
+    "Scenario_ID": "PT.A",
+    "Role": "Practice Test Login",
     "Flow": []
   },
   {
-    "Scenario_ID": "HRM.A.1",
+    "Scenario_ID": "PT.1",
     "Role": "Normal Scenario - Successful Login",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to OrangeHRM",
+        "Mapping_Key": "Navigate to PracticeTest",
         "Data": {}
       },
       {
         "Mapping_Key": "Input Username",
         "Data": {
-          "username": "Admin"
+          "username": "student"
         }
       },
       {
         "Mapping_Key": "Input Password",
         "Data": {
-          "password": "admin123"
+          "password": "Password123"
         }
       },
       {
@@ -29,23 +29,23 @@
         "Data": {}
       },
       {
-        "Mapping_Key": "Verify Dashboard",
+        "Mapping_Key": "Verify Login Success",
         "Data": {}
       }
     ]
   },
   {
-    "Scenario_ID": "HRM.A.2",
-    "Role": "Negative Scenario - Invalid Password",
+    "Scenario_ID": "PT.2",
+    "Role": "Negative Scenario - Incorrect Password",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to OrangeHRM",
+        "Mapping_Key": "Navigate to PracticeTest",
         "Data": {}
       },
       {
         "Mapping_Key": "Input Username",
         "Data": {
-          "username": "Admin"
+          "username": "student"
         }
       },
       {
@@ -59,25 +59,37 @@
         "Data": {}
       },
       {
-        "Mapping_Key": "Verify Invalid Credentials Error",
+        "Mapping_Key": "Verify Error Message",
         "Data": {}
       }
     ]
   },
   {
-    "Scenario_ID": "HRM.A.3",
-    "Role": "Negative Scenario - Empty Credentials",
+    "Scenario_ID": "PT.3",
+    "Role": "Negative Scenario - Incorrect Username",
     "Flow": [
       {
-        "Mapping_Key": "Navigate to OrangeHRM",
+        "Mapping_Key": "Navigate to PracticeTest",
         "Data": {}
+      },
+      {
+        "Mapping_Key": "Input Username",
+        "Data": {
+          "username": "wronguser"
+        }
+      },
+      {
+        "Mapping_Key": "Input Password",
+        "Data": {
+          "password": "Password123"
+        }
       },
       {
         "Mapping_Key": "Submit Login",
         "Data": {}
       },
       {
-        "Mapping_Key": "Verify Required Validation",
+        "Mapping_Key": "Verify Error Message",
         "Data": {}
       }
     ]

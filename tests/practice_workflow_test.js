@@ -7,6 +7,8 @@ async function runPracticeWorkflow() {
     const browser = await chromium.launch({ headless: true }); // headless for CI
     const context = await browser.newContext();
     const page = await context.newPage();
+    page.on('console', msg => console.log(`[STUDIO BROWSER CONSOLE] ${msg.type()}: ${msg.text()}`));
+    page.on('pageerror', err => console.error(`[STUDIO BROWSER ERROR] ${err.message}`));
 
     try {
         console.log("🌐 Navigating to Studio...");
