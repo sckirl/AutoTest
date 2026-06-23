@@ -9,6 +9,9 @@ async function runHumanWorkflow() {
     const page = await context.newPage();
 
     try {
+        page.on('console', msg => console.log(`[BROWSER CONSOLE] ${msg.type()}: ${msg.text()}`));
+        page.on('pageerror', err => console.error(`[BROWSER ERROR] ${err.message}`));
+
         console.log("🌐 Navigating to Studio...");
         await page.goto('http://localhost:3000/');
         

@@ -7,7 +7,6 @@ const MS_PLAYWRIGHT_PATH = path.resolve(__dirname, '../DRIVERS/ms-playwright');
 if (fs.existsSync(DRIVERS_PATH)) {
     module.paths.unshift(DRIVERS_PATH);
     process.env.NODE_PATH = DRIVERS_PATH;
-    process.env.PLAYWRIGHT_BROWSERS_PATH = MS_PLAYWRIGHT_PATH; // CRITICAL: Tell playwright EXACTLY where to look
     require('module').Module._initPaths();
 }
 
@@ -16,14 +15,19 @@ const walk = require('acorn-walk');
 const express = require('express');
 const cors = require('cors');
 const { exec, execSync, spawn } = require('child_process');
-const multer = require('multer');
 const XLSX = require('xlsx');
+const multer = require('multer');
+
+const pwPkgPath = require.resolve('@playwright/test/package.json');
+const PLAYWRIGHT_CLI = path.join(path.dirname(pwPkgPath), 'cli.js');
 
 let activeRun = null;
 let globalBrowser = null; 
 let lastActivity = Date.now();
-const trackedProcesses = new Set();
-let activePlatform = 'web'; // DEF-079 FIX: server-side platform state
+const trackedProcesses = new Set(); // ponytail: still used for cleanupAll on exit
+let activeCodegen = null;  // DEF-CRIT-001 FIX: single codegen guard
+let activeRunner = null;   // DEF-HIGH-004 FIX: separate runner ref
+let activePlatform = 'web';
 
 function cleanupAll() {
     console.log("\n🛑 Shutdown signal received. Killing all tracked processes...");
@@ -94,11 +98,23 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, ROOT_DIR),
     filename: (req, file, cb) => cb(null, 'scenario_uploaded.xlsx')
 });
-const upload = multer({ storage: storage });
-
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 } // DEF-MED-011 FIX: 5MB strict limit
+});
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'studio-ui.html')));
 app.post('/upload', upload.single('excel'), (req, res) => {
     if (fs.existsSync(RUNTIME_DATA_PATH)) fs.unlinkSync(RUNTIME_DATA_PATH);
+    if (req.body.keepMappings === 'false') {
+        fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
+    }
+    // Regenerate blueprint.json immediately on upload so we have the steps mapping structure
+    try {
+        execSync(`node core/scenario_parser.js scenario_uploaded.xlsx`, { stdio: 'inherit', cwd: ROOT_DIR });
+        console.log("✅ Blueprint generated successfully on upload");
+    } catch (e) {
+        console.error("⚠️ Error generating blueprint on upload:", e);
+    }
     res.json({ message: "Uploaded." });
 });
 
@@ -147,13 +163,21 @@ app.get('/scan', (req, res) => {
              return res.status(400).json({ error: "Malformed Template: Excel file is empty or missing data rows." });
         }
 
-        // Dynamic Header Detection
-        const headers = rows[0].map(h => String(h || '').toLowerCase());
-        const scenarioIdx = headers.findIndex(h => h.includes('scenario number') || h.includes('scenario id'));
-        const labelIdx = headers.findIndex(h => h.includes('scenario name') || h.includes('label'));
-        const testDataIdx = headers.findIndex(h => h.includes('test data'));
+        // Dynamic Header Detection across first 10 rows
+        let headerRowIdx = -1;
+        let scenarioIdx = -1, labelIdx = -1, testDataIdx = -1;
+        for (let i = 0; i < Math.min(rows.length, 10); i++) {
+            const headers = rows[i].map(h => String(h || '').toLowerCase());
+            scenarioIdx = headers.findIndex(h => h.includes('scenario number') || h.includes('scenario id'));
+            labelIdx = headers.findIndex(h => h.includes('scenario name') || h.includes('label'));
+            testDataIdx = headers.findIndex(h => h.includes('test data'));
+            if (scenarioIdx !== -1 && labelIdx !== -1) {
+                headerRowIdx = i;
+                break;
+            }
+        }
 
-        if (scenarioIdx === -1 || labelIdx === -1) {
+        if (headerRowIdx === -1) {
              return res.status(400).json({ error: "Malformed Template: Could not find 'Scenario Number' and 'Scenario Name' columns." });
         }
         
@@ -163,11 +187,11 @@ app.get('/scan', (req, res) => {
         let currentScenario = null;
 
         // Hierarchical Parser: Detects A.1, A.2 and their steps
-        for (let r = 1; r < rows.length; r++) {
+        for (let r = headerRowIdx + 1; r < rows.length; r++) {
             const scenarioNum = String(rows[r][scenarioIdx] || "").trim();
             const label = String(rows[r][labelIdx] || "").trim();
 
-            if (scenarioNum.match(/^(?!\d+$)[a-zA-Z0-9_.-]+$/)) {
+            if (scenarioNum.match(/^(?!\d+$).+/)) {
                 currentScenario = scenarioNum;
                 scenarios.push(currentScenario);
                 scenarioVariables[currentScenario] = new Set();
@@ -209,51 +233,176 @@ app.get('/scan', (req, res) => {
     }
 });
 
-// --- FIXED RECORDING ENDPOINT ---
-// POST /record — launches playwright codegen (the actual recorder, NOT inspector)
-// ponytail: spawn codegen with --output tmpfile; client polls /codegen-result/:id
 app.post('/record', (req, res) => {
+    // DEF-CRIT-001 FIX: Guard FIRST — before any computation. Sentinel is set synchronously.
+    if (activeCodegen && !activeCodegen.killed) {
+        return res.status(409).json({ error: 'A recording session is already active. Close the browser or click Cancel first.' });
+    }
+    activeCodegen = { killed: false }; // sentinel — blocks any concurrent request before spawn returns
+
     const { label, url, scenarioId } = req.body;
     console.log(`\n🎬 Codegen launched for: "${label}" in scenario: "${scenarioId}"`);
 
     const sessionId = Date.now().toString();
-    const outputPath = path.join(CORE_DIR, `codegen_${sessionId}.js`);
     const bundledPath = getBundledBrowserPath();
 
-    // Build the target URL: use provided url, fall back to about:blank
+    // Replay logic check
+    const blueprintPath = path.join(CORE_DIR, 'blueprint.json');
+    let precedingSteps = [];
+    let mappings = {};
+
+    if (fs.existsSync(blueprintPath) && fs.existsSync(MAPPINGS_PATH)) {
+        try {
+            const blueprint = JSON.parse(fs.readFileSync(blueprintPath, 'utf8'));
+            mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
+            const scenario = blueprint.find(s => s.Scenario_ID === scenarioId);
+            if (scenario) {
+                const targetIdx = scenario.Flow.findIndex(step => step.Mapping_Key === label);
+                if (targetIdx > 0) {
+                    precedingSteps = scenario.Flow.slice(0, targetIdx);
+                }
+            }
+        } catch (e) {
+            console.error("Error reading blueprint/mappings during record:", e);
+        }
+    }
+
+    if (precedingSteps.length > 0) {
+        // We have preceding steps, so we do a replay
+        let runtimeData = {};
+        if (fs.existsSync(RUNTIME_DATA_PATH)) {
+            try { runtimeData = JSON.parse(fs.readFileSync(RUNTIME_DATA_PATH, 'utf8')); } catch (e) {}
+        }
+        const iterations = runtimeData[scenarioId];
+        const iterData = (iterations && iterations.length > 0) ? iterations[0] : null;
+
+        const isSafeChain = (target) => {
+            if (typeof target !== 'string') return null;
+            if (!target.match(/^(getBy|locator|frameLocator)/)) return null;
+            if (/\b(require|exec|eval|process|import|global|constructor|window|document)\b/.test(target)) return null;
+            return target;
+        };
+
+        const interpolate = (templateStr, iterData, fallbackObj) => {
+            if (!templateStr) return "";
+            let processedStr = String(templateStr);
+            processedStr = processedStr.replace(/['"]\{([a-zA-Z0-9_]+)\}['"]/g, '{$1}');
+            processedStr = processedStr.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => {
+                let val = "";
+                if (iterData && iterData[key] !== undefined && iterData[key] !== null && iterData[key] !== "") {
+                    val = iterData[key];
+                } else if (fallbackObj && fallbackObj[key] !== undefined && fallbackObj[key] !== null) {
+                    val = fallbackObj[key];
+                }
+                return val;
+            });
+            return processedStr;
+        };
+
+        const q = (v) => JSON.stringify(String(v ?? ''));
+
+        let replayCode = `import { test, expect } from '@playwright/test';\n\n`;
+        replayCode += `test('Replay Scenario up to ${label.replace(/'/g, "\\'")}', async ({ page }) => {\n`;
+
+        for (const step of precedingSteps) {
+            const mapping = mappings[step.Mapping_Key];
+            if (mapping) {
+                replayCode += `  // Step: ${step.Mapping_Key}\n`;
+                for (const action of mapping.steps) {
+                    const finalTarget = interpolate(action.target, iterData, step.Data);
+                    const finalValue = interpolate(action.value, iterData, step.Data);
+                    const safeTarget = isSafeChain(finalTarget);
+                    const loc = safeTarget ? `page.${safeTarget}` : `page.locator(${q(finalTarget)})`;
+                    
+                    if (action.type === 'goto') replayCode += `  await page.goto(${q(finalTarget)}, { waitUntil: 'networkidle' });\n`;
+                    else if (action.type === 'click') replayCode += `  await ${loc}.click();\n`;
+                    else if (action.type === 'fill') replayCode += `  await ${loc}.fill(${q(finalValue)});\n`;
+                    else if (action.type === 'press') replayCode += `  await ${loc}.press(${q(finalValue || 'Enter')});\n`;
+                    else if (action.type === 'selectOption') replayCode += `  await ${loc}.selectOption(${q(finalValue)});\n`;
+                    else if (action.type === 'check') replayCode += `  await ${loc}.check();\n`;
+                    else if (action.type === 'uncheck') replayCode += `  await ${loc}.uncheck();\n`;
+                    else if (action.type === 'toBeVisible') replayCode += `  await expect(${loc}).toBeVisible();\n`;
+                    else if (action.type === 'toHaveText') replayCode += `  await expect(${loc}).toHaveText(${q(finalValue)});\n`;
+                }
+            }
+        }
+
+        replayCode += `  \n  // Pause to record next step:\n  await page.pause();\n`;
+        replayCode += `});\n`;
+
+        const replaySpecPath = path.join(CORE_DIR, `replay_${sessionId}.spec.ts`);
+        fs.writeFileSync(replaySpecPath, replayCode);
+
+        const child = spawn(process.execPath, [PLAYWRIGHT_CLI, 'test', replaySpecPath, '--headed'], {
+            env: {
+                ...process.env,
+                PW_HEADLESS: '0',
+                ...(bundledPath ? { 
+                    BROWSER_PATH: bundledPath,
+                    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
+                    PLAYWRIGHT_BROWSERS_PATH: MS_PLAYWRIGHT_PATH
+                } : {})
+            },
+            shell: false,
+            windowsHide: false,
+            detached: false
+        });
+
+        activeCodegen = child;
+        trackedProcesses.add(child);
+        child.stdout.on('data', d => console.log(`[REPLAY] ${d}`));
+        child.stderr.on('data', d => {
+            const msg = d.toString();
+            if (!msg.includes('DevTools listening') && !msg.includes('GPU process')) {
+                console.error(`[REPLAY ERR] ${msg}`);
+            }
+        });
+        child.on('close', code => {
+            trackedProcesses.delete(child);
+            if (activeCodegen === child) activeCodegen = null;
+            console.log(`[REPLAY] process closed (code ${code})`);
+            try { fs.unlinkSync(replaySpecPath); } catch (e) {}
+        });
+        child.on('error', err => console.error('[REPLAY SPAWN ERROR]', err.message));
+
+        return res.json({ sessionId, isReplay: true, message: 'Replay launched — preceding steps executing. Perform and copy new steps from Playwright Inspector.' });
+    }
+
+    // Otherwise, normal codegen:
+    const outputPath = path.join(CORE_DIR, `codegen_${sessionId}.js`);
     const targetUrl = (url && url.startsWith('http')) ? url : 'about:blank';
 
-    // Spawn codegen: opens a headed Chromium with live code recorder panel.
-    // --output writes the generated Playwright code to a file when the browser is closed.
-    // windowsHide:false ensures the browser window is actually visible on Windows.
-    const child = spawn('npx', ['playwright', 'codegen', targetUrl, '--output', outputPath], {
+    const child = spawn(process.execPath, [PLAYWRIGHT_CLI, 'codegen', targetUrl, '--output', outputPath], {
         env: {
             ...process.env,
-            PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
-            PLAYWRIGHT_BROWSERS_PATH: MS_PLAYWRIGHT_PATH,
-            ...(bundledPath ? { BROWSER_PATH: bundledPath } : {})
+            ...(bundledPath ? { 
+                BROWSER_PATH: bundledPath,
+                PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
+                PLAYWRIGHT_BROWSERS_PATH: MS_PLAYWRIGHT_PATH
+            } : {})
         },
-        shell: true,
-        windowsHide: false,   // ponytail: MUST be false — this is what shows the GUI window
+        shell: false,
+        windowsHide: false,
         detached: false
     });
 
+    activeCodegen = child;
     trackedProcesses.add(child);
     child.stdout.on('data', d => console.log(`[CODEGEN] ${d}`));
     child.stderr.on('data', d => {
         const msg = d.toString();
-        // Filter noise — chromium startup warnings are expected
         if (!msg.includes('DevTools listening') && !msg.includes('GPU process')) {
             console.error(`[CODEGEN ERR] ${msg}`);
         }
     });
     child.on('close', code => {
         trackedProcesses.delete(child);
+        if (activeCodegen === child) activeCodegen = null;
         console.log(`[CODEGEN] process closed (code ${code}), output: ${outputPath}`);
     });
     child.on('error', err => console.error('[CODEGEN SPAWN ERROR]', err.message));
 
-    res.json({ sessionId, message: 'Codegen launched — record in the browser, then close it.' });
+    res.json({ sessionId, isReplay: false, message: 'Codegen launched — record in the browser, then close it.' });
 });
 
 // GET /codegen-result/:sessionId — returns recorded code once codegen writes the file
@@ -280,11 +429,15 @@ app.post('/save-mapping', (req, res) => {
     if (!code || typeof code !== 'string') {
         return res.status(400).json({ error: 'Invalid code: must be a non-empty string.' });
     }
-    const steps = parseRecordedCode(code);
-    const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
-    mappings[label.trim()] = { steps };
-    fs.writeFileSync(MAPPINGS_PATH, JSON.stringify(mappings, null, 2));
-    res.json({ message: "Saved." });
+    try {
+        const steps = parseRecordedCode(code);
+        const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
+        mappings[label.trim()] = { steps };
+        fs.writeFileSync(MAPPINGS_PATH, JSON.stringify(mappings, null, 2));
+        res.json({ message: "Saved." });
+    } catch (e) {
+        res.status(400).json({ error: "Syntax error in Playwright code: " + e.message });
+    }
 });
 
 // ... existing code ...
@@ -302,38 +455,43 @@ app.post('/run', async (req, res) => {
         activePlatform = platform; // DEF-079 FIX: persist platform for /env
     }
 
-    if (activeRun) {
+    if (activeRun && (activeRun.phase === 'compiling' || activeRun.phase === 'running')) {
         return res.status(409).json({ error: "Execution already in progress." });
     }
     try {
         activeRun = { phase: 'compiling' };
         const numWorkers = workers || 2;
         console.log("🚀 Generating blueprint...");
-        execSync(`node core/scenario_parser.js ${UPLOADED_EXCEL}`, { stdio: 'inherit' });
+        // DEF-CRIT-006 FIX: explicit cwd so paths resolve from project root, not studio/
+        execSync(`node core/scenario_parser.js ${UPLOADED_EXCEL}`, { stdio: 'inherit', cwd: ROOT_DIR });
 
         console.log("🔨 Compiling scenarios into explicit code...");
-        execSync(`node core/compiler.js`, { stdio: 'inherit' });
+        execSync(`node core/compiler.js`, { stdio: 'inherit', cwd: ROOT_DIR });
 
         console.log(`🏃 Launching Playwright with ${numWorkers} workers...`);
         
         // Use headless from request body; default false (headed) for UAT evidence
         const isHeadless = headless ? '1' : '0';
         const bundledPath = getBundledBrowserPath();
-        const pwArgs = ['playwright', 'test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'];
+        const pwArgs = [PLAYWRIGHT_CLI, 'test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'];
         if (!headless) pwArgs.push('--headed');
-        const pw = spawn('npx', pwArgs, {
+        const pw = spawn(process.execPath, pwArgs, {
             env: { 
                 ...process.env, 
                 PW_HEADLESS: isHeadless, 
-                BROWSER_PATH: bundledPath || '',
-                PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
-                PLAYWRIGHT_BROWSERS_PATH: MS_PLAYWRIGHT_PATH,
-                NODE_PATH: DRIVERS_PATH
+                PLAYWRIGHT_JSON_OUTPUT_NAME: path.join(RESULTS_DIR, 'report.json'),
+                ...(bundledPath ? {
+                    BROWSER_PATH: bundledPath,
+                    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
+                    PLAYWRIGHT_BROWSERS_PATH: MS_PLAYWRIGHT_PATH
+                } : {})
             },
-            shell: true
+            shell: false
         });
 
+        activeRunner = pw;  // DEF-HIGH-004 FIX: separate runner ref
         trackedProcesses.add(pw);
+        activeRun.phase = 'running';
 
         let reportData = "";
         pw.stdout.on('data', (data) => {
@@ -348,19 +506,25 @@ app.post('/run', async (req, res) => {
 
         pw.on('close', (code) => {
             trackedProcesses.delete(pw);
+            if (activeRunner === pw) activeRunner = null;  // DEF-HIGH-004: clear on close
             console.log(`✅ Playwright process closed with code ${code}`);
-            if (activeRun) {
+            if (activeRun && activeRun.phase !== 'cancelled') {
                 activeRun.phase = code === 0 ? 'completed' : 'failed';
                 if (code !== 0) {
                     activeRun.error = errorData || reportData || "Unknown execution error";
                 }
                 try {
-                    // Extract JSON report from stdout if possible
-                    const startJson = reportData.indexOf('{');
-                    const endJson = reportData.lastIndexOf('}');
-                    if (startJson !== -1 && endJson !== -1) {
-                        const jsonStr = reportData.substring(startJson, endJson + 1);
-                        activeRun.results = JSON.parse(jsonStr);
+                    const reportFile = path.join(RESULTS_DIR, 'report.json');
+                    if (fs.existsSync(reportFile)) {
+                        activeRun.results = JSON.parse(fs.readFileSync(reportFile, 'utf8'));
+                    } else if (reportData.includes('{')) {
+                        // Fallback parsing just in case
+                        const startJson = reportData.indexOf('{');
+                        const endJson = reportData.lastIndexOf('}');
+                        if (startJson !== -1 && endJson !== -1) {
+                            const jsonStr = reportData.substring(startJson, endJson + 1);
+                            activeRun.results = JSON.parse(jsonStr);
+                        }
                     }
                 } catch (e) { console.error("Report Parsing Error:", e); }
             }
@@ -440,7 +604,10 @@ function parseRecordedCode(code) {
                 }
             }
         });
-    } catch(e) { console.error("Parse Error:", e); }
+    } catch(e) { 
+        console.error("Parse Error:", e);
+        throw new Error("Invalid Playwright Code Syntax: " + e.message); 
+    }
     return steps;
 }
 
@@ -528,9 +695,11 @@ app.get('/run-status', (req, res) => {
 });
 
 app.post('/record-cancel', (req, res) => {
-    console.log('🛑 Record cancellation requested. Closing inspector...');
-    for (const proc of trackedProcesses) {
-        try { proc.kill('SIGKILL'); } catch (e) {}
+    console.log('🛑 Record cancellation requested. Closing codegen...');
+    // DEF-HIGH-004 FIX: Only kill the codegen process, NOT the test runner
+    if (activeCodegen && !activeCodegen.killed) {
+        try { activeCodegen.kill('SIGKILL'); } catch (e) {}
+        activeCodegen = null;
     }
     res.json({ message: "Cancelled." });
 });
@@ -539,8 +708,10 @@ app.post('/record-cancel', (req, res) => {
 app.post('/run-cancel', (req, res) => {
     if (!activeRun) return res.json({ message: 'No active run to cancel.' });
     console.log('🛑 Run cancellation requested.');
-    for (const proc of trackedProcesses) {
-        try { proc.kill('SIGKILL'); } catch (e) {}
+    // DEF-HIGH-004 FIX: Only kill the runner, NOT the codegen session
+    if (activeRunner && !activeRunner.killed) {
+        try { activeRunner.kill('SIGKILL'); } catch (e) {}
+        activeRunner = null;
     }
     activeRun.phase = 'cancelled';
     activeRun.message = 'Run cancelled by user.';
@@ -553,13 +724,38 @@ app.listen(port, () => {
     console.log(`🚀 Studio Live on ${port}`);
 
     // DEF-NEW-002 FIX: Startup cleanup — delete orphaned replay scripts from prior crashes
-    const replayGlob = fs.readdirSync(ROOT_DIR).filter(f =>
-        (f.startsWith('replay_') && (f.endsWith('.js') || f.endsWith('.spec.js')))
+    if (fs.existsSync(CORE_DIR)) {
+        const replayGlob = fs.readdirSync(CORE_DIR).filter(f =>
+            (f.startsWith('replay_') && (f.endsWith('.js') || f.endsWith('.ts') || f.endsWith('.spec.js') || f.endsWith('.spec.ts')))
+        );
+        if (replayGlob.length > 0) {
+            replayGlob.forEach(f => {
+                try { fs.unlinkSync(path.join(CORE_DIR, f)); } catch (e) {}
+            });
+            console.log(`🧹 Startup cleanup: removed ${replayGlob.length} orphaned replay script(s) in core/`);
+        }
+    }
+
+    const rootReplayGlob = fs.readdirSync(ROOT_DIR).filter(f =>
+        (f.startsWith('replay_') && (f.endsWith('.js') || f.endsWith('.ts') || f.endsWith('.spec.js') || f.endsWith('.spec.ts')))
     );
-    if (replayGlob.length > 0) {
-        replayGlob.forEach(f => {
+    if (rootReplayGlob.length > 0) {
+        rootReplayGlob.forEach(f => {
             try { fs.unlinkSync(path.join(ROOT_DIR, f)); } catch (e) {}
         });
-        console.log(`🧹 Startup cleanup: removed ${replayGlob.length} orphaned replay script(s).`);
+        console.log(`🧹 Startup cleanup: removed ${rootReplayGlob.length} orphaned replay script(s) in root`);
+    }
+
+    if (!fs.existsSync(UPLOADED_EXCEL)) {
+        fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
+        console.log("🧹 Startup cleanup: scenario_uploaded.xlsx not found, cleared mappings.json");
+    } else {
+        // Run scenario parser to rebuild blueprint.json
+        try {
+            execSync(`node core/scenario_parser.js scenario_uploaded.xlsx`, { stdio: 'inherit', cwd: ROOT_DIR });
+            console.log("✅ Blueprint generated successfully on startup");
+        } catch (e) {
+            console.error("⚠️ Error generating blueprint on startup:", e);
+        }
     }
 });

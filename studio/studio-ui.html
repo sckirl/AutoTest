@@ -248,13 +248,18 @@
             document.getElementById(`tab-${tabId}`).classList.add('tab-active');
             if (tabId === 'data-matrix') initDataMatrix();
             if (tabId === 'mappings') scanSteps();
+            if (tabId === 'execution') pollRunStatus(); // DEF-MED-017 FIX: Resume polling when returning to tab
         }
 
         dropZone.onclick = () => fileInput.click();
         fileInput.onchange = (e) => handleFile(e.target.files[0]);
 
         async function handleFile(file) {
-            const formData = new FormData(); formData.append('excel', file);
+            if (!file) return; // DEF-LOW-012 FIX: Guard against canceled file dialog
+            const keepMappings = confirm("Keep existing Playwright mappings? (Click Cancel to wipe mappings and start a fresh project)");
+            const formData = new FormData(); 
+            formData.append('excel', file);
+            formData.append('keepMappings', keepMappings);
             const res = await fetch('/upload', { method: 'POST', body: formData });
             if (res.ok) { await scanSteps(); switchTab('mappings'); }
         }
@@ -361,7 +366,9 @@
                     if (d.ready && d.code) {
                         clearInterval(codegenPollTimer);
                         const body = extractCodegenBody(d.code);
-                        codeArea.value = body;
+                        if (body.trim().length > 0) {
+                            codeArea.value = body;
+                        }
                         isUserInteracting = true;
                         showStatus('✅ Codegen captured! Review the code and click "Sync & Save Action".', 'success');
                     }
@@ -374,6 +381,13 @@
             isUserInteracting = false;
             codeArea.value = '';
             codeArea.placeholder = '⏳ Waiting for Chromium Codegen to open...\n\nRecord your actions in the browser, then close it.\nThe code will appear here automatically.';
+            
+            // Fetch existing mapping so the previous script is loaded when recording
+            fetch(`/preview/${encodeURIComponent(label)}`)
+                .then(r => r.json())
+                .then(data => { if (data.code && !data.code.startsWith('// Not')) codeArea.value = data.code; })
+                .catch(() => {});
+
             modal.style.display = 'flex';
             document.getElementById('modal-title').innerText = `🎬 Record: "${label}"`;
 
@@ -391,8 +405,13 @@
                 });
                 if (!res.ok) throw new Error((await res.json()).error || 'Server error');
                 const data = await res.json();
-                showStatus('🎬 Codegen launched — record in the browser, then close it.', 'warning');
-                if (data.sessionId) startCodegenPoll(data.sessionId);
+                if (data.isReplay) {
+                    showStatus('🔄 Replay session active — preceding steps are running in the browser. When the browser pauses, perform the new step actions, copy the code from the Playwright Inspector, and paste it here.', 'info');
+                    codeArea.placeholder = '🔄 REPLAY ACTIVE\n\n1. Preceding steps are running in the browser.\n2. When execution pauses, the Playwright Inspector opens.\n3. Perform your new actions in the browser.\n4. Copy the generated code lines from Playwright Inspector.\n5. Click "Paste Clipboard" or paste here, then click "Sync & Save Action".';
+                } else {
+                    showStatus('🎬 Codegen launched — record in the browser, then close it.', 'warning');
+                    if (data.sessionId) startCodegenPoll(data.sessionId);
+                }
             } catch (e) {
                 showStatus('❌ Failed to launch Codegen: ' + e.message, 'error');
             }
@@ -469,22 +488,32 @@
         }
 
         function pollRunStatus() {
+            console.log("Starting pollRunStatus interval...");
             const interval = setInterval(async () => {
                 try {
                     const res = await fetch('/run-status');
                     const data = await res.json();
-                    showStatus(data.message, data.failureType === 'system' ? 'error' : 'info');
+                    console.log(`Polled run status: phase=${data.phase}, message=${data.message}`);
+                    showStatus(data.message || `Status: ${data.phase}`, data.failureType === 'system' ? 'error' : 'info');
                     
                     if (['completed', 'failed', 'cancelled'].includes(data.phase)) {
+                        console.log(`Poll complete, phase reached: ${data.phase}`);
                         clearInterval(interval); 
                         runBtn.disabled = false;
                         document.getElementById('cancel-run-btn').style.display = 'none';
                         if (data.error && !data.results) {
+                            console.log(`Rendering error: ${data.error}`);
                             const dashboard = document.getElementById('results-dashboard');
                             const list = document.getElementById('results-list');
                             dashboard.style.display = 'block';
-                            list.innerHTML = `<div style="background: #FFF5F4; color: var(--danger); padding: 16px; border: 1px solid var(--danger); border-radius: 8px; white-space: pre-wrap; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto;">${data.error}</div>`;
+                            // DEF-CRIT-002 FIX: safe DOM — no innerHTML with server data
+                            const errBox = document.createElement('div');
+                            errBox.style.cssText = 'background:#FFF5F4;color:var(--danger);padding:16px;border:1px solid var(--danger);border-radius:8px;white-space:pre-wrap;font-family:monospace;font-size:12px;max-height:400px;overflow-y:auto;';
+                            errBox.textContent = data.error;
+                            list.innerHTML = '';
+                            list.appendChild(errBox);
                         } else if (data.results) {
+                            console.log(`Rendering results dashboard`);
                             renderResultsDashboard(data.results);
                         }
                     }
@@ -492,6 +521,17 @@
                     console.error("Poll Error:", e);
                 }
             }, 1500);
+        }
+
+        function getAllSpecs(suite) {
+            let specs = [];
+            if (suite.specs) specs = specs.concat(suite.specs);
+            if (suite.suites) {
+                suite.suites.forEach(s => {
+                    specs = specs.concat(getAllSpecs(s));
+                });
+            }
+            return specs;
         }
 
         function renderResultsDashboard(results) {
@@ -506,8 +546,14 @@
             let passed = 0;
             let failed = 0;
 
-            const specs = results && results.suites && results.suites[0] && results.suites[0].specs;
-            if (!specs || specs.length === 0) {
+            let specs = [];
+            if (results && results.suites) {
+                results.suites.forEach(suite => {
+                    specs = specs.concat(getAllSpecs(suite));
+                });
+            }
+
+            if (specs.length === 0) {
                 list.innerHTML = '<p style="color:var(--muted-text); text-align:center; padding:20px;">No test results to display.</p>';
                 return;
             }
@@ -531,15 +577,38 @@
                 const statusColor = status === 'passed' ? 'var(--success)' : 'var(--danger)';
                 const scenarioId = title.split(':')[0].replace(/[^a-z0-9]/gi, '_');
                 
-                chip.innerHTML = `
-                    <div style="font-weight:600; font-size:14px;">${title}</div>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <span style="background:${statusColor}; color:#fff; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700;">${status.toUpperCase()}</span>
-                        <a href="results/${scenarioId}/FINAL.png" target="_blank" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" title="View final screenshot evidence">📸 View PNG</a>
-                        <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="window.open('/results')" title="Open Results folder">📁 Results</button>
-                    </div>
-                `;
-                list.appendChild(chip);
+                // DEF-CRIT-003 FIX: safe DOM — no innerHTML with spec title from server
+                const titleEl = document.createElement('div');
+                titleEl.style.cssText = 'font-weight:600; font-size:14px;';
+                titleEl.textContent = title;
+
+                const actionsEl = document.createElement('div');
+                actionsEl.style.cssText = 'display:flex; gap:10px; align-items:center;';
+
+                const badge = document.createElement('span');
+                badge.style.cssText = `background:${statusColor}; color:#fff; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700;`;
+                badge.textContent = status.toUpperCase();
+
+                const pngLink = document.createElement('a');
+                pngLink.href = `results/${scenarioId}/FINAL.png`;
+                pngLink.target = '_blank';
+                pngLink.className = 'btn btn-secondary';
+                pngLink.style.cssText = 'padding:4px 8px; font-size:11px;';
+                pngLink.title = 'View final screenshot evidence';
+                pngLink.textContent = '\uD83D\uDCF8 View PNG';
+
+                const folderBtn = document.createElement('button');
+                folderBtn.className = 'btn btn-secondary';
+                folderBtn.style.cssText = 'padding:4px 8px; font-size:11px;';
+                folderBtn.title = 'Open Results folder';
+                folderBtn.textContent = '\uD83D\uDCC1 Results';
+                folderBtn.onclick = () => window.open('/results');
+
+                actionsEl.appendChild(badge);
+                actionsEl.appendChild(pngLink);
+                actionsEl.appendChild(folderBtn);
+                chip.appendChild(titleEl);
+                chip.appendChild(actionsEl);
             });
             
             document.getElementById('pass-count').innerText = passed;
