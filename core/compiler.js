@@ -26,6 +26,7 @@ function compile() {
 
     // ponytail: use shared helpers module
     const { isSafeChain, interpolate, q } = require('./helpers');
+    const ActionDB = require('./action_db');
 
     function translateToMobileLocator(pwLocator, finalValue) {
         if (!pwLocator) return "";
@@ -92,12 +93,12 @@ function compile() {
 
             for (let i = 0; i < scenario.Flow.length; i++) {
                 const step = scenario.Flow[i];
-                const mapping = mappings[step.Mapping_Key];
-                if (mapping) {
+                const actionSteps = (mappings[step.Mapping_Key] && mappings[step.Mapping_Key].steps) || ActionDB.resolveSteps(step.Mapping_Key);
+                if (actionSteps && actionSteps.length > 0) {
                     const safeKey = String(step.Mapping_Key).replace(/'/g, "\\'").replace(/\r?\n|\r/g, " ");
                     if (!isMobile) code += `      await test.step('${safeKey}', async () => {\n`;
                     
-                    for (const action of mapping.steps) {
+                    for (const action of actionSteps) {
                         const finalTarget = interpolate(action.target, iterData, step.Data);
                         const finalValue = interpolate(action.value, iterData, step.Data);
                         

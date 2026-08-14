@@ -20,6 +20,7 @@ const multer = require('multer');
 
 // ponytail: shared helpers module
 const { isSafeChain, interpolate, q } = require('../core/helpers');
+const ActionDB = require('../core/action_db');
 
 const CORE_DIR = path.join(__dirname, '../core');
 const RESULTS_DIR = path.join(__dirname, '../results');
@@ -293,10 +294,13 @@ app.get('/scan', (req, res) => {
                 scenarioVariables[currentScenario] = new Set();
             } else if (currentScenario && scenarioNum.match(/^\d+$/) && label) {
                 // This is a step within a scenario
+                const resolvedSteps = (mappings[label] && mappings[label].steps) || ActionDB.resolveSteps(label);
+                const isMapped = !!(resolvedSteps && resolvedSteps.length > 0);
+
                 if (!stepMap.has(label)) {
                     stepMap.set(label, { 
                         label, 
-                        status: mappings[label] ? 'mapped' : 'missing',
+                        status: isMapped ? 'mapped' : 'missing',
                         flows: [currentScenario],
                         scenarioId: currentScenario
                     });
@@ -305,8 +309,8 @@ app.get('/scan', (req, res) => {
                 }
 
                 // Harvest variables for this scenario
-                if (mappings[label] && mappings[label].steps) {
-                    for (const action of mappings[label].steps) {
+                if (resolvedSteps && Array.isArray(resolvedSteps)) {
+                    for (const action of resolvedSteps) {
                         const str = (action.target || "") + " " + (action.value || "");
                         const matches = str.match(/\{([a-zA-Z0-9_]+)\}/g);
                         if (matches) {
@@ -666,13 +670,78 @@ function parseRecordedCode(code) {
     return steps;
 }
 
+// ── Action Database & Library Routes ───────────────────────────────────
+app.get('/action-db', (req, res) => {
+    try {
+        const db = ActionDB.read();
+        res.json(db);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/action-db/action', (req, res) => {
+    try {
+        const { id, name, description, code, synonyms, platform } = req.body;
+        const act = ActionDB.saveAction({ id, name, description, code, synonyms, platform });
+        res.json({ action: act });
+    } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.delete('/action-db/action/:id', (req, res) => {
+    try {
+        ActionDB.deleteAction(req.params.id);
+        res.json({ status: 'deleted' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/action-db/group', (req, res) => {
+    try {
+        const { id, name, description, actionIds, synonyms } = req.body;
+        const grp = ActionDB.saveGroup({ id, name, description, actionIds, synonyms });
+        res.json({ group: grp });
+    } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.delete('/action-db/group/:id', (req, res) => {
+    try {
+        ActionDB.deleteGroup(req.params.id);
+        res.json({ status: 'deleted' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/link-synonym', (req, res) => {
+    try {
+        const { excelLabel, targetType, targetId } = req.body;
+        ActionDB.linkSynonym(excelLabel, targetType, targetId);
+        // Also sync into mappings.json for fast local caching
+        const steps = ActionDB.resolveSteps(excelLabel);
+        if (steps) {
+            let mappings = {};
+            if (fs.existsSync(MAPPINGS_PATH)) {
+                try { mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8')); } catch (e) {}
+            }
+            mappings[excelLabel.trim()] = { steps };
+            fs.writeFileSync(MAPPINGS_PATH, JSON.stringify(mappings, null, 2));
+        }
+        res.json({ status: 'linked', excelLabel, targetType, targetId });
+    } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
 // GET /mapping/:label — returns current saved mapping for a step label
 app.get('/mapping/:label', (req, res) => {
     try {
         const label = decodeURIComponent(req.params.label);
-        if (!fs.existsSync(MAPPINGS_PATH)) return res.json({ mapping: null });
-        const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
-        res.json({ mapping: mappings[label] || null });
+        let mapping = null;
+        if (fs.existsSync(MAPPINGS_PATH)) {
+            try {
+                const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
+                if (mappings[label]) mapping = mappings[label];
+            } catch (e) {}
+        }
+        if (!mapping) {
+            const steps = ActionDB.resolveSteps(label);
+            if (steps) mapping = { steps };
+        }
+        res.json({ mapping });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -681,11 +750,17 @@ app.get('/mapping/:label', (req, res) => {
 app.get('/preview/:label', (req, res) => {
     try {
         const label = decodeURIComponent(req.params.label);
-        if (!fs.existsSync(MAPPINGS_PATH)) return res.json({ code: '' });
-        const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
-        const mapping = mappings[label];
-        if (!mapping) return res.json({ code: '// Not mapped yet' });
-        const lines = mapping.steps.map(s => {
+        let steps = null;
+        if (fs.existsSync(MAPPINGS_PATH)) {
+            try {
+                const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
+                if (mappings[label] && mappings[label].steps) steps = mappings[label].steps;
+            } catch (e) {}
+        }
+        if (!steps) steps = ActionDB.resolveSteps(label);
+        if (!steps || steps.length === 0) return res.json({ code: '// Not mapped yet' });
+
+        const lines = steps.map(s => {
             const loc = s.target && s.target.match(/^(getBy|locator|frameLocator)/) ? `page.${s.target}` : `page.locator('${s.target}')`;
             if (s.type === 'goto')       return `await page.goto('${s.target}');`;
             if (s.type === 'click')      return `await ${loc}.click();`;
@@ -711,9 +786,9 @@ app.get('/preview-scenario/:scenarioId', (req, res) => {
         const lines = [`// Scenario: ${scenario.Scenario_ID} — ${scenario.Role}`, ''];
         for (const step of scenario.Flow) {
             lines.push(`// Step: ${step.Mapping_Key}`);
-            const m = mappings[step.Mapping_Key];
-            if (!m) { lines.push('// ⚠️  NOT MAPPED YET', ''); continue; }
-            for (const s of m.steps) {
+            const steps = (mappings[step.Mapping_Key] && mappings[step.Mapping_Key].steps) || ActionDB.resolveSteps(step.Mapping_Key);
+            if (!steps || steps.length === 0) { lines.push('// ⚠️  NOT MAPPED YET', ''); continue; }
+            for (const s of steps) {
                 const loc = s.target && s.target.match(/^(getBy|locator|frameLocator)/) ? `page.${s.target}` : `page.locator('${s.target}')`;
                 if (s.type === 'goto')        lines.push(`await page.goto('${s.target}');`);
                 else if (s.type === 'click')  lines.push(`await ${loc}.click();`);
