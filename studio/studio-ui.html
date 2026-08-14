@@ -68,12 +68,17 @@
 </head>
 <body>
     <div id="record-modal" class="modal">
-        <div class="modal-content">
-            <h3 id="modal-title" style="margin-top:0;">Record Action</h3>
-            <p style="font-size: 13px; color: var(--muted-text);">Manual Recording Active. Use the browser to record steps, then click "Sync & Save". User edits block auto-polling.</p>
+        <div class="modal-content" style="max-width: 680px; width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h3 id="modal-title" style="margin: 0; font-size: 18px;">Record Action</h3>
+                <button class="btn btn-secondary" onclick="closeModal()" style="padding: 4px 10px; font-size: 12px;" title="Close Modal">✕</button>
+            </div>
+            <div id="record-guide-banner" style="background: #F0F7FF; border: 1px solid #C2E0FF; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; color: #1E3A8A;">
+                ⏳ Initializing recorder...
+            </div>
             <textarea id="recorded-code" placeholder="Wait for browser to open..."></textarea>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="btn btn-secondary" onclick="pasteFromClipboard()">Paste Clipboard</button>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px;">
+                <button class="btn btn-secondary" onclick="pasteFromClipboard()">📋 Paste Clipboard</button>
                 <button class="btn btn-danger" onclick="closeModal()">Cancel & Close Replay</button>
                 <button class="btn btn-primary" style="width: auto;" onclick="saveMapping()">Sync & Save Action</button>
             </div>
@@ -90,20 +95,6 @@
                 <button class="btn btn-secondary" onclick="copyPreview()">📋 Copy to Clipboard</button>
                 <button class="btn btn-primary" style="width:auto;" onclick="document.getElementById('preview-modal').style.display='none'">Close</button>
             </div>
-        </div>
-    </div>
-
-        <div id="guidance-modal" class="modal">
-        <div class="modal-content" style="width: 520px;">
-            <h3>🎥 Codegen Recording Guide</h3>
-            <div style="font-size: 14px; margin-bottom: 20px; line-height:1.7;">
-                <p><strong>Step 1 — Browser opens:</strong> A Chromium window opens with a <em>live code recorder panel</em>. This is <strong>Playwright Codegen</strong> — the real recorder, not the debugger.</p>
-                <p><strong>Step 2 — Record your actions:</strong> Click, type, and navigate in the browser. Every action is captured as Playwright code automatically in real-time.</p>
-                <p><strong>Step 3 — Close the browser:</strong> When you have finished recording, <strong>close the Chromium window</strong>. The code is auto-saved.</p>
-                <p><strong>Step 4 — Code auto-fills:</strong> The recorded code appears in the textarea below <em>automatically</em>. Review it, then click <strong>"Sync &amp; Save Action"</strong>.</p>
-                <p style="background:#FEF9C3;padding:8px;border-radius:4px;font-size:12px;">💡 You can also paste codegen output manually into the textarea at any time.</p>
-            </div>
-            <button class="btn btn-primary" onclick="document.getElementById('guidance-modal').style.display='none'">Got it — open the browser!</button>
         </div>
     </div>
 
@@ -383,7 +374,9 @@
             isUserInteracting = false;
             codeArea.value = '';
             codeArea.placeholder = '⏳ Initializing recording session...';
-            
+            const guideBanner = document.getElementById('record-guide-banner');
+            guideBanner.innerHTML = '⏳ <strong>Launching Browser...</strong> Please wait while the recording session initializes.';
+
             // Fetch existing mapping so the previous script is loaded when recording
             fetch(`/preview/${encodeURIComponent(label)}`)
                 .then(r => r.json())
@@ -391,7 +384,7 @@
                 .catch(() => {});
 
             modal.style.display = 'flex';
-            document.getElementById('modal-title').innerText = `🎬 Record: "${label}"`;
+            document.getElementById('modal-title').innerText = `🎬 Record / Re-Map: "${label}"`;
 
             const url = document.getElementById('base-url').value;
             const platform = document.getElementById('platform-toggle').value;
@@ -405,43 +398,31 @@
                 if (!res.ok) throw new Error((await res.json()).error || 'Server error');
                 const data = await res.json();
 
-                const guideModal = document.getElementById('guidance-modal');
-                const guideTitle = guideModal.querySelector('h3');
-                const guideBody = guideModal.querySelector('div');
-
                 if (data.isReplay) {
-                    showStatus('🔄 Replay session active — preceding steps are running in the browser. When the browser pauses, perform the new step actions, copy the code from the Playwright Inspector, and paste it here.', 'info');
-                    codeArea.placeholder = '🔄 REPLAY ACTIVE\n\n1. Preceding steps are running in the browser.\n2. When execution pauses, the Playwright Inspector opens.\n3. Perform your new actions in the browser.\n4. Copy the generated code lines from Playwright Inspector.\n5. Click "Paste Clipboard" or paste here, then click "Sync & Save Action".';
-                    
-                    guideTitle.innerText = '🔄 Replay Recording Guide';
-                    guideBody.innerHTML = `
-                        <p><strong>Step 1 — Preceding steps run:</strong> The browser automatically replays all previous steps up to this action so you are in the exact DOM state.</p>
-                        <p><strong>Step 2 — Execution pauses:</strong> The Playwright Inspector opens when it reaches this step.</p>
-                        <p><strong>Step 3 — Perform new actions:</strong> Perform your action in the browser, then copy the action code from the Inspector.</p>
-                        <p><strong>Step 4 — Paste &amp; Save:</strong> Paste the code into the editor and click <strong>"Sync &amp; Save Action"</strong>.</p>
-                    `;
-                    guideModal.style.display = 'flex';
+                    showStatus('🔄 Replay session active — preceding steps are running in the browser.', 'info');
+                    codeArea.placeholder = '🔄 REPLAY ACTIVE\n\n1. Preceding steps are running in the browser.\n2. When execution pauses, Playwright Inspector opens.\n3. Perform your new actions in the browser.\n4. Copy the generated code lines from Playwright Inspector.\n5. Click "Paste Clipboard" or paste here, then click "Sync & Save Action".';
+                    guideBanner.innerHTML = '<strong>🔄 Replay Mode:</strong> Preceding steps are executing in the browser. When the Playwright Inspector opens, perform the new action, copy the code from Inspector, paste below, and click <strong>"Sync & Save Action"</strong>.';
                 } else {
-                    showStatus('🎬 Codegen launched — record in the browser, then close it.', 'warning');
-                    guideTitle.innerText = '🎥 Codegen Recording Guide';
-                    guideBody.innerHTML = `
-                        <p><strong>Step 1 — Browser opens:</strong> A Chromium window opens with a <em>live code recorder panel</em> (Playwright Codegen).</p>
-                        <p><strong>Step 2 — Record your actions:</strong> Click, type, and navigate in the browser.</p>
-                        <p><strong>Step 3 — Close the browser:</strong> When you have finished recording, <strong>close the Chromium window</strong>.</p>
-                        <p><strong>Step 4 — Code auto-fills:</strong> The recorded code appears in the textarea automatically. Click <strong>"Sync &amp; Save Action"</strong>.</p>
-                    `;
-                    guideModal.style.display = 'flex';
+                    showStatus('🎬 Live Codegen active — record in the browser, then close Chromium.', 'warning');
+                    codeArea.placeholder = '🎬 CODEGEN ACTIVE\n\n1. Chromium window is open with the Playwright Codegen recorder.\n2. Interact with the browser.\n3. Close Chromium when finished — your code will auto-fill here.\n4. Review the code and click "Sync & Save Action".';
+                    guideBanner.innerHTML = '<strong>🎬 Live Codegen:</strong> Chromium is open with the recorder. Interact with the page, then <strong>close the browser</strong> to automatically transfer code here.';
                     if (data.sessionId) startCodegenPoll(data.sessionId);
                 }
             } catch (e) {
-                showStatus('❌ Failed to launch Codegen: ' + e.message, 'error');
+                guideBanner.innerHTML = `<span style="color:#DC2626;">❌ <strong>Launch Error:</strong> ${e.message}</span>`;
+                showStatus('❌ Failed to launch: ' + e.message, 'error');
             }
         }
 
         function openManualModal(label, scenarioId) {
             currentLabel = label; currentScenarioId = scenarioId;
-            isUserInteracting = true; codeArea.value = ''; modal.style.display = 'flex';
-            document.getElementById('modal-title').innerText = `Manual Map: "${label}"`;
+            isUserInteracting = true; 
+            codeArea.value = ''; 
+            modal.style.display = 'flex';
+            document.getElementById('modal-title').innerText = `✏️ Manual Map: "${label}"`;
+            document.getElementById('record-guide-banner').innerHTML = '<strong>✏️ Manual Edit:</strong> Enter or paste Playwright action code for this step, then click <strong>"Sync & Save Action"</strong>.';
+            codeArea.placeholder = '// Enter Playwright code for this step\nawait page.getByRole("button", { name: "Submit" }).click();';
+            
             // ponytail: load existing code into textarea so human can see + edit it
             fetch(`/preview/${encodeURIComponent(label)}`)
                 .then(r => r.json())
