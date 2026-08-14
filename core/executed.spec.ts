@@ -1,127 +1,140 @@
-const { remote } = require('webdriverio');
-const path = require('path');
-const fs = require('fs');
+import { test, expect } from '@playwright/test';
+import * as path from 'path';
+import * as fs from 'fs';
 
-describe('Automated UAT Execution (Mobile)', function() {
-  let driver;
-  before(async () => {
-    driver = await remote({ capabilities: { platformName: 'Android', 'appium:automationName': 'UiAutomator2' } });
-  });
-  after(async () => {
-    if (driver) await driver.deleteSession();
-  });
+async function markLocator(locator) {
+    try {
+        await locator.first().evaluate((el) => {
+            el.style.outline = '3px solid #ff1f1f'; el.style.boxShadow = '0 0 0 4px rgba(255,31,31,0.25)';
+        });
+    } catch (e) {}
+}
 
-  it('Scenario A: OrangeHRM Standard Flows', async () => {
-    const resultsDir = path.join(process.cwd(), 'results', 'A');
+test.describe('Automated UAT Execution', () => {
+  test('Scenario HRM.A.1: Normal Scenario - Successful Login', async ({ page }) => {
+    const resultsDir = path.join(process.cwd(), 'results', 'HRM_A_1');
     if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
 
+    await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
     try {
+      await test.step('Navigate to OrangeHRM', async () => {
+        await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login");
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'STEP_1.png'), fullPage: true });
+      });
+      await test.step('Input Username', async () => {
+        await markLocator(page.getByRole("textbox", "name"));
+        await page.getByRole("textbox", "name").click();
+        await markLocator(page.getByRole("textbox", "name")); await page.getByRole("textbox", "name").fill("");
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'STEP_2.png'), fullPage: true });
+      });
+      await test.step('Input Password', async () => {
+        await markLocator(page.getByPlaceholder('Password')); await page.getByPlaceholder('Password').fill("admin123");
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'STEP_3.png'), fullPage: true });
+      });
+      await test.step('Submit Login', async () => {
+        await markLocator(page.getByRole('button', { name: 'Login' }));
+        await page.getByRole('button', { name: 'Login' }).click();
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'STEP_4.png'), fullPage: true });
+      });
+      await test.step('Verify Dashboard', async () => {
+        await markLocator(page.getByRole('heading', { name: 'Dashboard' })); await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'STEP_5.png'), fullPage: true });
+      });
     } finally {
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'FINAL.png'), fullPage: true });
+      await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') });
     }
   });
 
-  it('Scenario A.1 - Iteration 1: Successful Admin Login', async () => {
-    const resultsDir = path.join(process.cwd(), 'results', 'A_1_Iter1');
+  test('Scenario HRM.A.2: Negative Scenario - Invalid Password', async ({ page }) => {
+    const resultsDir = path.join(process.cwd(), 'results', 'HRM_A_2');
     if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
 
+    await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
     try {
-        await driver.url("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login");
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_1.png'));
-        await driver.$("getByRole(\"textbox\", \"name\")").click();
-        await driver.$("//*[@text=\"admin\" or @content-desc=\"admin\"]").setValue("admin");
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_2.png'));
-        await driver.$("//*[@text=\"admin123\" or @content-desc=\"admin123\"]").setValue("admin123");
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_3.png'));
-        await driver.$("//*[@text=\"Login\" or @content-desc=\"Login\"]").click();
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_4.png'));
+      await test.step('Navigate to OrangeHRM', async () => {
+        await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login");
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'STEP_1.png'), fullPage: true });
+      });
+      await test.step('Input Username', async () => {
+        await markLocator(page.getByRole("textbox", "name"));
+        await page.getByRole("textbox", "name").click();
+        await markLocator(page.getByRole("textbox", "name")); await page.getByRole("textbox", "name").fill("");
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'STEP_2.png'), fullPage: true });
+      });
+      await test.step('Input Password', async () => {
+        await markLocator(page.getByPlaceholder('Password')); await page.getByPlaceholder('Password').fill("wrongpassword");
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'STEP_3.png'), fullPage: true });
+      });
+      await test.step('Submit Login', async () => {
+        await markLocator(page.getByRole('button', { name: 'Login' }));
+        await page.getByRole('button', { name: 'Login' }).click();
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'STEP_4.png'), fullPage: true });
+      });
+      await test.step('Verify Invalid Credentials Error', async () => {
+        await markLocator(page.getByText('Invalid credentials')); await expect(page.getByText('Invalid credentials')).toBeVisible();
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'STEP_5.png'), fullPage: true });
+      });
     } finally {
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'FINAL.png'), fullPage: true });
+      await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') });
     }
   });
 
-  it('Scenario A.1 - Iteration 2: Successful Admin Login', async () => {
-    const resultsDir = path.join(process.cwd(), 'results', 'A_1_Iter2');
+  test('Scenario HRM.A.3: Negative Scenario - Empty Credentials', async ({ page }) => {
+    const resultsDir = path.join(process.cwd(), 'results', 'HRM_A_3');
     if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
 
+    await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
     try {
-        await driver.url("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login");
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_1.png'));
-        await driver.$("getByRole(\"textbox\", \"name\")").click();
-        await driver.$("//*[@text=\"spv\" or @content-desc=\"spv\"]").setValue("spv");
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_2.png'));
-        await driver.$("//*[@text=\"spv123\" or @content-desc=\"spv123\"]").setValue("spv123");
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_3.png'));
-        await driver.$("//*[@text=\"Login\" or @content-desc=\"Login\"]").click();
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_4.png'));
+      await test.step('Navigate to OrangeHRM', async () => {
+        await page.goto("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login");
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'STEP_1.png'), fullPage: true });
+      });
+      await test.step('Submit Login', async () => {
+        await markLocator(page.getByRole('button', { name: 'Login' }));
+        await page.getByRole('button', { name: 'Login' }).click();
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'STEP_2.png'), fullPage: true });
+      });
+      await test.step('Verify Required Validation', async () => {
+        await markLocator(page.locator('form').filter({ hasText: 'Required' })); await expect(page.locator('form').filter({ hasText: 'Required' })).toBeVisible();
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'STEP_3.png'), fullPage: true });
+      });
     } finally {
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));
-    }
-  });
-
-  it('Scenario A.2: Navigate to My Info', async () => {
-    const resultsDir = path.join(process.cwd(), 'results', 'A_2');
-    if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-    try {
-        await driver.url("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login");
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_1.png'));
-        await driver.$("getByRole(\"textbox\", \"name\")").click();
-        await driver.$("getByRole(\"textbox\", \"name\")").setValue("");
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_2.png'));
-        await driver.$("//*[@text=\"admin123\" or @content-desc=\"admin123\"]").setValue("admin123");
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_3.png'));
-        await driver.$("//*[@text=\"Login\" or @content-desc=\"Login\"]").click();
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_4.png'));
-        await driver.$("//*[@text=\"My Info\" or @content-desc=\"My Info\"]").click();
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_5.png'));
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_6.png'));
-    } finally {
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));
-    }
-  });
-
-  it('Scenario B.1: Invalid Login Attempt', async () => {
-    const resultsDir = path.join(process.cwd(), 'results', 'B_1');
-    if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
-
-    try {
-        await driver.url("https://opensource-demo.orangehrmlive.com/web/index.php/auth/login");
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_1.png'));
-        await driver.$("getByRole(\"textbox\", \"name\")").click();
-        await driver.$("getByRole(\"textbox\", \"name\")").setValue("");
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_2.png'));
-        await driver.$("//*[@text=\"Wrong123\" or @content-desc=\"Wrong123\"]").setValue("Wrong123");
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_3.png'));
-        await driver.$("//*[@text=\"Login\" or @content-desc=\"Login\"]").click();
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_4.png'));
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'STEP_5.png'));
-    } finally {
-      await driver.pause(800);
-      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));
+      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
+      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
+      await page.screenshot({ path: path.join(resultsDir, 'FINAL.png'), fullPage: true });
+      await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') });
     }
   });
 

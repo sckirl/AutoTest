@@ -1,12 +1,12 @@
 [
   {
-    "Scenario_ID": "A",
-    "Role": "OrangeHRM Standard Flows",
+    "Scenario_ID": "HRM.A",
+    "Role": "Authentication Module",
     "Flow": []
   },
   {
-    "Scenario_ID": "A.1",
-    "Role": "Successful Admin Login",
+    "Scenario_ID": "HRM.A.1",
+    "Role": "Normal Scenario - Successful Login",
     "Flow": [
       {
         "Mapping_Key": "Navigate to OrangeHRM",
@@ -25,14 +25,18 @@
         }
       },
       {
-        "Mapping_Key": "Click Login Button",
+        "Mapping_Key": "Submit Login",
+        "Data": {}
+      },
+      {
+        "Mapping_Key": "Verify Dashboard",
         "Data": {}
       }
     ]
   },
   {
-    "Scenario_ID": "A.2",
-    "Role": "Navigate to My Info",
+    "Scenario_ID": "HRM.A.2",
+    "Role": "Negative Scenario - Invalid Password",
     "Flow": [
       {
         "Mapping_Key": "Navigate to OrangeHRM",
@@ -47,49 +51,33 @@
       {
         "Mapping_Key": "Input Password",
         "Data": {
-          "password": "admin123"
+          "password": "wrongpassword"
         }
       },
       {
-        "Mapping_Key": "Click Login Button",
+        "Mapping_Key": "Submit Login",
         "Data": {}
       },
       {
-        "Mapping_Key": "Click My Info Tab",
-        "Data": {}
-      },
-      {
-        "Mapping_Key": "Verify Personal Details Header",
+        "Mapping_Key": "Verify Invalid Credentials Error",
         "Data": {}
       }
     ]
   },
   {
-    "Scenario_ID": "B.1",
-    "Role": "Invalid Login Attempt",
+    "Scenario_ID": "HRM.A.3",
+    "Role": "Negative Scenario - Empty Credentials",
     "Flow": [
       {
         "Mapping_Key": "Navigate to OrangeHRM",
         "Data": {}
       },
       {
-        "Mapping_Key": "Input Username",
-        "Data": {
-          "username": "Invalid"
-        }
-      },
-      {
-        "Mapping_Key": "Input Password",
-        "Data": {
-          "password": "Wrong123"
-        }
-      },
-      {
-        "Mapping_Key": "Click Login Button",
+        "Mapping_Key": "Submit Login",
         "Data": {}
       },
       {
-        "Mapping_Key": "Verify Login Error Message",
+        "Mapping_Key": "Verify Required Validation",
         "Data": {}
       }
     ]

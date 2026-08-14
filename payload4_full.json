@@ -1,4 +1,0 @@
-{
-  "label": "Submit Login",
-  "code": "import { test, expect } from '@playwright/test';\ntest('test', async ({ page }) => {\n  await Promise.all([\n    page.waitForNavigation({ waitUntil: 'networkidle' }).catch(() => {}),\n    page.locator('#submit').click()\n  ]);\n});"
-}

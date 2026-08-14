@@ -2,10 +2,10 @@
   "name": "app",
   "version": "1.0.0",
   "description": "",
-  "main": "fix_rce.js",
+  "main": "start.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "npx playwright install chromium"
+    "start": "node start.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
@@ -20,14 +20,14 @@
   },
   "homepage": "https://github.com/sckirl/AutoTest#readme",
   "dependencies": {
-    "@playwright/test": "^1.60.0",
+    "@playwright/test": "^1.61.0",
     "acorn": "^8.16.0",
     "acorn-walk": "^8.3.5",
+    "agy": "^0.0.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "multer": "^2.1.1",
-    "playwright": "^1.60.0",
-    "webdriverio": "^9.27.1",
+    "webdriverio": "^8.14.6",
     "xlsx": "^0.18.5"
   }
 }

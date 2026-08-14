@@ -1,6 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 
+// Banking Block Compliance: Strict DRIVERS/ Resolution
+const DRIVERS_PATH = path.join(__dirname, '../DRIVERS/node_modules');
+if (fs.existsSync(DRIVERS_PATH)) {
+    module.paths.unshift(DRIVERS_PATH);
+    process.env.NODE_PATH = DRIVERS_PATH;
+    require('module').Module._initPaths();
+}
+
 function compile() {
     const blueprintPath = path.join(__dirname, 'blueprint.json');
     const mappingsPath = path.join(__dirname, 'mappings.json');
@@ -16,8 +24,9 @@ function compile() {
         try { runtimeData = JSON.parse(fs.readFileSync(runtimeDataPath, 'utf8')); } catch(e) {}
     }
 
-    const q = (v) => JSON.stringify(String(v ?? ''));
-    
+    // ponytail: use shared helpers module
+    const { isSafeChain, interpolate, q } = require('./helpers');
+
     function translateToMobileLocator(pwLocator, finalValue) {
         if (!pwLocator) return "";
         if (pwLocator.startsWith('/') || pwLocator.startsWith('#') || pwLocator.startsWith('.')) return pwLocator;
@@ -34,32 +43,6 @@ function compile() {
         if (finalValue && !finalValue.includes('{')) return `//*[@text="${finalValue}" or @content-desc="${finalValue}"]`;
         return pwLocator;
     }
-
-    const safeGetBy = (target) => {
-        if (typeof target !== 'string') return null;
-        const m = target.match(/^getBy(Role|Label|Placeholder|Text|AltText|Title|TestId|DisplayValue)\((.*)\)$/);
-        if (!m) return null;
-        const args = m[2];
-        if (!/^[a-zA-Z0-9\s\-#\.\:\{\},\[\]\=_\/'"`]*$/.test(args.trim())) return null;
-        if (/\b(require|exec|eval|process|import|global|constructor|window|document)\b/.test(args)) return null;
-        return target;
-    };
-
-    const interpolate = (templateStr, iterData, fallbackObj) => {
-        if (!templateStr) return "";
-        let processedStr = String(templateStr);
-        processedStr = processedStr.replace(/['"]\{([a-zA-Z0-9_]+)\}['"]/g, '{$1}');
-        processedStr = processedStr.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => {
-            let val = "";
-            if (iterData && iterData[key] !== undefined && iterData[key] !== null && iterData[key] !== "") {
-                val = iterData[key];
-            } else if (fallbackObj && fallbackObj[key] !== undefined && fallbackObj[key] !== null) {
-                val = fallbackObj[key];
-            }
-            return val;
-        });
-        return processedStr;
-    };
 
     const isMobile = process.env.AUTOTEST_PLATFORM === 'mobile';
     let code = '';
@@ -81,6 +64,7 @@ function compile() {
     }
 
     for (const scenario of scenarios) {
+        if (!scenario.Flow || scenario.Flow.length === 0) continue;
         let iterations = runtimeData[scenario.Scenario_ID];
         if (!Array.isArray(iterations) || iterations.length === 0) {
             iterations = [null];
@@ -100,6 +84,10 @@ function compile() {
             
             code += `    const resultsDir = path.join(process.cwd(), 'results', '${scenarioIdClean}');\n`;
             code += `    if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });\n\n`;
+            // DEF-NEW-004 FIX: Start per-scenario Playwright tracing for UAT evidence
+            if (!isMobile) {
+                code += `    await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });\n`;
+            }
             code += `    try {\n`;
 
             for (let i = 0; i < scenario.Flow.length; i++) {
@@ -122,15 +110,20 @@ function compile() {
                             else if (action.type === 'fill') code += `        await ${loc}.setValue(${q(finalValue)});\n`;
                             else if (action.type === 'press') code += `        await driver.keys(${q(finalValue || 'Enter')});\n`;
                         } else {
-                            const getByTarget = safeGetBy(finalTarget);
-                            const loc = getByTarget ? `page.${getByTarget}` : `page.locator(${q(finalTarget)})`;
-                            if (action.type === 'goto') code += `        await page.goto(${q(finalTarget)}, { waitUntil: 'networkidle' });\n`;
+                            const safeTarget = isSafeChain(finalTarget);
+                            const loc = safeTarget ? `page.${safeTarget}` : `page.locator(${q(finalTarget)})`;
+                            if (action.type === 'goto') code += `        await page.goto(${q(finalTarget)});\n`;
                             else if (action.type === 'click') {
                                 code += `        await markLocator(${loc});\n`;
-                                code += `        await Promise.all([page.waitForNavigation({ timeout: 5000, waitUntil: 'networkidle' }).catch(() => {}), ${loc}.click()]);\n`;
+                                code += `        await ${loc}.click();\n`;
                             }
                             else if (action.type === 'fill') code += `        await markLocator(${loc}); await ${loc}.fill(${q(finalValue)});\n`;
                             else if (action.type === 'press') code += `        await markLocator(${loc}); await ${loc}.press(${q(finalValue || 'Enter')});\n`;
+                            else if (action.type === 'selectOption') code += `        await markLocator(${loc}); await ${loc}.selectOption(${q(finalValue)});\n`;
+                            else if (action.type === 'check') code += `        await markLocator(${loc}); await ${loc}.check();\n`;
+                            else if (action.type === 'uncheck') code += `        await markLocator(${loc}); await ${loc}.uncheck();\n`;
+                            else if (action.type === 'toBeVisible') code += `        await markLocator(${loc}); await expect(${loc}).toBeVisible();\n`;
+                            else if (action.type === 'toHaveText') code += `        await markLocator(${loc}); await expect(${loc}).toHaveText(${q(finalValue)});\n`;
                         }
                     }
                     
@@ -138,7 +131,8 @@ function compile() {
                         code += `      await driver.pause(800);\n`;
                         code += `      await driver.saveScreenshot(path.join(resultsDir, 'STEP_${i + 1}.png'));\n`;
                     } else {
-                        code += `      await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);\n`;
+                        code += `      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});\n`;
+                        code += `      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});\n`;
                         code += `      await page.screenshot({ path: path.join(resultsDir, 'STEP_${i + 1}.png'), fullPage: true });\n`;
                         code += `      });\n`;
                     }
@@ -149,8 +143,11 @@ function compile() {
                 code += `      await driver.pause(800);\n`;
                 code += `      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));\n`;
             } else {
-                code += `      await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);\n`;
+                code += `      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});\n`;
+                code += `      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});\n`;
                 code += `      await page.screenshot({ path: path.join(resultsDir, 'FINAL.png'), fullPage: true });\n`;
+                // DEF-NEW-004 FIX: Stop tracing and save trace.zip per scenario
+                code += `      await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') });\n`;
             }
             code += `    }\n  });\n\n`;
         }

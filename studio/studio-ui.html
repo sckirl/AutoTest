@@ -29,7 +29,7 @@
         .view-pane.active { display: block; }
 
         /* Phase 4-B: Device Frame Overlay */
-        .device-frame { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border: 16px solid #222; border-radius: 40px; pointer-events: none; z-index: 100; display: none; opacity: 0.1; }
+        .device-frame { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border: 16px solid #222; border-radius: 40px; pointer-events: none; z-index: 100; display: none; opacity: 0.5; }
         .card.mobile-mode { border: 2px solid var(--danger) !important; position: relative; }
         .card.mobile-mode .device-frame { display: block; }
 
@@ -60,6 +60,10 @@
         .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; }
         .modal-content { background: #FFFFFF; padding: 30px; border-radius: 8px; width: 750px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
         textarea { width: 100%; height: 400px; margin: 15px 0; padding: 12px; border: 1px solid #C4C4C4; border-radius: 8px; font-family: 'Open Sans', monospace; font-size: 13px; box-sizing: border-box; resize: none; }
+        .btn-preview { background: #F0FDF4; color: #16A34A; border: 1px solid #16A34A; }
+        #preview-modal .modal-content { max-height: 80vh; overflow-y: auto; }
+        #preview-code { background: #1e1e1e; color: #d4d4d4; border: none; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.6; }
+        .scenario-header { background: #E8F0FE; padding: 10px 16px; border-radius: 6px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--deep-corporate); }
     </style>
 </head>
 <body>
@@ -76,15 +80,30 @@
         </div>
     </div>
 
-    <div id="guidance-modal" class="modal">
-        <div class="modal-content" style="width: 500px;">
-            <h3>🎥 Recording Guide</h3>
-            <div id="guidance-steps" style="font-size: 14px; margin-bottom: 20px;">
-                <p><strong>1. Watch the Browser:</strong> A Chromium window will open and automatically replay previous steps.</p>
-                <p><strong>2. Take Action:</strong> Once replay stops, perform the new manual steps you want to record.</p>
-                <p><strong>3. Sync & Save:</strong> When done, return here and click <strong>"Sync & Save"</strong> to commit the mapping.</p>
+    <!-- Preview Modal (read-only) -->
+    <div id="preview-modal" class="modal">
+        <div class="modal-content" style="width:780px;">
+            <h3 id="preview-title" style="margin-top:0;">🔍 Mapping Preview</h3>
+            <p style="font-size:12px;color:var(--muted-text);margin-top:-10px;">Read-only view of what the AI mapped. If wrong, click Manual or Re-Map on that step.</p>
+            <textarea id="preview-code" readonly></textarea>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="copyPreview()">📋 Copy to Clipboard</button>
+                <button class="btn btn-primary" style="width:auto;" onclick="document.getElementById('preview-modal').style.display='none'">Close</button>
             </div>
-            <button class="btn btn-primary" onclick="document.getElementById('guidance-modal').style.display='none'">Got it, let's go!</button>
+        </div>
+    </div>
+
+        <div id="guidance-modal" class="modal">
+        <div class="modal-content" style="width: 520px;">
+            <h3>🎥 Codegen Recording Guide</h3>
+            <div style="font-size: 14px; margin-bottom: 20px; line-height:1.7;">
+                <p><strong>Step 1 — Browser opens:</strong> A Chromium window opens with a <em>live code recorder panel</em>. This is <strong>Playwright Codegen</strong> — the real recorder, not the debugger.</p>
+                <p><strong>Step 2 — Record your actions:</strong> Click, type, and navigate in the browser. Every action is captured as Playwright code automatically in real-time.</p>
+                <p><strong>Step 3 — Close the browser:</strong> When you have finished recording, <strong>close the Chromium window</strong>. The code is auto-saved.</p>
+                <p><strong>Step 4 — Code auto-fills:</strong> The recorded code appears in the textarea below <em>automatically</em>. Review it, then click <strong>"Sync &amp; Save Action"</strong>.</p>
+                <p style="background:#FEF9C3;padding:8px;border-radius:4px;font-size:12px;">💡 You can also paste codegen output manually into the textarea at any time.</p>
+            </div>
+            <button class="btn btn-primary" onclick="document.getElementById('guidance-modal').style.display='none'">Got it — open the browser!</button>
         </div>
     </div>
 
@@ -93,12 +112,15 @@
             <div class="device-frame"></div>
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <h1>AUTOMATION STUDIO <span id="env-badge" class="badge-context badge-web">WEB</span></h1>
-                <div class="platform-select-container">
-                    <span>Target:</span>
-                    <select id="platform-toggle" onchange="updateContextSelection()">
-                        <option value="web">🌐 WEB / Playwright</option>
-                        <option value="mobile">📱 MOBILE / Appium</option>
-                    </select>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <div class="platform-select-container" style="margin-bottom: 0;">
+                        <span>Target:</span>
+                        <select id="platform-toggle" onchange="updateContextSelection()">
+                            <option value="web">🌐 WEB / Playwright</option>
+                            <option value="mobile">📱 MOBILE / Appium</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-danger" onclick="restartSystem()" style="margin-top: 0; width: auto; padding: 10px 14px;" title="DANGEROUS: Wipes all current mappings and uploads. Use for fresh start.">Reset System (Wipe All)</button>
                 </div>
             </div>
             <div class="tab-strip">
@@ -117,7 +139,6 @@
                     <input type="text" id="base-url" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;" placeholder="https://example.com" title="Optional: Set the starting URL for the recording session" />
                 </div>
 
-                <button class="btn btn-danger" style="margin-top:20px; width: 100%" onclick="restartSystem()" title="DANGEROUS: Wipes all current mappings and uploads. Use for fresh start.">Reset System (Wipe All)</button>
             </div>
 
             <div id="view-mappings" class="view-pane">
@@ -144,6 +165,13 @@
                 </div>
                 <button class="btn btn-primary" id="run-btn" title="Compile scenarios and execute parallel test workers">Execute Test Scenarios</button>
                 <button class="btn btn-danger" id="cancel-run-btn" style="display:none; margin-top:10px; width:100%" onclick="cancelRun()" title="Stop all running test processes immediately">Cancel Execution</button>
+                <div style="margin-top:12px; display:flex; align-items:center; gap:10px;">
+                    <label style="font-size:13px; font-weight:600; color:var(--muted-text); cursor:pointer; display:flex; align-items:center; gap:6px;">
+                        <input type="checkbox" id="headless-toggle" title="Uncheck to see the browser window during test execution (headed mode)" />
+                        Headless (hide browser)
+                    </label>
+                    <span style="font-size:11px; color:var(--muted-text);">Uncheck = headed (browser visible for monitoring)</span>
+                </div>
                 
                 <div id="status-box"></div>
                 <div id="results-dashboard" style="margin-top:20px; display:none;">
@@ -222,13 +250,18 @@
             document.getElementById(`tab-${tabId}`).classList.add('tab-active');
             if (tabId === 'data-matrix') initDataMatrix();
             if (tabId === 'mappings') scanSteps();
+            if (tabId === 'execution') pollRunStatus(); // DEF-MED-017 FIX: Resume polling when returning to tab
         }
 
         dropZone.onclick = () => fileInput.click();
         fileInput.onchange = (e) => handleFile(e.target.files[0]);
 
         async function handleFile(file) {
-            const formData = new FormData(); formData.append('excel', file);
+            if (!file) return; // DEF-LOW-012 FIX: Guard against canceled file dialog
+            const keepMappings = confirm("Keep existing Playwright mappings? (Click Cancel to wipe mappings and start a fresh project)");
+            const formData = new FormData(); 
+            formData.append('excel', file);
+            formData.append('keepMappings', keepMappings);
             const res = await fetch('/upload', { method: 'POST', body: formData });
             if (res.ok) { await scanSteps(); switchTab('mappings'); }
         }
@@ -244,19 +277,62 @@
                     stepListUi.innerHTML = '<p style="color:var(--muted-text); text-align:center; padding: 20px;">No scenarios found. Please upload a valid Excel file in the Studio tab first.</p>';
                     return;
                 }
-
+                let lastScenario = null;
                 data.steps.forEach(s => {
+                    // Group steps by scenario — add scenario header when it changes
+                    if (s.scenarioId !== lastScenario) {
+                        lastScenario = s.scenarioId;
+                        const scenHdr = document.createElement('div');
+                        scenHdr.className = 'scenario-header';
+                        const scenTitle = document.createElement('span');
+                        scenTitle.textContent = `📋 Scenario: ${s.scenarioId}`;
+                        const previewScenBtn = document.createElement('button');
+                        previewScenBtn.className = 'btn btn-scen-preview';
+                        previewScenBtn.style.cssText = 'padding:4px 12px;font-size:12px;';
+                        previewScenBtn.textContent = '👁 Preview Scenario';
+                        previewScenBtn.title = 'View the full mapped Playwright script for this scenario';
+                        previewScenBtn.addEventListener('click', () => previewScenario(s.scenarioId));
+                        scenHdr.appendChild(scenTitle);
+                        scenHdr.appendChild(previewScenBtn);
+                        stepListUi.appendChild(scenHdr);
+                    }
+
                     const row = document.createElement('div');
                     row.className = 'step-row';
-                    row.innerHTML = `
-                        <div class="step-label">${s.label} <small>(Flow: ${s.scenarioId})</small></div>
-                        <div style="display:flex; gap:8px">
-                            <button class="btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}" onclick="openRecordModal('${s.label}', '${s.scenarioId}')" title="${s.status === 'missing' ? 'Open the browser to record this action' : 'Re-record this action to update the mapping'}">
-                                ${s.status === 'missing' ? 'Record' : 'Re-Map'}
-                            </button>
-                            <button class="btn btn-secondary" onclick="openManualModal('${s.label}', '${s.scenarioId}')" title="Manually edit or paste Playwright code for this action">Manual</button>
-                        </div>
-                    `;
+
+                    // --- DEF-H8 FIX: Safe DOM construction — NO innerHTML with user data ---
+                    const labelDiv = document.createElement('div');
+                    labelDiv.className = 'step-label';
+                    labelDiv.textContent = s.label;                    // safe — no HTML injection
+
+                    const btnGroup = document.createElement('div');
+                    btnGroup.style.cssText = 'display:flex; gap:8px';
+
+                    if (s.status === 'mapped') {
+                        const previewBtn = document.createElement('button');
+                        previewBtn.className = 'btn btn-preview';
+                        previewBtn.textContent = '👁';
+                        previewBtn.title = 'Preview what this step does — verify the AI mapping is correct';
+                        previewBtn.addEventListener('click', () => previewStep(s.label));
+                        btnGroup.appendChild(previewBtn);
+                    }
+
+                    const recBtn = document.createElement('button');
+                    recBtn.className = `btn ${s.status === 'missing' ? 'btn-record' : 'btn-remap'}`;
+                    recBtn.textContent = s.status === 'missing' ? 'Record' : 'Re-Map';
+                    recBtn.title = s.status === 'missing' ? 'Open the browser to record this action' : 'Re-record this action to update the mapping';
+                    recBtn.addEventListener('click', () => openRecordModal(s.label, s.scenarioId));
+
+                    const manBtn = document.createElement('button');
+                    manBtn.className = 'btn btn-secondary';
+                    manBtn.textContent = 'Manual';
+                    manBtn.title = 'Manually edit or paste Playwright code for this action';
+                    manBtn.addEventListener('click', () => openManualModal(s.label, s.scenarioId));
+
+                    btnGroup.appendChild(recBtn);
+                    btnGroup.appendChild(manBtn);
+                    row.appendChild(labelDiv);
+                    row.appendChild(btnGroup);
                     stepListUi.appendChild(row);
                 });
                 runBtn.disabled = data.steps.filter(s => s.status === 'mapped').length === 0;
@@ -265,25 +341,81 @@
             }
         }
 
+        let codegenPollTimer = null;
+
+        // Extracts only the Playwright test body lines from codegen --output file
+        // ponytail: regex not parser — drops import/test() boilerplate, keeps await lines
+        function extractCodegenBody(raw) {
+            const match = raw.match(/async\s*\(\{\s*page\s*\}\)\s*=>\s*\{([\s\S]*?)\}\s*\)\s*;?\s*$/);
+            if (match) return match[1].replace(/^\n/, '').replace(/\n$/, '').trim();
+            // Fallback: return everything after the first '{'
+            const brace = raw.indexOf('{');
+            return brace >= 0 ? raw.slice(brace + 1, raw.lastIndexOf('}')).trim() : raw;
+        }
+
+        function startCodegenPoll(sessionId) {
+            let attempts = 0;
+            const MAX = 200; // 5 minutes @ 1.5s
+            codegenPollTimer = setInterval(async () => {
+                if (attempts++ > MAX) {
+                    clearInterval(codegenPollTimer);
+                    showStatus('⏰ Codegen session timed out. Paste your code manually above.', 'warning');
+                    return;
+                }
+                try {
+                    const r = await fetch(`/codegen-result/${sessionId}`);
+                    const d = await r.json();
+                    if (d.ready && d.code) {
+                        clearInterval(codegenPollTimer);
+                        const body = extractCodegenBody(d.code);
+                        if (body.trim().length > 0) {
+                            codeArea.value = body;
+                        }
+                        isUserInteracting = true;
+                        showStatus('✅ Codegen captured! Review the code and click "Sync & Save Action".', 'success');
+                    }
+                } catch (e) { /* network blip — keep polling */ }
+            }, 1500);
+        }
+
         async function openRecordModal(label, scenarioId) {
             currentLabel = label; currentScenarioId = scenarioId;
+            isUserInteracting = false;
+            codeArea.value = '';
+            codeArea.placeholder = '⏳ Waiting for Chromium Codegen to open...\n\nRecord your actions in the browser, then close it.\nThe code will appear here automatically.';
+            
+            // Fetch existing mapping so the previous script is loaded when recording
+            fetch(`/preview/${encodeURIComponent(label)}`)
+                .then(r => r.json())
+                .then(data => { if (data.code && !data.code.startsWith('// Not')) codeArea.value = data.code; })
+                .catch(() => {});
+
+            modal.style.display = 'flex';
+            document.getElementById('modal-title').innerText = `🎬 Record: "${label}"`;
+
+            // Show the updated guidance modal
+            document.getElementById('guidance-modal').style.display = 'flex';
+
             const url = document.getElementById('base-url').value;
             const platform = document.getElementById('platform-toggle').value;
-            
-            // Phase 3-B: Show guidance
-            document.getElementById('guidance-modal').style.display = 'flex';
-            
-            isUserInteracting = false; codeArea.value = ''; modal.style.display = 'flex';
+
             try {
-                const res = await fetch('/record', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ label, scenarioId, url, platform }) 
+                const res = await fetch('/record', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label, scenarioId, url, platform })
                 });
-                if (!res.ok) throw new Error((await res.json()).error);
+                if (!res.ok) throw new Error((await res.json()).error || 'Server error');
+                const data = await res.json();
+                if (data.isReplay) {
+                    showStatus('🔄 Replay session active — preceding steps are running in the browser. When the browser pauses, perform the new step actions, copy the code from the Playwright Inspector, and paste it here.', 'info');
+                    codeArea.placeholder = '🔄 REPLAY ACTIVE\n\n1. Preceding steps are running in the browser.\n2. When execution pauses, the Playwright Inspector opens.\n3. Perform your new actions in the browser.\n4. Copy the generated code lines from Playwright Inspector.\n5. Click "Paste Clipboard" or paste here, then click "Sync & Save Action".';
+                } else {
+                    showStatus('🎬 Codegen launched — record in the browser, then close it.', 'warning');
+                    if (data.sessionId) startCodegenPoll(data.sessionId);
+                }
             } catch (e) {
-                showStatus("Recording Failed: " + e.message, 'error');
-                closeModal();
+                showStatus('❌ Failed to launch Codegen: ' + e.message, 'error');
             }
         }
 
@@ -291,18 +423,17 @@
             currentLabel = label; currentScenarioId = scenarioId;
             isUserInteracting = true; codeArea.value = ''; modal.style.display = 'flex';
             document.getElementById('modal-title').innerText = `Manual Map: "${label}"`;
-            fetch(`/mapping/${encodeURIComponent(label)}`)
+            // ponytail: load existing code into textarea so human can see + edit it
+            fetch(`/preview/${encodeURIComponent(label)}`)
                 .then(r => r.json())
-                .then(data => {
-                    if (data.mapping) {
-                        codeArea.placeholder = "Paste your Playwright code here...";
-                    }
-                })
-                .catch(e => showStatus("Failed to load mapping", "error"));
+                .then(data => { if (data.code && !data.code.startsWith('// Not')) codeArea.value = data.code; })
+                .catch(() => {});
         }
 
-        function closeModal() {
+        async function closeModal() {
+            clearInterval(codegenPollTimer);
             modal.style.display = 'none';
+            try { await fetch('/record-cancel', { method: 'POST' }); } catch(e) {}
         }
 
         async function saveMapping() {
@@ -314,9 +445,9 @@
                     body: JSON.stringify({ label: currentLabel, code: codeArea.value, platform }) 
                 });
                 if (!res.ok) throw new Error((await res.json()).error);
+                showStatus("Action Mapped Successfully", "success");
                 modal.style.display = 'none'; 
                 await scanSteps();
-                showStatus("Action Mapped Successfully", "success");
             } catch (e) {
                 showStatus("Mapping Error: " + e.message, "error");
             }
@@ -324,14 +455,17 @@
 
         runBtn.onclick = async () => {
             runBtn.disabled = true;
+            document.getElementById('cancel-run-btn').style.display = 'block';
             try { 
-                await window.saveDataMatrix(true); 
+                await window.saveDataMatrix();
                 const platform = document.getElementById('platform-toggle').value;
+                const headless = document.getElementById('headless-toggle').checked;
                 const res = await fetch('/run', { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify({ 
                         workers: document.getElementById('worker-count').value,
+                        headless,
                         platform 
                     }) 
                 });
@@ -341,25 +475,65 @@
             } catch (e) {
                 showStatus("Execution Error: " + e.message, "error");
                 runBtn.disabled = false;
+                document.getElementById('cancel-run-btn').style.display = 'none';
             }
         };
 
+        async function cancelRun() {
+            try {
+                await fetch('/run-cancel', { method: 'POST' });
+                showStatus("Execution cancelled by user.", "warning");
+                document.getElementById('cancel-run-btn').style.display = 'none';
+            } catch (e) {
+                console.error("Cancel Error:", e);
+            }
+        }
+
         function pollRunStatus() {
+            console.log("Starting pollRunStatus interval...");
             const interval = setInterval(async () => {
                 try {
                     const res = await fetch('/run-status');
                     const data = await res.json();
-                    showStatus(data.message, data.failureType === 'system' ? 'error' : 'info');
+                    console.log(`Polled run status: phase=${data.phase}, message=${data.message}`);
+                    showStatus(data.message || `Status: ${data.phase}`, data.failureType === 'system' ? 'error' : 'info');
                     
                     if (['completed', 'failed', 'cancelled'].includes(data.phase)) {
+                        console.log(`Poll complete, phase reached: ${data.phase}`);
                         clearInterval(interval); 
                         runBtn.disabled = false;
-                        if (data.results) renderResultsDashboard(data.results);
+                        document.getElementById('cancel-run-btn').style.display = 'none';
+                        if (data.error && !data.results) {
+                            console.log(`Rendering error: ${data.error}`);
+                            const dashboard = document.getElementById('results-dashboard');
+                            const list = document.getElementById('results-list');
+                            dashboard.style.display = 'block';
+                            // DEF-CRIT-002 FIX: safe DOM — no innerHTML with server data
+                            const errBox = document.createElement('div');
+                            errBox.style.cssText = 'background:#FFF5F4;color:var(--danger);padding:16px;border:1px solid var(--danger);border-radius:8px;white-space:pre-wrap;font-family:monospace;font-size:12px;max-height:400px;overflow-y:auto;';
+                            errBox.textContent = data.error;
+                            list.innerHTML = '';
+                            list.appendChild(errBox);
+                        } else if (data.results) {
+                            console.log(`Rendering results dashboard`);
+                            renderResultsDashboard(data.results);
+                        }
                     }
                 } catch (e) {
                     console.error("Poll Error:", e);
                 }
             }, 1500);
+        }
+
+        function getAllSpecs(suite) {
+            let specs = [];
+            if (suite.specs) specs = specs.concat(suite.specs);
+            if (suite.suites) {
+                suite.suites.forEach(s => {
+                    specs = specs.concat(getAllSpecs(s));
+                });
+            }
+            return specs;
         }
 
         function renderResultsDashboard(results) {
@@ -373,8 +547,20 @@
             
             let passed = 0;
             let failed = 0;
+
+            let specs = [];
+            if (results && results.suites) {
+                results.suites.forEach(suite => {
+                    specs = specs.concat(getAllSpecs(suite));
+                });
+            }
+
+            if (specs.length === 0) {
+                list.innerHTML = '<p style="color:var(--muted-text); text-align:center; padding:20px;">No test results to display.</p>';
+                return;
+            }
             
-            results.suites[0].specs.forEach(spec => {
+            specs.forEach(spec => {
                 const test = spec.tests[0];
                 const status = test.results[0].status;
                 if (status === 'passed') passed++; else failed++;
@@ -391,16 +577,50 @@
                 
                 const title = spec.title;
                 const statusColor = status === 'passed' ? 'var(--success)' : 'var(--danger)';
-                const scenarioId = title.split(':')[0].replace(/[^a-z0-9]/gi, '_');
                 
-                chip.innerHTML = `
-                    <div style="font-weight:600; font-size:14px;">${title}</div>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <span style="background:${statusColor}; color:#fff; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700;">${status.toUpperCase()}</span>
-                        <a href="results/${scenarioId}/FINAL.png" target="_blank" class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" title="View final screenshot evidence">📸 View PNG</a>
-                        <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="window.open('/results')" title="Open Results folder">📁 Results</button>
-                    </div>
-                `;
+                // Consistently parse Scenario ID and Iteration suffix to match compiler's folder names
+                const matchScen = title.match(/^Scenario\s+(.*?)(?:\s+-\s+Iteration\s+(\d+))?\s*:\s*(.*)$/);
+                let scenarioId = '';
+                if (matchScen) {
+                    const rawScenId = matchScen[1];
+                    const iterNum = matchScen[2];
+                    scenarioId = rawScenId.replace(/[^a-z0-9]/gi, '_') + (iterNum ? `_Iter${iterNum}` : '');
+                } else {
+                    scenarioId = title.split(':')[0].replace(/[^a-z0-9]/gi, '_');
+                }
+                
+                // DEF-CRIT-003 FIX: safe DOM — no innerHTML with spec title from server
+                const titleEl = document.createElement('div');
+                titleEl.style.cssText = 'font-weight:600; font-size:14px;';
+                titleEl.textContent = title;
+
+                const actionsEl = document.createElement('div');
+                actionsEl.style.cssText = 'display:flex; gap:10px; align-items:center;';
+
+                const badge = document.createElement('span');
+                badge.style.cssText = `background:${statusColor}; color:#fff; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700;`;
+                badge.textContent = status.toUpperCase();
+
+                const pngLink = document.createElement('a');
+                pngLink.href = `results/${scenarioId}/FINAL.png`;
+                pngLink.target = '_blank';
+                pngLink.className = 'btn btn-secondary';
+                pngLink.style.cssText = 'padding:4px 8px; font-size:11px;';
+                pngLink.title = 'View final screenshot evidence';
+                pngLink.textContent = '\uD83D\uDCF8 View PNG';
+
+                const folderBtn = document.createElement('button');
+                folderBtn.className = 'btn btn-secondary';
+                folderBtn.style.cssText = 'padding:4px 8px; font-size:11px;';
+                folderBtn.title = 'Open Results folder';
+                folderBtn.textContent = '\uD83D\uDCC1 Results';
+                folderBtn.onclick = () => window.open('/results');
+
+                actionsEl.appendChild(badge);
+                actionsEl.appendChild(pngLink);
+                actionsEl.appendChild(folderBtn);
+                chip.appendChild(titleEl);
+                chip.appendChild(actionsEl);
                 list.appendChild(chip);
             });
             
@@ -410,6 +630,30 @@
 
         function showStatus(msg, type) {
             statusBox.innerText = msg; statusBox.style.display = 'block'; statusBox.className = `status-${type}`;
+        }
+
+        // --- PREVIEW FUNCTIONS ---
+        async function previewStep(label) {
+            const res = await fetch(`/preview/${encodeURIComponent(label)}`);
+            const data = await res.json();
+            document.getElementById('preview-title').textContent = `\uD83D\uDD0D Preview: "${label}"`;
+            document.getElementById('preview-code').value = data.code || '// No code';
+            document.getElementById('preview-modal').style.display = 'flex';
+        }
+
+        async function previewScenario(scenarioId) {
+            const res = await fetch(`/preview-scenario/${encodeURIComponent(scenarioId)}`);
+            const data = await res.json();
+            document.getElementById('preview-title').textContent = `\uD83D\uDCCB Full Scenario: ${scenarioId}`;
+            document.getElementById('preview-code').value = data.code || '// No code';
+            document.getElementById('preview-modal').style.display = 'flex';
+        }
+
+        async function copyPreview() {
+            try {
+                await navigator.clipboard.writeText(document.getElementById('preview-code').value);
+                showStatus('Copied to clipboard!', 'success');
+            } catch (e) { showStatus('Copy failed — select text manually.', 'error'); }
         }
 
         async function restartSystem() {
@@ -461,7 +705,15 @@
                 header.style.padding = '12px 16px';
                 header.style.cursor = 'pointer';
                 header.style.fontWeight = '600';
-                header.innerHTML = `Scenario: ${scenarioId} <span style="float:right">${iterations.length} Iterations</span>`;
+                
+                // ponytail: safe DOM text assignments for scenario headers
+                const titleSpan = document.createElement('span');
+                titleSpan.textContent = `Scenario: ${scenarioId} `;
+                const countSpan = document.createElement('span');
+                countSpan.style.float = 'right';
+                countSpan.textContent = `${iterations.length} Iterations`;
+                header.appendChild(titleSpan);
+                header.appendChild(countSpan);
                 
                 const body = document.createElement('div');
                 body.style.padding = '16px';
@@ -469,22 +721,57 @@
                 
                 header.onclick = () => body.style.display = body.style.display === 'none' ? 'block' : 'none';
 
-                let html = `<table style="width:100%; border-collapse: collapse; margin-bottom: 10px;">`;
-                html += `<tr>`;
-                vars.forEach(v => html += `<th style="text-align:left; padding:8px; border-bottom:2px solid #ddd;">{${v}}</th>`);
-                html += `<th style="width: 50px;"></th></tr>`;
+                // ponytail: construct table DOM safely to prevent XSS from user iteration data
+                const table = document.createElement('table');
+                table.style.cssText = 'width:100%; border-collapse: collapse; margin-bottom: 10px;';
+                const headerTr = document.createElement('tr');
+                vars.forEach(v => {
+                    const th = document.createElement('th');
+                    th.style.cssText = 'text-align:left; padding:8px; border-bottom:2px solid #ddd;';
+                    th.textContent = `{${v}}`;
+                    headerTr.appendChild(th);
+                });
+                const thAction = document.createElement('th');
+                thAction.style.width = '50px';
+                headerTr.appendChild(thAction);
+                table.appendChild(headerTr);
 
                 iterations.forEach((iter, idx) => {
-                    html += `<tr data-scen="${scenarioId}" data-idx="${idx}">`;
+                    const tr = document.createElement('tr');
+                    tr.dataset.scen = scenarioId;
+                    tr.dataset.idx = idx;
                     vars.forEach(v => {
-                        html += `<td style="padding:4px; border-bottom:1px solid #eee;"><input type="text" style="width:100%; padding:6px; box-sizing:border-box;" data-var="${v}" value="${String(iter[v] || '').replace(/"/g, '&quot;')}" /></td>`;
+                        const td = document.createElement('td');
+                        td.style.cssText = 'padding:4px; border-bottom:1px solid #eee;';
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.style.cssText = 'width:100%; padding:6px; box-sizing:border-box;';
+                        input.dataset.var = v;
+                        input.value = iter && iter[v] !== undefined ? String(iter[v]) : '';
+                        td.appendChild(input);
+                        tr.appendChild(td);
                     });
-                    html += `<td><button class="btn btn-danger" style="padding:4px 8px;" onclick="removeDataRow('${scenarioId}', ${idx})" title="Permanently delete this test iteration">X</button></td></tr>`;
+                    const tdDel = document.createElement('td');
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'btn btn-danger';
+                    delBtn.style.cssText = 'padding:4px 8px;';
+                    delBtn.textContent = 'X';
+                    delBtn.title = 'Permanently delete this test iteration';
+                    delBtn.onclick = () => removeDataRow(scenarioId, idx);
+                    tdDel.appendChild(delBtn);
+                    tr.appendChild(tdDel);
+                    table.appendChild(tr);
                 });
-                html += `</table>`;
-                html += `<button type="button" class="btn btn-secondary" onclick="addDataRow('${scenarioId}')" title="Add a new set of data variables for this scenario">+ Add Iteration</button>`;
+                body.appendChild(table);
 
-                body.innerHTML = html;
+                const addBtn = document.createElement('button');
+                addBtn.type = 'button';
+                addBtn.className = 'btn btn-secondary';
+                addBtn.textContent = '+ Add Iteration';
+                addBtn.title = 'Add a new set of data variables for this scenario';
+                addBtn.onclick = () => addDataRow(scenarioId);
+                body.appendChild(addBtn);
+
                 acc.appendChild(header);
                 acc.appendChild(body);
                 container.appendChild(acc);
@@ -528,14 +815,14 @@
             });
         }
 
-        window.saveDataMatrix = async () => {
+        window.saveDataMatrix = async (silent = false) => {
             saveDataMatrixStateFromDOM();
             const res = await fetch('/data-matrix', { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify(currentRuntimeData) 
             });
-            if (res.ok) showStatus("Saved!", "success");
+            if (res.ok && !silent) showStatus('Saved!', 'success');
         };
     </script>
 </body>

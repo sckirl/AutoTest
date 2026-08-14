@@ -1,6 +1,15 @@
 const fs = require('fs');
-const XLSX = require('xlsx');
 const path = require('path');
+
+// Banking Block Compliance: Strict DRIVERS/ Resolution
+const DRIVERS_PATH = path.join(__dirname, '../DRIVERS/node_modules');
+if (fs.existsSync(DRIVERS_PATH)) {
+    module.paths.unshift(DRIVERS_PATH);
+    process.env.NODE_PATH = DRIVERS_PATH;
+    require('module').Module._initPaths();
+}
+
+const XLSX = require('xlsx');
 
 /**
  * Parses the hierarchical Excel UAT matrix (A.1, A.2, etc.)
@@ -22,22 +31,30 @@ function generateBlueprintFromExcel(excelPath) {
         throw new Error('❌ Invalid Excel structure: expected scenario matrix with at least 3 columns.');
     }
 
-    // Dynamic Header Detection
-    const headers = rows[0].map(h => String(h || '').toLowerCase());
-    const scenarioIdx = headers.findIndex(h => h.includes('scenario number') || h.includes('scenario id'));
-    const labelIdx = headers.findIndex(h => h.includes('scenario name') || h.includes('label'));
-    const testDataIdx = headers.findIndex(h => h.includes('test data'));
+    // Dynamic Header Detection across first 10 rows
+    let headerRowIdx = -1;
+    let scenarioIdx = -1, labelIdx = -1, testDataIdx = -1;
+    for (let i = 0; i < Math.min(rows.length, 10); i++) {
+        const headers = rows[i].map(h => String(h || '').toLowerCase());
+        scenarioIdx = headers.findIndex(h => h.includes('scenario number') || h.includes('scenario id'));
+        labelIdx = headers.findIndex(h => h.includes('scenario name') || h.includes('label'));
+        testDataIdx = headers.findIndex(h => h.includes('test data'));
+        if (scenarioIdx !== -1 && labelIdx !== -1) {
+            headerRowIdx = i;
+            break;
+        }
+    }
 
-    if (scenarioIdx === -1 || labelIdx === -1) {
+    if (headerRowIdx === -1) {
         throw new Error('❌ Malformed Template: Could not find required columns.');
     }
 
-    for (let r = 1; r < rows.length; r++) {
+    for (let r = headerRowIdx + 1; r < rows.length; r++) {
         const scenarioNum = String(rows[r][scenarioIdx] || "").trim();
         const labelOrTitle = String(rows[r][labelIdx] || "").trim();
         const testDataRaw = testDataIdx !== -1 ? String(rows[r][testDataIdx] || "").trim() : "";
 
-        if (scenarioNum.match(/^[A-Z](\.\d+)?$/)) {
+        if (scenarioNum.match(/^(?!\d+$).+/)) {
             // Start of a new scenario
             currentScenario = {
                 Scenario_ID: scenarioNum,
@@ -70,7 +87,7 @@ function generateBlueprintFromExcel(excelPath) {
         }
     }
 
-    const outputPath = path.join(process.cwd(), 'core/blueprint.json');
+    const outputPath = path.join(process.cwd(), 'core', 'blueprint.json');
     if (blueprint.length === 0) {
         throw new Error('❌ No scenarios parsed from the uploaded file.');
     }
