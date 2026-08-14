@@ -382,7 +382,7 @@
             currentLabel = label; currentScenarioId = scenarioId;
             isUserInteracting = false;
             codeArea.value = '';
-            codeArea.placeholder = '⏳ Waiting for Chromium Codegen to open...\n\nRecord your actions in the browser, then close it.\nThe code will appear here automatically.';
+            codeArea.placeholder = '⏳ Initializing recording session...';
             
             // Fetch existing mapping so the previous script is loaded when recording
             fetch(`/preview/${encodeURIComponent(label)}`)
@@ -392,9 +392,6 @@
 
             modal.style.display = 'flex';
             document.getElementById('modal-title').innerText = `🎬 Record: "${label}"`;
-
-            // Show the updated guidance modal
-            document.getElementById('guidance-modal').style.display = 'flex';
 
             const url = document.getElementById('base-url').value;
             const platform = document.getElementById('platform-toggle').value;
@@ -407,11 +404,33 @@
                 });
                 if (!res.ok) throw new Error((await res.json()).error || 'Server error');
                 const data = await res.json();
+
+                const guideModal = document.getElementById('guidance-modal');
+                const guideTitle = guideModal.querySelector('h3');
+                const guideBody = guideModal.querySelector('div');
+
                 if (data.isReplay) {
                     showStatus('🔄 Replay session active — preceding steps are running in the browser. When the browser pauses, perform the new step actions, copy the code from the Playwright Inspector, and paste it here.', 'info');
                     codeArea.placeholder = '🔄 REPLAY ACTIVE\n\n1. Preceding steps are running in the browser.\n2. When execution pauses, the Playwright Inspector opens.\n3. Perform your new actions in the browser.\n4. Copy the generated code lines from Playwright Inspector.\n5. Click "Paste Clipboard" or paste here, then click "Sync & Save Action".';
+                    
+                    guideTitle.innerText = '🔄 Replay Recording Guide';
+                    guideBody.innerHTML = `
+                        <p><strong>Step 1 — Preceding steps run:</strong> The browser automatically replays all previous steps up to this action so you are in the exact DOM state.</p>
+                        <p><strong>Step 2 — Execution pauses:</strong> The Playwright Inspector opens when it reaches this step.</p>
+                        <p><strong>Step 3 — Perform new actions:</strong> Perform your action in the browser, then copy the action code from the Inspector.</p>
+                        <p><strong>Step 4 — Paste &amp; Save:</strong> Paste the code into the editor and click <strong>"Sync &amp; Save Action"</strong>.</p>
+                    `;
+                    guideModal.style.display = 'flex';
                 } else {
                     showStatus('🎬 Codegen launched — record in the browser, then close it.', 'warning');
+                    guideTitle.innerText = '🎥 Codegen Recording Guide';
+                    guideBody.innerHTML = `
+                        <p><strong>Step 1 — Browser opens:</strong> A Chromium window opens with a <em>live code recorder panel</em> (Playwright Codegen).</p>
+                        <p><strong>Step 2 — Record your actions:</strong> Click, type, and navigate in the browser.</p>
+                        <p><strong>Step 3 — Close the browser:</strong> When you have finished recording, <strong>close the Chromium window</strong>.</p>
+                        <p><strong>Step 4 — Code auto-fills:</strong> The recorded code appears in the textarea automatically. Click <strong>"Sync &amp; Save Action"</strong>.</p>
+                    `;
+                    guideModal.style.display = 'flex';
                     if (data.sessionId) startCodegenPoll(data.sessionId);
                 }
             } catch (e) {

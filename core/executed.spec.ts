@@ -24,9 +24,7 @@ test.describe('Automated UAT Execution', () => {
       await page.screenshot({ path: path.join(resultsDir, 'STEP_1.png'), fullPage: true });
       });
       await test.step('Input Username', async () => {
-        await markLocator(page.getByRole("textbox", "name"));
-        await page.getByRole("textbox", "name").click();
-        await markLocator(page.getByRole("textbox", "name")); await page.getByRole("textbox", "name").fill("");
+        await markLocator(page.getByPlaceholder('Username')); await page.getByPlaceholder('Username').fill("Admin");
       await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
       await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
       await page.screenshot({ path: path.join(resultsDir, 'STEP_2.png'), fullPage: true });
@@ -71,9 +69,7 @@ test.describe('Automated UAT Execution', () => {
       await page.screenshot({ path: path.join(resultsDir, 'STEP_1.png'), fullPage: true });
       });
       await test.step('Input Username', async () => {
-        await markLocator(page.getByRole("textbox", "name"));
-        await page.getByRole("textbox", "name").click();
-        await markLocator(page.getByRole("textbox", "name")); await page.getByRole("textbox", "name").fill("");
+        await markLocator(page.getByPlaceholder('Username')); await page.getByPlaceholder('Username').fill("Admin");
       await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
       await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
       await page.screenshot({ path: path.join(resultsDir, 'STEP_2.png'), fullPage: true });

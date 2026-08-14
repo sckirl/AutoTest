@@ -350,8 +350,11 @@ app.post('/record', (req, res) => {
         try {
             const blueprint = JSON.parse(fs.readFileSync(blueprintPath, 'utf8'));
             mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
-            const scenario = blueprint.find(s => s.Scenario_ID === scenarioId);
-            if (scenario) {
+            let scenario = blueprint.find(s => s.Scenario_ID === scenarioId);
+            if (!scenario && blueprint.length > 0) {
+                scenario = blueprint.find(s => Array.isArray(s.Flow) && s.Flow.some(st => st.Mapping_Key === label));
+            }
+            if (scenario && Array.isArray(scenario.Flow)) {
                 const targetIdx = scenario.Flow.findIndex(step => step.Mapping_Key === label);
                 if (targetIdx > 0) {
                     const slice = scenario.Flow.slice(0, targetIdx);
@@ -397,6 +400,8 @@ app.post('/record', (req, res) => {
                 else if (action.type === 'toBeVisible') replayCode += `  await expect(${loc}).toBeVisible();\n`;
                 else if (action.type === 'toHaveText') replayCode += `  await expect(${loc}).toHaveText(${q(finalValue)});\n`;
             }
+            // ponytail: ensure page stabilizes between preceding steps before pausing at target
+            replayCode += `  await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});\n`;
         }
 
         replayCode += `  \n  // Pause to record next step:\n  await page.pause();\n`;
