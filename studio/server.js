@@ -18,16 +18,44 @@ const { exec, execSync, spawn } = require('child_process');
 const XLSX = require('xlsx');
 const multer = require('multer');
 
-const pwPkgPath = require.resolve('@playwright/test/package.json');
-const PLAYWRIGHT_CLI = path.join(path.dirname(pwPkgPath), 'cli.js');
+// ponytail: shared helpers module
+const { isSafeChain, interpolate, q } = require('../core/helpers');
+
+const CORE_DIR = path.join(__dirname, '../core');
+const RESULTS_DIR = path.join(__dirname, '../results');
+const ROOT_DIR = path.join(__dirname, '../');
+const MAPPINGS_PATH = path.join(CORE_DIR, 'mappings.json');
+const UPLOADED_EXCEL = path.join(ROOT_DIR, 'scenario_uploaded.xlsx');
+const RUNTIME_DATA_PATH = path.join(CORE_DIR, 'runtime_data.json');
+const PLATFORM_STATE_PATH = path.join(CORE_DIR, 'platform_state.json');
+
+// ponytail: resolve CLI consistently with Node's ancestor module resolution to prevent singleton mismatch
+let PLAYWRIGHT_CLI;
+if (fs.existsSync(path.join(ROOT_DIR, 'node_modules/@playwright/test/cli.js'))) {
+    PLAYWRIGHT_CLI = path.join(ROOT_DIR, 'node_modules/@playwright/test/cli.js');
+} else if (fs.existsSync(path.join(DRIVERS_PATH, '@playwright/test/cli.js'))) {
+    PLAYWRIGHT_CLI = path.join(DRIVERS_PATH, '@playwright/test/cli.js');
+} else {
+    const pwPkgPath = require.resolve('@playwright/test/package.json');
+    PLAYWRIGHT_CLI = path.join(path.dirname(pwPkgPath), 'cli.js');
+}
 
 let activeRun = null;
 let globalBrowser = null; 
-let lastActivity = Date.now();
 const trackedProcesses = new Set(); // ponytail: still used for cleanupAll on exit
 let activeCodegen = null;  // DEF-CRIT-001 FIX: single codegen guard
 let activeRunner = null;   // DEF-HIGH-004 FIX: separate runner ref
+
+// ponytail: restore persisted platform state on startup
 let activePlatform = 'web';
+if (fs.existsSync(PLATFORM_STATE_PATH)) {
+    try {
+        const saved = JSON.parse(fs.readFileSync(PLATFORM_STATE_PATH, 'utf8'));
+        if (saved && (saved.platform === 'web' || saved.platform === 'mobile')) {
+            activePlatform = saved.platform;
+        }
+    } catch (e) {}
+}
 
 function cleanupAll() {
     console.log("\n🛑 Shutdown signal received. Killing all tracked processes...");
@@ -47,6 +75,7 @@ process.on('SIGTERM', cleanupAll);
 function getBundledBrowserPath() {
     const paths = [
         path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'),
+        path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'),
         path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-win/chrome.exe'),
         path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-linux/chrome'),
         path.resolve(__dirname, '../bin/chrome-win/chrome.exe'),
@@ -62,38 +91,36 @@ function getBundledBrowserPath() {
     return null;
 }
 
-// Phase 1-C: Inactivity Timeout (10 minutes)
-setInterval(() => {
-    if (globalBrowser && (Date.now() - lastActivity > 600000)) {
-        console.log("🕒 Inactivity timeout: Closing global browser...");
-        globalBrowser.close().catch(() => {});
-        globalBrowser = null;
+// ponytail: cache bundled browser path once at startup
+const BUNDLED_BROWSER = getBundledBrowserPath();
+
+// ponytail: standard browser environment helper for codegen, replay, and test runs
+function getBrowserEnv(extraEnv = {}) {
+    const env = { ...process.env, ...extraEnv };
+    if (fs.existsSync(MS_PLAYWRIGHT_PATH)) {
+        env.PLAYWRIGHT_BROWSERS_PATH = MS_PLAYWRIGHT_PATH;
+        env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '1';
     }
-}, 60000);
+    if (BUNDLED_BROWSER) {
+        env.BROWSER_PATH = BUNDLED_BROWSER;
+        env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = BUNDLED_BROWSER;
+        env.PLAYWRIGHT_LAUNCH_OPTIONS_EXECUTABLE_PATH = BUNDLED_BROWSER;
+    }
+    return env;
+}
 
-function updateActivity() { lastActivity = Date.now(); }
-
-// Phase 1-C: Process Cleanup Hook
+// Process Cleanup Hook
 process.on('exit', () => {
     if (globalBrowser) {
         try { globalBrowser.close(); } catch (e) {}
     }
 });
 
-
-
 const app = express();
 app.use(cors({ origin: ['http://localhost:3000', 'http://127.0.0.1:3000'] }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
-
-const CORE_DIR = path.join(__dirname, '../core');
-const RESULTS_DIR = path.join(__dirname, '../results');
-const ROOT_DIR = path.join(__dirname, '../');
 app.use('/results', express.static(RESULTS_DIR));
-const MAPPINGS_PATH = path.join(CORE_DIR, 'mappings.json');
-const UPLOADED_EXCEL = path.join(ROOT_DIR, 'scenario_uploaded.xlsx');
-const RUNTIME_DATA_PATH = path.join(CORE_DIR, 'runtime_data.json');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, ROOT_DIR),
@@ -304,20 +331,19 @@ app.get('/scan', (req, res) => {
 
 app.post('/record', (req, res) => {
     // DEF-CRIT-001 FIX: Guard FIRST — before any computation. Sentinel is set synchronously.
-    if (activeCodegen && !activeCodegen.killed) {
+    if (activeCodegen && !activeCodegen.killed && activeCodegen.exitCode === null) {
         return res.status(409).json({ error: 'A recording session is already active. Close the browser or click Cancel first.' });
     }
-    activeCodegen = { killed: false }; // sentinel — blocks any concurrent request before spawn returns
+    activeCodegen = { killed: false, exitCode: null }; // sentinel — blocks any concurrent request before spawn returns
 
     const { label, url, scenarioId } = req.body;
     console.log(`\n🎬 Codegen launched for: "${label}" in scenario: "${scenarioId}"`);
 
     const sessionId = Date.now().toString();
-    const bundledPath = getBundledBrowserPath();
 
     // Replay logic check
     const blueprintPath = path.join(CORE_DIR, 'blueprint.json');
-    let precedingSteps = [];
+    let precedingMappedSteps = [];
     let mappings = {};
 
     if (fs.existsSync(blueprintPath) && fs.existsSync(MAPPINGS_PATH)) {
@@ -328,7 +354,9 @@ app.post('/record', (req, res) => {
             if (scenario) {
                 const targetIdx = scenario.Flow.findIndex(step => step.Mapping_Key === label);
                 if (targetIdx > 0) {
-                    precedingSteps = scenario.Flow.slice(0, targetIdx);
+                    const slice = scenario.Flow.slice(0, targetIdx);
+                    // ponytail: only include preceding steps that actually have recorded actions
+                    precedingMappedSteps = slice.filter(s => mappings[s.Mapping_Key] && Array.isArray(mappings[s.Mapping_Key].steps) && mappings[s.Mapping_Key].steps.length > 0);
                 }
             }
         } catch (e) {
@@ -336,8 +364,8 @@ app.post('/record', (req, res) => {
         }
     }
 
-    if (precedingSteps.length > 0) {
-        // We have preceding steps, so we do a replay
+    if (precedingMappedSteps.length > 0) {
+        // We have preceding mapped steps, so we do a replay
         let runtimeData = {};
         if (fs.existsSync(RUNTIME_DATA_PATH)) {
             try { runtimeData = JSON.parse(fs.readFileSync(RUNTIME_DATA_PATH, 'utf8')); } catch (e) {}
@@ -345,54 +373,29 @@ app.post('/record', (req, res) => {
         const iterations = runtimeData[scenarioId];
         const iterData = (iterations && iterations.length > 0) ? iterations[0] : null;
 
-        const isSafeChain = (target) => {
-            if (typeof target !== 'string') return null;
-            if (!target.match(/^(getBy|locator|frameLocator)/)) return null;
-            if (/\b(require|exec|eval|process|import|global|constructor|window|document)\b/.test(target)) return null;
-            return target;
-        };
-
-        const interpolate = (templateStr, iterData, fallbackObj) => {
-            if (!templateStr) return "";
-            let processedStr = String(templateStr);
-            processedStr = processedStr.replace(/['"]\{([a-zA-Z0-9_]+)\}['"]/g, '{$1}');
-            processedStr = processedStr.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => {
-                let val = "";
-                if (iterData && iterData[key] !== undefined && iterData[key] !== null && iterData[key] !== "") {
-                    val = iterData[key];
-                } else if (fallbackObj && fallbackObj[key] !== undefined && fallbackObj[key] !== null) {
-                    val = fallbackObj[key];
-                }
-                return val;
-            });
-            return processedStr;
-        };
-
-        const q = (v) => JSON.stringify(String(v ?? ''));
-
         let replayCode = `import { test, expect } from '@playwright/test';\n\n`;
         replayCode += `test('Replay Scenario up to ${label.replace(/'/g, "\\'")}', async ({ page }) => {\n`;
+        replayCode += `  // ponytail: disable test timeout so tester can interact indefinitely with Playwright Inspector\n`;
+        replayCode += `  test.setTimeout(0);\n\n`;
 
-        for (const step of precedingSteps) {
+        for (const step of precedingMappedSteps) {
             const mapping = mappings[step.Mapping_Key];
-            if (mapping) {
-                replayCode += `  // Step: ${step.Mapping_Key}\n`;
-                for (const action of mapping.steps) {
-                    const finalTarget = interpolate(action.target, iterData, step.Data);
-                    const finalValue = interpolate(action.value, iterData, step.Data);
-                    const safeTarget = isSafeChain(finalTarget);
-                    const loc = safeTarget ? `page.${safeTarget}` : `page.locator(${q(finalTarget)})`;
-                    
-                    if (action.type === 'goto') replayCode += `  await page.goto(${q(finalTarget)});\n`;
-                    else if (action.type === 'click') replayCode += `  await ${loc}.click();\n`;
-                    else if (action.type === 'fill') replayCode += `  await ${loc}.fill(${q(finalValue)});\n`;
-                    else if (action.type === 'press') replayCode += `  await ${loc}.press(${q(finalValue || 'Enter')});\n`;
-                    else if (action.type === 'selectOption') replayCode += `  await ${loc}.selectOption(${q(finalValue)});\n`;
-                    else if (action.type === 'check') replayCode += `  await ${loc}.check();\n`;
-                    else if (action.type === 'uncheck') replayCode += `  await ${loc}.uncheck();\n`;
-                    else if (action.type === 'toBeVisible') replayCode += `  await expect(${loc}).toBeVisible();\n`;
-                    else if (action.type === 'toHaveText') replayCode += `  await expect(${loc}).toHaveText(${q(finalValue)});\n`;
-                }
+            replayCode += `  // Step: ${step.Mapping_Key}\n`;
+            for (const action of mapping.steps) {
+                const finalTarget = interpolate(action.target, iterData, step.Data);
+                const finalValue = interpolate(action.value, iterData, step.Data);
+                const safeTarget = isSafeChain(finalTarget);
+                const loc = safeTarget ? `page.${safeTarget}` : `page.locator(${q(finalTarget)})`;
+                
+                if (action.type === 'goto') replayCode += `  await page.goto(${q(finalTarget)});\n`;
+                else if (action.type === 'click') replayCode += `  await ${loc}.click();\n`;
+                else if (action.type === 'fill') replayCode += `  await ${loc}.fill(${q(finalValue)});\n`;
+                else if (action.type === 'press') replayCode += `  await ${loc}.press(${q(finalValue || 'Enter')});\n`;
+                else if (action.type === 'selectOption') replayCode += `  await ${loc}.selectOption(${q(finalValue)});\n`;
+                else if (action.type === 'check') replayCode += `  await ${loc}.check();\n`;
+                else if (action.type === 'uncheck') replayCode += `  await ${loc}.uncheck();\n`;
+                else if (action.type === 'toBeVisible') replayCode += `  await expect(${loc}).toBeVisible();\n`;
+                else if (action.type === 'toHaveText') replayCode += `  await expect(${loc}).toHaveText(${q(finalValue)});\n`;
             }
         }
 
@@ -403,15 +406,7 @@ app.post('/record', (req, res) => {
         fs.writeFileSync(replaySpecPath, replayCode);
 
         const child = spawn(process.execPath, [PLAYWRIGHT_CLI, 'test', replaySpecPath, '--headed'], {
-            env: {
-                ...process.env,
-                PW_HEADLESS: '0',
-                ...(bundledPath ? { 
-                    BROWSER_PATH: bundledPath,
-                    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
-                    PLAYWRIGHT_BROWSERS_PATH: MS_PLAYWRIGHT_PATH
-                } : {})
-            },
+            env: getBrowserEnv({ PW_HEADLESS: '0' }),
             shell: false,
             windowsHide: false,
             detached: false
@@ -442,14 +437,7 @@ app.post('/record', (req, res) => {
     const targetUrl = (url && url.startsWith('http')) ? url : 'about:blank';
 
     const child = spawn(process.execPath, [PLAYWRIGHT_CLI, 'codegen', targetUrl, '--output', outputPath], {
-        env: {
-            ...process.env,
-            ...(bundledPath ? { 
-                BROWSER_PATH: bundledPath,
-                PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
-                PLAYWRIGHT_BROWSERS_PATH: MS_PLAYWRIGHT_PATH
-            } : {})
-        },
+        env: getBrowserEnv(),
         shell: false,
         windowsHide: false,
         detached: false
@@ -541,20 +529,13 @@ app.post('/run', async (req, res) => {
         
         // Use headless from request body; default false (headed) for UAT evidence
         const isHeadless = headless ? '1' : '0';
-        const bundledPath = getBundledBrowserPath();
         const pwArgs = [PLAYWRIGHT_CLI, 'test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'];
         if (!headless) pwArgs.push('--headed');
         const pw = spawn(process.execPath, pwArgs, {
-            env: { 
-                ...process.env, 
+            env: getBrowserEnv({ 
                 PW_HEADLESS: isHeadless, 
-                PLAYWRIGHT_JSON_OUTPUT_NAME: path.join(RESULTS_DIR, 'report.json'),
-                ...(bundledPath ? {
-                    BROWSER_PATH: bundledPath,
-                    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
-                    PLAYWRIGHT_BROWSERS_PATH: MS_PLAYWRIGHT_PATH
-                } : {})
-            },
+                PLAYWRIGHT_JSON_OUTPUT_NAME: path.join(RESULTS_DIR, 'report.json')
+            }),
             shell: false
         });
 
@@ -755,6 +736,11 @@ app.post('/set-platform', (req, res) => {
     }
     activePlatform = platform;
     process.env.AUTOTEST_PLATFORM = platform;
+    try {
+        fs.writeFileSync(PLATFORM_STATE_PATH, JSON.stringify({ platform: activePlatform }, null, 2));
+    } catch (e) {
+        console.error("Error saving platform state:", e);
+    }
     res.json({ message: `Platform set to ${platform}.` });
 });
 
@@ -792,28 +778,17 @@ const port = process.env.PORT || 3000;
 app.listen(port, () => {
     console.log(`🚀 Studio Live on ${port}`);
 
-    // DEF-NEW-002 FIX: Startup cleanup — delete orphaned replay scripts from prior crashes
-    if (fs.existsSync(CORE_DIR)) {
-        const replayGlob = fs.readdirSync(CORE_DIR).filter(f =>
-            (f.startsWith('replay_') && (f.endsWith('.js') || f.endsWith('.ts') || f.endsWith('.spec.js') || f.endsWith('.spec.ts')))
-        );
-        if (replayGlob.length > 0) {
-            replayGlob.forEach(f => {
-                try { fs.unlinkSync(path.join(CORE_DIR, f)); } catch (e) {}
-            });
-            console.log(`🧹 Startup cleanup: removed ${replayGlob.length} orphaned replay script(s) in core/`);
+    // ponytail: consolidate startup replay script cleanup across dirs
+    [CORE_DIR, ROOT_DIR].forEach(dir => {
+        if (fs.existsSync(dir)) {
+            fs.readdirSync(dir)
+                .filter(f => f.startsWith('replay_') && (f.endsWith('.js') || f.endsWith('.ts') || f.endsWith('.spec.js') || f.endsWith('.spec.ts')))
+                .forEach(f => {
+                    try { fs.unlinkSync(path.join(dir, f)); } catch (e) {}
+                });
         }
-    }
-
-    const rootReplayGlob = fs.readdirSync(ROOT_DIR).filter(f =>
-        (f.startsWith('replay_') && (f.endsWith('.js') || f.endsWith('.ts') || f.endsWith('.spec.js') || f.endsWith('.spec.ts')))
-    );
-    if (rootReplayGlob.length > 0) {
-        rootReplayGlob.forEach(f => {
-            try { fs.unlinkSync(path.join(ROOT_DIR, f)); } catch (e) {}
-        });
-        console.log(`🧹 Startup cleanup: removed ${rootReplayGlob.length} orphaned replay script(s) in root`);
-    }
+    });
+    console.log(`🧹 Startup cleanup: swept orphaned replay scripts.`);
 
     if (!fs.existsSync(UPLOADED_EXCEL)) {
         fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));

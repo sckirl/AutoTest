@@ -51,7 +51,12 @@ async function runAllScenarios() {
   console.log('║  AutoTest Studio — 20 Realistic Human-in-the-Loop Tests  ║');
   console.log('╚══════════════════════════════════════════════════════════╝\n');
 
-  const browser = await chromium.launch({ headless: true });
+  function getBundledBrowser() {
+    const p = path.join(__dirname, '../DRIVERS/ms-playwright/chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing');
+    return fs.existsSync(p) ? p : undefined;
+  }
+
+  const browser = await chromium.launch({ headless: true, executablePath: getBundledBrowser() });
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   page.on('dialog', async d => { await d.accept(); });

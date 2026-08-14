@@ -8,10 +8,14 @@ test-results/
 blob-report/
 scenario_uploaded*.xlsx
 replay_*.js
+replay_*.ts
 replay_*.spec.js
+replay_*.spec.ts
+codegen_*.js
 core/blueprint.json
 core/executed.spec.ts
 core/runtime_data.json
+core/platform_state.json
 .current_upload
 DPR TEMPLATE.xlsx
 test_dump.csv

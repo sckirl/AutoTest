@@ -24,8 +24,9 @@ function compile() {
         try { runtimeData = JSON.parse(fs.readFileSync(runtimeDataPath, 'utf8')); } catch(e) {}
     }
 
-    const q = (v) => JSON.stringify(String(v ?? ''));
-    
+    // ponytail: use shared helpers module
+    const { isSafeChain, interpolate, q } = require('./helpers');
+
     function translateToMobileLocator(pwLocator, finalValue) {
         if (!pwLocator) return "";
         if (pwLocator.startsWith('/') || pwLocator.startsWith('#') || pwLocator.startsWith('.')) return pwLocator;
@@ -42,29 +43,6 @@ function compile() {
         if (finalValue && !finalValue.includes('{')) return `//*[@text="${finalValue}" or @content-desc="${finalValue}"]`;
         return pwLocator;
     }
-
-    const isSafeChain = (target) => {
-        if (typeof target !== 'string') return null;
-        if (!target.match(/^(getBy|locator|frameLocator)/)) return null;
-        if (/\b(require|exec|eval|process|import|global|constructor|window|document)\b/.test(target)) return null;
-        return target;
-    };
-
-    const interpolate = (templateStr, iterData, fallbackObj) => {
-        if (!templateStr) return "";
-        let processedStr = String(templateStr);
-        processedStr = processedStr.replace(/['"]\{([a-zA-Z0-9_]+)\}['"]/g, '{$1}');
-        processedStr = processedStr.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => {
-            let val = "";
-            if (iterData && iterData[key] !== undefined && iterData[key] !== null && iterData[key] !== "") {
-                val = iterData[key];
-            } else if (fallbackObj && fallbackObj[key] !== undefined && fallbackObj[key] !== null) {
-                val = fallbackObj[key];
-            }
-            return val;
-        });
-        return processedStr;
-    };
 
     const isMobile = process.env.AUTOTEST_PLATFORM === 'mobile';
     let code = '';
@@ -86,6 +64,7 @@ function compile() {
     }
 
     for (const scenario of scenarios) {
+        if (!scenario.Flow || scenario.Flow.length === 0) continue;
         let iterations = runtimeData[scenario.Scenario_ID];
         if (!Array.isArray(iterations) || iterations.length === 0) {
             iterations = [null];

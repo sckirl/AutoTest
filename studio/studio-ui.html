@@ -445,9 +445,9 @@
                     body: JSON.stringify({ label: currentLabel, code: codeArea.value, platform }) 
                 });
                 if (!res.ok) throw new Error((await res.json()).error);
+                showStatus("Action Mapped Successfully", "success");
                 modal.style.display = 'none'; 
                 await scanSteps();
-                showStatus("Action Mapped Successfully", "success");
             } catch (e) {
                 showStatus("Mapping Error: " + e.message, "error");
             }
@@ -705,7 +705,15 @@
                 header.style.padding = '12px 16px';
                 header.style.cursor = 'pointer';
                 header.style.fontWeight = '600';
-                header.innerHTML = `Scenario: ${scenarioId} <span style="float:right">${iterations.length} Iterations</span>`;
+                
+                // ponytail: safe DOM text assignments for scenario headers
+                const titleSpan = document.createElement('span');
+                titleSpan.textContent = `Scenario: ${scenarioId} `;
+                const countSpan = document.createElement('span');
+                countSpan.style.float = 'right';
+                countSpan.textContent = `${iterations.length} Iterations`;
+                header.appendChild(titleSpan);
+                header.appendChild(countSpan);
                 
                 const body = document.createElement('div');
                 body.style.padding = '16px';
@@ -713,22 +721,57 @@
                 
                 header.onclick = () => body.style.display = body.style.display === 'none' ? 'block' : 'none';
 
-                let html = `<table style="width:100%; border-collapse: collapse; margin-bottom: 10px;">`;
-                html += `<tr>`;
-                vars.forEach(v => html += `<th style="text-align:left; padding:8px; border-bottom:2px solid #ddd;">{${v}}</th>`);
-                html += `<th style="width: 50px;"></th></tr>`;
+                // ponytail: construct table DOM safely to prevent XSS from user iteration data
+                const table = document.createElement('table');
+                table.style.cssText = 'width:100%; border-collapse: collapse; margin-bottom: 10px;';
+                const headerTr = document.createElement('tr');
+                vars.forEach(v => {
+                    const th = document.createElement('th');
+                    th.style.cssText = 'text-align:left; padding:8px; border-bottom:2px solid #ddd;';
+                    th.textContent = `{${v}}`;
+                    headerTr.appendChild(th);
+                });
+                const thAction = document.createElement('th');
+                thAction.style.width = '50px';
+                headerTr.appendChild(thAction);
+                table.appendChild(headerTr);
 
                 iterations.forEach((iter, idx) => {
-                    html += `<tr data-scen="${scenarioId}" data-idx="${idx}">`;
+                    const tr = document.createElement('tr');
+                    tr.dataset.scen = scenarioId;
+                    tr.dataset.idx = idx;
                     vars.forEach(v => {
-                        html += `<td style="padding:4px; border-bottom:1px solid #eee;"><input type="text" style="width:100%; padding:6px; box-sizing:border-box;" data-var="${v}" value="${String(iter[v] || '').replace(/"/g, '&quot;')}" /></td>`;
+                        const td = document.createElement('td');
+                        td.style.cssText = 'padding:4px; border-bottom:1px solid #eee;';
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.style.cssText = 'width:100%; padding:6px; box-sizing:border-box;';
+                        input.dataset.var = v;
+                        input.value = iter && iter[v] !== undefined ? String(iter[v]) : '';
+                        td.appendChild(input);
+                        tr.appendChild(td);
                     });
-                    html += `<td><button class="btn btn-danger" style="padding:4px 8px;" onclick="removeDataRow('${scenarioId}', ${idx})" title="Permanently delete this test iteration">X</button></td></tr>`;
+                    const tdDel = document.createElement('td');
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'btn btn-danger';
+                    delBtn.style.cssText = 'padding:4px 8px;';
+                    delBtn.textContent = 'X';
+                    delBtn.title = 'Permanently delete this test iteration';
+                    delBtn.onclick = () => removeDataRow(scenarioId, idx);
+                    tdDel.appendChild(delBtn);
+                    tr.appendChild(tdDel);
+                    table.appendChild(tr);
                 });
-                html += `</table>`;
-                html += `<button type="button" class="btn btn-secondary" onclick="addDataRow('${scenarioId}')" title="Add a new set of data variables for this scenario">+ Add Iteration</button>`;
+                body.appendChild(table);
 
-                body.innerHTML = html;
+                const addBtn = document.createElement('button');
+                addBtn.type = 'button';
+                addBtn.className = 'btn btn-secondary';
+                addBtn.textContent = '+ Add Iteration';
+                addBtn.title = 'Add a new set of data variables for this scenario';
+                addBtn.onclick = () => addDataRow(scenarioId);
+                body.appendChild(addBtn);
+
                 acc.appendChild(header);
                 acc.appendChild(body);
                 container.appendChild(acc);

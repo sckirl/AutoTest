@@ -2,9 +2,14 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 
+function getBundledBrowser() {
+    const p = path.join(__dirname, '../DRIVERS/ms-playwright/chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing');
+    return fs.existsSync(p) ? p : undefined;
+}
+
 async function runHumanWorkflow() {
     console.log("👩‍💻 Starting Human-like E2E Workflow Test...");
-    const browser = await chromium.launch({ headless: true }); // headless for silent test
+    const browser = await chromium.launch({ headless: true, executablePath: getBundledBrowser() }); // headless for silent test
     const context = await browser.newContext();
     const page = await context.newPage();
 
@@ -76,7 +81,7 @@ async function runHumanWorkflow() {
 
         // Verify folder and images
         console.log("\\n📂 Verifying Folder Organization...");
-        const scenarios = ['HRM.A.1', 'HRM.A.2', 'HRM.A.3'];
+        const scenarios = ['HRM_A_1', 'HRM_A_2', 'HRM_A_3'];
         
         for (const scenario of scenarios) {
             const resultsDir = path.join(process.cwd(), 'results', scenario);
