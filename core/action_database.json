@@ -2,7 +2,7 @@
   "version": 1,
   "actions": [
     {
-      "id": "act_1786699558988_4ylrv",
+      "id": "act_1789979042904_z81af",
       "name": "Navigate to URL",
       "description": "Open a target web page",
       "code": "await page.goto('{url}');",
@@ -15,18 +15,17 @@
       "synonyms": [
         "Go to URL",
         "Open Page",
-        "Visit Website",
-        "Navigate to OrangeHRM"
+        "Visit Website"
       ],
       "platform": "web",
       "variables": [
         "url"
       ],
-      "createdAt": 1786699558992,
-      "updatedAt": 1786699558992
+      "createdAt": 1789979042908,
+      "updatedAt": 1789979042908
     },
     {
-      "id": "act_1786699558993_iedd5",
+      "id": "act_1789979042909_ceujx",
       "name": "Input Username",
       "description": "Fill user identifier",
       "code": "await page.getByPlaceholder('Username').fill('{username}');",
@@ -40,18 +39,17 @@
       "synonyms": [
         "Type Username",
         "Enter User",
-        "Provide User",
-        "Input Username"
+        "Provide User"
       ],
       "platform": "web",
       "variables": [
         "username"
       ],
-      "createdAt": 1786699558993,
-      "updatedAt": 1786699558993
+      "createdAt": 1789979042909,
+      "updatedAt": 1789979042909
     },
     {
-      "id": "act_1786699558994_j3as0",
+      "id": "act_1789979042909_jvn1t",
       "name": "Input Password",
       "description": "Fill user password",
       "code": "await page.getByPlaceholder('Password').fill('{password}');",
@@ -65,18 +63,17 @@
       "synonyms": [
         "Type Password",
         "Enter Password",
-        "Fill Password",
-        "Input Password"
+        "Fill Password"
       ],
       "platform": "web",
       "variables": [
         "password"
       ],
-      "createdAt": 1786699558994,
-      "updatedAt": 1786699558994
+      "createdAt": 1789979042910,
+      "updatedAt": 1789979042910
     },
     {
-      "id": "act_1786699558994_5d9f9",
+      "id": "act_1789979042910_tznga",
       "name": "Submit Login",
       "description": "Click login button",
       "code": "await page.getByRole('button', { name: 'Login' }).click();",
@@ -92,20 +89,20 @@
       ],
       "platform": "web",
       "variables": [],
-      "createdAt": 1786699558995,
-      "updatedAt": 1786699558995
+      "createdAt": 1789979042911,
+      "updatedAt": 1789979042911
     }
   ],
   "groups": [
     {
-      "id": "grp_1786699558996_mhacc",
+      "id": "grp_1789979042911_1nqhd",
       "name": "Standard Login Flow",
       "description": "Complete authentication sequence from navigation to submit",
       "actionIds": [
-        "act_1786699558988_4ylrv",
-        "act_1786699558993_iedd5",
-        "act_1786699558994_j3as0",
-        "act_1786699558994_5d9f9"
+        "act_1789979042904_z81af",
+        "act_1789979042909_ceujx",
+        "act_1789979042909_jvn1t",
+        "act_1789979042910_tznga"
       ],
       "synonyms": [
         "Login Chain",
@@ -118,8 +115,8 @@
         "username",
         "password"
       ],
-      "createdAt": 1786699558996,
-      "updatedAt": 1786699558996
+      "createdAt": 1789979042912,
+      "updatedAt": 1789979042912
     }
   ]
 }
