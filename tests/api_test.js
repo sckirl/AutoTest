@@ -92,7 +92,7 @@ async function run() {
   check('T18 GET /preview/:label not-mapped returns comment', r.status === 200 && prevMissing.code.includes('// Not mapped'), prevMissing.code);
 
   // --- NEW: /preview-scenario/:scenarioId ---
-  // Need a blueprint — run parser first using uploaded excel
+  // Need a blueprint: run parser first using uploaded excel
   // Use the practicetest_scenario.xlsx already on disk
   const { execSync } = require('child_process');
   try {
@@ -134,7 +134,7 @@ async function run() {
   check('T28 require in code saved (isSafeChain blocks compile)', r.status === 200);
 
   // --- /run with headless flag ---
-  // Don't actually run playwright (no mapped steps for current blueprint) — just test the endpoint accepts headless param
+  // Don't actually run playwright (no mapped steps for current blueprint), just test the endpoint accepts headless param
   r = await req('POST', '/run', { workers: 1, headless: true, platform: 'web' });
   check('T29 POST /run headless:true accepted (200 or 500)', r.status === 200 || r.status === 500 || r.status === 409);
 

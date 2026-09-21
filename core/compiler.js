@@ -13,7 +13,9 @@ function compile() {
     const blueprintPath = path.join(__dirname, 'blueprint.json');
     const mappingsPath = path.join(__dirname, 'mappings.json');
     const runtimeDataPath = path.join(__dirname, 'runtime_data.json');
-    const outputPath = path.join(__dirname, 'executed.spec.ts');
+    const isMobile = process.env.AUTOTEST_PLATFORM === 'mobile';
+    // ponytail: mobile output is plain CommonJS (no test framework bundled in DRIVERS/), web stays Playwright Test
+    const outputPath = path.join(__dirname, isMobile ? 'executed.mobile.js' : 'executed.spec.ts');
 
     if (!fs.existsSync(blueprintPath) || !fs.existsSync(mappingsPath)) return;
 
@@ -45,19 +47,16 @@ function compile() {
         return pwLocator;
     }
 
-    const isMobile = process.env.AUTOTEST_PLATFORM === 'mobile';
     let code = '';
-    
+
     if (isMobile) {
+        // ponytail: no Mocha/@wdio-cli bundled in DRIVERS/ (air-gapped), run as a plain
+        // async script via `node`, not a test-framework file (was describe/it/before, which
+        // has no runner to interpret it and made every mobile /run fail with 0 tests found).
         code += `const { remote } = require('webdriverio');\nconst path = require('path');\nconst fs = require('fs');\n\n`;
-        code += `describe('Automated UAT Execution (Mobile)', function() {\n`;
-        code += `  let driver;\n`;
-        code += `  before(async () => {\n`;
-        code += `    driver = await remote({ capabilities: { platformName: 'Android', 'appium:automationName': 'UiAutomator2' } });\n`;
-        code += `  });\n`;
-        code += `  after(async () => {\n`;
-        code += `    if (driver) await driver.deleteSession();\n`;
-        code += `  });\n\n`;
+        code += `(async () => {\n`;
+        code += `  const driver = await remote({ capabilities: { platformName: 'Android', 'appium:automationName': 'UiAutomator2' } });\n`;
+        code += `  try {\n`;
     } else {
         code += `import { test, expect } from '@playwright/test';\nimport * as path from 'path';\nimport * as fs from 'fs';\n\n`;
         code += `async function markLocator(locator) {\n    try {\n        await locator.first().evaluate((el) => {\n            el.style.outline = '3px solid #ff1f1f'; el.style.boxShadow = '0 0 0 4px rgba(255,31,31,0.25)';\n        });\n    } catch (e) {}\n}\n\n`;
@@ -78,7 +77,7 @@ function compile() {
             const safeTitle = String(scenario.Role || '').replace(/'/g, "\\'").replace(/\r?\n|\r/g, " ");
             
             if (isMobile) {
-                code += `  it('Scenario ${scenario.Scenario_ID}${testSuffix}: ${safeTitle}', async () => {\n`;
+                code += `  try {\n    console.log('Scenario ${scenario.Scenario_ID}${testSuffix}: ${safeTitle}');\n`;
             } else {
                 code += `  test('Scenario ${scenario.Scenario_ID}${testSuffix}: ${safeTitle}', async ({ page }) => {\n`;
             }
@@ -150,10 +149,14 @@ function compile() {
                 // DEF-NEW-004 FIX: Stop tracing and save trace.zip per scenario
                 code += `      await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') });\n`;
             }
-            code += `    }\n  });\n\n`;
+            if (isMobile) {
+                code += `    }\n  } catch (e) { console.error('Scenario ${scenario.Scenario_ID}${testSuffix} failed:', e.stack || e); }\n\n`;
+            } else {
+                code += `    }\n  });\n\n`;
+            }
         }
     }
-    code += `});\n`;
+    code += isMobile ? `  } finally {\n    await driver.deleteSession();\n  }\n})();\n` : `});\n`;
     fs.writeFileSync(outputPath, code);
 }
 compile();

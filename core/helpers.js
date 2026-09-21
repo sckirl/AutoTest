@@ -1,4 +1,4 @@
-// ponytail: shared helpers module — zero-dependency, pure stdlib logic
+// ponytail: shared helpers module, zero-dependency, pure stdlib logic
 
 /**
  * Validates that locator string uses safe Playwright selector chains
@@ -35,8 +35,31 @@ function interpolate(templateStr, iterData, fallbackObj) {
  */
 const q = (v) => JSON.stringify(String(v ?? ''));
 
+/**
+ * Codegen always records literal values (e.g. "admin123"), never {key} placeholders.
+ * When a Mapping_Key is shared across scenarios with different Data (a negative-path
+ * scenario reusing "Input Password" with a different password, say), the literal from
+ * whichever scenario it was recorded under silently wins on every replay, ignoring
+ * every other scenario's Data. Rewriting an exact-match literal back to {key} at save
+ * time is what lets interpolate() do its job for every scenario sharing this step.
+ * Mutates and returns steps.
+ */
+function tokenizeLiterals(steps, data) {
+    if (!data) return steps;
+    for (const step of steps) {
+        for (const [key, val] of Object.entries(data)) {
+            if (val === '' || val === undefined || val === null) continue;
+            const strVal = String(val);
+            if (step.value === strVal) step.value = `{${key}}`;
+            if (step.target === strVal) step.target = `{${key}}`;
+        }
+    }
+    return steps;
+}
+
 module.exports = {
     isSafeChain,
     interpolate,
+    tokenizeLiterals,
     q
 };

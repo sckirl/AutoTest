@@ -26,7 +26,7 @@ function req(method, urlPath, body) {
 }
 
 async function startServer() {
-  console.log("🚀 Starting AutoTest Studio test server...");
+  console.log("Starting AutoTest Studio test server...");
   const serverProc = spawn(process.execPath, [path.join(__dirname, '../studio/server.js')], {
     cwd: path.join(__dirname, '..'),
     env: { ...process.env, PORT: '3000' },
@@ -46,7 +46,7 @@ async function startServer() {
     try {
       const res = await req('GET', '/run-status');
       if (res.status === 200) {
-        console.log("✅ Test server live and responsive on port 3000\n");
+        console.log("Test server live and responsive on port 3000\n");
         return serverProc;
       }
     } catch (e) {}
@@ -56,7 +56,7 @@ async function startServer() {
 
 async function runAudit() {
   console.log("══════════════════════════════════════════════════════════════════════");
-  console.log(" 🔬 AUTO-TEST STUDIO: RIGOROUS SIT AUDIT FOR RECORD & REPLAY ENGINE");
+  console.log(" AUTO-TEST STUDIO: RIGOROUS SIT AUDIT FOR RECORD & REPLAY ENGINE");
   console.log("══════════════════════════════════════════════════════════════════════\n");
 
   let pass = 0, fail = 0;
@@ -65,11 +65,11 @@ async function runAudit() {
   function check(testId, name, cond, detail = '') {
     if (cond) {
       pass++;
-      console.log(`  ✅ PASS [${testId}] ${name}`);
+      console.log(`  PASS [${testId}] ${name}`);
       findings.push({ id: testId, name, status: 'PASS', detail: '' });
     } else {
       fail++;
-      console.log(`  ❌ FAIL [${testId}] ${name} | ${detail}`);
+      console.log(`  FAIL [${testId}] ${name} | ${detail}`);
       findings.push({ id: testId, name, status: 'FAIL', detail });
     }
   }

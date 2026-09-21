@@ -30,7 +30,9 @@ test.describe('Automated UAT Execution', () => {
       await page.screenshot({ path: path.join(resultsDir, 'STEP_2.png'), fullPage: true });
       });
       await test.step('Input Password', async () => {
-        await markLocator(page.getByPlaceholder('Password')); await page.getByPlaceholder('Password').fill("admin123");
+        await markLocator(page.getByRole('textbox', { name: 'Password' }));
+        await page.getByRole('textbox', { name: 'Password' }).click();
+        await markLocator(page.getByRole('textbox', { name: 'Password' })); await page.getByRole('textbox', { name: 'Password' }).fill("admin123");
       await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
       await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
       await page.screenshot({ path: path.join(resultsDir, 'STEP_3.png'), fullPage: true });
@@ -43,7 +45,7 @@ test.describe('Automated UAT Execution', () => {
       await page.screenshot({ path: path.join(resultsDir, 'STEP_4.png'), fullPage: true });
       });
       await test.step('Verify Dashboard', async () => {
-        await markLocator(page.getByRole('heading', { name: 'Dashboard' })); await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+        await markLocator(page.locator("div").filter({ hasText: "Time at WorkPunched" }).nth(3)); await expect(page.locator("div").filter({ hasText: "Time at WorkPunched" }).nth(3)).toBeVisible();
       await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
       await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
       await page.screenshot({ path: path.join(resultsDir, 'STEP_5.png'), fullPage: true });
@@ -75,7 +77,9 @@ test.describe('Automated UAT Execution', () => {
       await page.screenshot({ path: path.join(resultsDir, 'STEP_2.png'), fullPage: true });
       });
       await test.step('Input Password', async () => {
-        await markLocator(page.getByPlaceholder('Password')); await page.getByPlaceholder('Password').fill("wrongpassword");
+        await markLocator(page.getByRole('textbox', { name: 'Password' }));
+        await page.getByRole('textbox', { name: 'Password' }).click();
+        await markLocator(page.getByRole('textbox', { name: 'Password' })); await page.getByRole('textbox', { name: 'Password' }).fill("wrongpassword");
       await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
       await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
       await page.screenshot({ path: path.join(resultsDir, 'STEP_3.png'), fullPage: true });
@@ -88,7 +92,9 @@ test.describe('Automated UAT Execution', () => {
       await page.screenshot({ path: path.join(resultsDir, 'STEP_4.png'), fullPage: true });
       });
       await test.step('Verify Invalid Credentials Error', async () => {
-        await markLocator(page.getByText('Invalid credentials')); await expect(page.getByText('Invalid credentials')).toBeVisible();
+        await markLocator(page.getByText("Invalid credentials")); await expect(page.getByText("Invalid credentials")).toBeVisible();
+        await markLocator(page.getByText("Password", { exact: true })); await expect(page.getByText("Password", { exact: true })).toBeVisible();
+        await markLocator(page.getByText("Username", { exact: true })); await expect(page.getByText("Username", { exact: true })).toBeVisible();
       await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
       await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
       await page.screenshot({ path: path.join(resultsDir, 'STEP_5.png'), fullPage: true });
@@ -121,7 +127,8 @@ test.describe('Automated UAT Execution', () => {
       await page.screenshot({ path: path.join(resultsDir, 'STEP_2.png'), fullPage: true });
       });
       await test.step('Verify Required Validation', async () => {
-        await markLocator(page.locator('form').filter({ hasText: 'Required' })); await expect(page.locator('form').filter({ hasText: 'Required' })).toBeVisible();
+        await markLocator(page.getByText("Required").first()); await expect(page.getByText("Required").first()).toBeVisible();
+        await markLocator(page.getByText("Required").nth(1)); await expect(page.getByText("Required").nth(1)).toBeVisible();
       await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});
       await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});
       await page.screenshot({ path: path.join(resultsDir, 'STEP_3.png'), fullPage: true });

@@ -1,5 +1,5 @@
 /**
- * AutoTest Studio — 20-Scenario Human-in-the-Loop Realistic Test Suite
+ * AutoTest Studio: 20-Scenario Human-in-the-Loop Realistic Test Suite
  * Simulates real tester behaviour: uploads, maps, previews, runs, cancels, corrects.
  * Each scenario is documented individually for audit.
  */
@@ -40,15 +40,15 @@ async function freshServer() {
 const findings = [];
 function record(id, title, status, detail, recommendation = '') {
   findings.push({ id, title, status, detail, recommendation });
-  const icon = status === 'PASS' ? '✅' : status === 'WARN' ? '⚠️' : '❌';
-  console.log(`  ${icon} S${String(id).padStart(2,'0')} [${status}] ${title}`);
+  const icon = status === 'PASS' ? '' : status === 'WARN' ? '' : '';
+  console.log(`  ${icon}S${String(id).padStart(2,'0')} [${status}] ${title}`);
   if (status !== 'PASS' && detail) console.log(`         → ${detail}`);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
 async function runAllScenarios() {
   console.log('\n╔══════════════════════════════════════════════════════════╗');
-  console.log('║  AutoTest Studio — 20 Realistic Human-in-the-Loop Tests  ║');
+  console.log('║  AutoTest Studio: 20 Realistic Human-in-the-Loop Tests  ║');
   console.log('╚══════════════════════════════════════════════════════════╝\n');
 
   function getBundledBrowser() {
@@ -72,7 +72,7 @@ async function runAllScenarios() {
     const hasEnvBadge = await page.locator('#env-badge').count() > 0;
     const badgeText = await page.locator('#env-badge').textContent();
     if (title && hasTabs && hasDrop && hasEnvBadge && badgeText.trim() === 'WEB')
-      record(1, 'Fresh UI load — all elements present, badge=WEB', 'PASS', '');
+      record(1, 'Fresh UI load: all elements present, badge=WEB', 'PASS', '');
     else
       record(1, 'Fresh UI load', 'FAIL', `title=${title} tabs=${hasTabs} drop=${hasDrop} badge=${badgeText}`);
   } catch(e) { record(1, 'Fresh UI load', 'FAIL', e.message); }
@@ -128,13 +128,13 @@ async function runAllScenarios() {
     const remapBtns = await page.locator('.btn-remap').count();
     const previewBtns = await page.locator('.btn-preview').count();
     if (remapBtns > 0 && previewBtns > 0)
-      record(5, `Mapped step → Re-Map & 👁 Preview buttons appear`, 'PASS', '');
+      record(5, `Mapped step → Re-Map & Preview buttons appear`, 'PASS', '');
     else
       record(5, 'Mapped step button states', 'FAIL',
         `remapBtns=${remapBtns} previewBtns=${previewBtns}`);
   } catch(e) { record(5, 'Mapped step button states', 'FAIL', e.message); }
 
-  // ── S06: Preview step — read-only modal shows correct code ───────────────
+  // ── S06: Preview step, read-only modal shows correct code ───────────────
   console.log('\n[S06] Preview button opens correct read-only modal');
   try {
     await page.locator('.btn-preview').first().click();
@@ -214,7 +214,7 @@ async function runAllScenarios() {
       record(9, `Manual modal pre-loaded existing code (${existingCode.length} chars)`, 'PASS', existingCode.trim());
     else
       record(9, 'Manual modal pre-loads existing code', 'WARN',
-        `code="${existingCode}" — textarea empty, human must re-type everything`);
+        `code="${existingCode}": textarea empty, human must re-type everything`);
     await page.click('button:has-text("Cancel & Close Replay")');
     await page.waitForSelector('#record-modal', { state: 'hidden' });
   } catch(e) { record(9, 'Manual modal pre-load', 'FAIL', e.message); }
@@ -331,7 +331,7 @@ async function runAllScenarios() {
     let allGood = true;
     const issues = [];
     for (const dir of dirs) {
-      if (dir === 'PT_A') continue; // header scenario — no steps expected
+      if (dir === 'PT_A') continue; // header scenario, no steps expected
       const files = fs.readdirSync(path.join(resultsBase, dir));
       const hasSteps = files.some(f => f.startsWith('STEP_'));
       const hasFinal = files.includes('FINAL.png');
@@ -379,7 +379,7 @@ async function runAllScenarios() {
       record(18, 'Empty code → 400 error returned', 'PASS', `error="${msg}"`);
     } else {
       record(18, 'Empty code rejection', 'WARN',
-        `got HTTP ${r.status} instead of 400 — server may silently accept empty code`,
+        `got HTTP ${r.status} instead of 400, server may silently accept empty code`,
         'Add code.trim() validation to /save-mapping');
     }
   } catch(e) { record(18, 'Empty code rejection', 'FAIL', e.message); }
@@ -397,13 +397,13 @@ async function runAllScenarios() {
         record(19, 'Double-run → 409 Conflict correctly returned', 'PASS', '');
       else
         record(19, 'Double-run prevention', 'WARN',
-          `Second /run returned ${r2.status} — expected 409`,
+          `Second /run returned ${r2.status}, expected 409`,
           'Race window may be too tight; activeRun set after async execSync');
       // Cancel it
       await apiReq('POST', '/run-cancel', {});
     } else {
       record(19, 'Double-run prevention', 'WARN',
-        `First /run returned ${r1.status} (not 200) — could not test double-run`,
+        `First /run returned ${r1.status} (not 200), could not test double-run`,
         r1.json().error || '');
     }
     await new Promise(r => setTimeout(r, 2000));
@@ -448,7 +448,7 @@ async function generateAudit(findings) {
 
   const now = new Date().toISOString();
   const lines = [
-    `# AutoTest Studio — 20-Scenario Human-in-the-Loop Audit`,
+    `# AutoTest Studio: 20-Scenario Human-in-the-Loop Audit`,
     `**Date:** ${now}`,
     `**Score:** ${pass}/20 PASS | ${warn} WARN | ${fail} FAIL`,
     '',
@@ -459,15 +459,15 @@ async function generateAudit(findings) {
   ];
 
   for (const f of findings) {
-    const icon = f.status === 'PASS' ? '✅' : f.status === 'WARN' ? '⚠️' : '❌';
+    const icon = f.status === 'PASS' ? '' : f.status === 'WARN' ? '' : '';
     const detail = f.detail ? f.detail.replace(/\|/g, '\\|').substring(0, 120) : '';
-    lines.push(`| S${String(f.id).padStart(2,'0')} | ${f.title} | ${icon} ${f.status} | ${detail} |`);
+    lines.push(`| S${String(f.id).padStart(2,'0')} | ${f.title} | ${icon}${f.status} | ${detail} |`);
   }
 
   // Findings that need fixes
   const issues = findings.filter(f => f.status !== 'PASS');
   if (issues.length > 0) {
-    lines.push('', '## ⚠️ Findings Requiring Action', '');
+    lines.push('', '## Findings Requiring Action', '');
     for (const f of issues) {
       lines.push(`### S${String(f.id).padStart(2,'0')}: ${f.title}`);
       lines.push(`- **Status:** ${f.status}`);
@@ -476,7 +476,7 @@ async function generateAudit(findings) {
       lines.push('');
     }
   } else {
-    lines.push('', '## ✅ No issues found — system is fully compliant.', '');
+    lines.push('', '## No issues found. System is fully compliant.', '');
   }
 
   lines.push('---');
@@ -484,7 +484,7 @@ async function generateAudit(findings) {
 
   const outPath = path.join(__dirname, '..', 'qa_audit_round21.md');
   fs.writeFileSync(outPath, lines.join('\n'));
-  console.log(`📄 Audit written to: ${outPath}`);
+  console.log(`Audit written to: ${outPath}`);
   return outPath;
 }
 

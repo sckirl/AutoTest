@@ -15,7 +15,8 @@
       "synonyms": [
         "Go to URL",
         "Open Page",
-        "Visit Website"
+        "Visit Website",
+        "Navigate to OrangeHRM"
       ],
       "platform": "web",
       "variables": [
@@ -39,7 +40,8 @@
       "synonyms": [
         "Type Username",
         "Enter User",
-        "Provide User"
+        "Provide User",
+        "Input Username"
       ],
       "platform": "web",
       "variables": [
@@ -63,7 +65,8 @@
       "synonyms": [
         "Type Password",
         "Enter Password",
-        "Fill Password"
+        "Fill Password",
+        "Input Password"
       ],
       "platform": "web",
       "variables": [
