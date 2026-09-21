@@ -1,10 +1,10 @@
-# 🚀 AutoTest Studio: Zero-Trust Orchestration Guide
+# AutoTest Studio: Zero-Trust Orchestration Guide
 
 AutoTest Studio is a **Zero-Install, Air-Gapped, Data-Driven Playwright Engine** built specifically for hardened corporate and banking environments. It completely decouples Playwright logic from UAT Excel matrices, allowing manual testers to build dynamic test suites entirely from the UI without writing code.
 
 ---
 
-## 🛠️ Step 1: Environment & Setup (Zero-Install)
+## Step 1: Environment & Setup (Zero-Install)
 This engine requires **NO** internet access and **NO** `npx` execution. Everything is self-contained.
 
 1. **Prerequisites**: Ensure you have `Node.js` installed. 
@@ -14,12 +14,12 @@ This engine requires **NO** internet access and **NO** `npx` execution. Everythi
    # From the project root
    node studio/server.js
    ```
-   *You should see `✅ FOUND bundled Chromium` in the terminal logs.*
+   *You should see `FOUND bundled Chromium` in the terminal logs.*
 4. **Access the Application**: Open your browser and navigate to `http://localhost:3000`.
 
 ---
 
-## 📂 Step 2: The E2E Workflow (Human Usage Guide)
+## Step 2: The E2E Workflow (Human Usage Guide)
 
 ### 1. Uploading the Blueprint (UAT Matrix)
 - Prepare your UAT Excel file (e.g., `DPR TEMPLATE.xlsx` or `orangehrm_blueprint.xlsx`). The parser supports hierarchical flows (e.g., Scenario A.1, A.2) and will dynamically find "Scenario ID", "Step Label", and "Test Data" headers.
@@ -33,7 +33,7 @@ For every unique step found in your Excel file, you must map it to Playwright ac
 - Copy the generated locator code (e.g., `await page.getByRole('button', { name: 'Login' }).click();`).
 - Click the **"Manual"** button on the step in the UI and paste the code into the text area. 
 - **Parameterization (DDT)**: If the step requires dynamic variables from the Excel's "Test Data" column, replace literal values with `{variable_name}` syntax (e.g., `fill('{username}')`).
-- Click **"Sync & Save Action"**. The step will turn blue ✅. The system's AST engine securely extracts and validates your target commands automatically.
+- Click **"Sync & Save Action"**. The step will turn blue. The system's AST engine securely extracts and validates your target commands automatically.
 
 ### 3. Configuring Data Matrix
 - Navigate to the **Data Matrix** tab. The UI will automatically pull dynamic `{variables}` from your mapped scripts and map them to scenarios that use those steps.
@@ -47,7 +47,7 @@ For every unique step found in your Excel file, you must map it to Playwright ac
 
 ---
 
-## 📊 Step 3: Audit & Evidence
+## Step 3: Audit & Evidence
 Once the test finishes, verification artifacts are stored natively for auditors.
 
 - **Check the `results/` folder.** Every scenario (e.g., `HRM_01/`) gets its own isolated directory.
@@ -56,7 +56,7 @@ Once the test finishes, verification artifacts are stored natively for auditors.
 
 ---
 
-## 🗑️ Step 4: Resetting the System
+## Step 4: Resetting the System
 When moving to a completely new project, click the **"Reset System"** button on the top right of the application. This securely wipes:
 1. All generated scripts.
 2. The `mappings.json` library.

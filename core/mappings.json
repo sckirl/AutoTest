@@ -1,9 +1,9 @@
 {
-  "Navigate to PracticeTest": {
+  "Navigate to OrangeHRM": {
     "steps": [
       {
         "type": "goto",
-        "target": "https://practicetestautomation.com/practice-test-login/"
+        "target": "{url}"
       }
     ]
   },
@@ -11,7 +11,7 @@
     "steps": [
       {
         "type": "fill",
-        "target": "locator('#username')",
+        "target": "getByPlaceholder('Username')",
         "value": "{username}"
       }
     ]
@@ -20,32 +20,44 @@
     "steps": [
       {
         "type": "fill",
-        "target": "locator('#password')",
+        "target": "getByPlaceholder('Password')",
         "value": "{password}"
       }
     ]
   },
-  "Submit Login": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "locator('#submit')"
-      }
-    ]
-  },
-  "Verify Login Success": {
+  "Verify Dashboard": {
     "steps": [
       {
         "type": "toBeVisible",
-        "target": "locator('h1.post-title')"
+        "target": "locator(\"div\").filter({ hasText: \"Time at WorkPunched\" }).nth(3)"
       }
     ]
   },
-  "Verify Error Message": {
+  "Verify Invalid Credentials Error": {
     "steps": [
       {
         "type": "toBeVisible",
-        "target": "locator('#error')"
+        "target": "getByText(\"Invalid credentials\")"
+      },
+      {
+        "type": "toBeVisible",
+        "target": "getByText(\"Password\", { exact: true })"
+      },
+      {
+        "type": "toBeVisible",
+        "target": "getByText(\"Username\", { exact: true })"
+      }
+    ]
+  },
+  "Verify Required Validation": {
+    "steps": [
+      {
+        "type": "toBeVisible",
+        "target": "getByText(\"Required\").first()"
+      },
+      {
+        "type": "toBeVisible",
+        "target": "getByText(\"Required\").nth(1)"
       }
     ]
   }

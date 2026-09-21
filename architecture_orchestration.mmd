@@ -10,77 +10,95 @@ graph TD
 
     %% 1. ORCHESTRATION LAYER (Control Plane)
     subgraph Control_Plane ["fa:fa-user-tie COMMAND & CONTROL"]
-        PM["ELITE PM ORCHESTRATOR<br/>(Zero-Defect Mandate)"]:::pm
         UI_SPA["STUDIO UI (SPA)<br/>Montserrat/OpenSans DNA"]:::supervisor
-        SELECTOR["PLATFORM SELECTOR<br/>(Dynamic Toggle)"]:::dev
-        UI_SPA --- SELECTOR
+        RESET_SYS["RESET SYSTEM (Top-Right)<br/>Synchronous Wiping API"]:::qa
+        PLATFORM["PLATFORM TOGGLE<br/>(Web vs Mobile)"]:::dev
+        EXEC_OPTS["EXECUTION CONFIGS<br/>(Headless, Workers, Cancel)"]:::dev
+        
+        UI_SPA --- RESET_SYS
+        UI_SPA --- PLATFORM
+        UI_SPA --- EXEC_OPTS
     end
 
-    %% 2. INGESTION & PARSING (Track 1)
+    %% 2. INGESTION & PARSING (Excel Ingestion)
     subgraph Ingestion_Layer ["fa:fa-file-excel BLUEPRINT INGESTION"]
         direction TB
-        EXCEL["DPR TEMPLATE.xlsx"]:::data
-        PARSER["SCENARIO PARSER<br/>(Dynamic Header Detection)"]:::engine
-        BLUEPRINT["BLUEPRINT JSON<br/>(Hierarchical Data)"]:::data
+        EXCEL["scenario_uploaded.xlsx<br/>(Excel Matrix Ingest)"]:::data
+        PARSER["SCENARIO PARSER<br/>(scenario_parser.js)"]:::engine
+        BLUEPRINT["blueprint.json<br/>(Hierarchical Blueprint)"]:::data
         
         EXCEL -->|"Upload"| PARSER
         PARSER --> BLUEPRINT
     end
 
-    %% 3. MAPPING & AST ANALYSIS (Track 2)
+    %% 3. MAPPING & AST ANALYSIS (Playwright Codegen)
     subgraph Mapping_Core ["fa:fa-code ACTION MAPPING ENGINE"]
         direction LR
-        REC_WEB["PLAYWRIGHT RECORDER<br/>(Web Context)"]:::dev
-        REC_MOB["APPIUM INSPECTOR<br/>(Mobile Stub)"]:::dev
-        AST["AST PARSER (ACORN)<br/>Boilerplate Stripper"]:::engine
-        MAPPINGS["MAPPINGS.JSON<br/>(Unique Action Store)"]:::data
+        REPLAY_GEN["REPLAY GENERATOR<br/>(preceding replay_*.spec.ts)"]:::engine
+        REC_SESSION["PLAYWRIGHT CODEGEN<br/>(Isolated Browser & Pause)"]:::dev
+        AST["AST PARSER (ACORN)<br/>Locator/Command Extractor"]:::engine
+        MAPPINGS["mappings.json<br/>(Mapping Library Store)"]:::data
         
-        REC_WEB & REC_MOB -->|"Raw Code"| AST
+        REPLAY_GEN --> REC_SESSION
+        REC_SESSION -->|"Raw Playwright Code"| AST
         AST --> MAPPINGS
     end
 
-    %% 4. DDT & STABILITY (Track 3 / 6)
-    subgraph Stabilization_Layer ["fa:fa-shield-alt DATA & STABILITY"]
-        MATRIX["DATA MATRIX UI<br/>(localStorage Persistent)"]:::dev
-        RUNTIME["RUNTIME_DATA.JSON<br/>(Override Store)"]:::data
-        SYNC["STABILITY INJECTOR<br/>(Navigation Awareness)"]:::engine
+    %% 4. DDT OVERRIDES (Data Matrix accordion)
+    subgraph Stabilization_Layer ["fa:fa-shield-alt DDT OVERRIDE LAYER"]
+        direction TB
+        MATRIX["DATA MATRIX UI<br/>(Variable Harvesting)"]:::dev
+        RUNTIME["runtime_data.json<br/>(DDT Row Iterations)"]:::data
         
         MATRIX --> RUNTIME
-        RUNTIME & SYNC --- COMPILER
     end
 
-    %% 5. COMPILER & ROUTER (Track 4 / 5)
-    subgraph Compiler_Core ["fa:fa-microchip EXECUTION ROUTER"]
+    %% 5. COMPILER & RUNNER (Stitching execution spec)
+    subgraph Compiler_Core ["fa:fa-microchip COMPILATION & RUNTIME"]
         direction TB
-        COMPILER["CORE COMPILER<br/>(Parallel Loop Gen)"]:::engine
-        TRANSLATOR["LOCATOR TRANSLATOR<br/>(PW -> Mobile XPath)"]:::engine
+        COMPILER["CORE COMPILER<br/>(compiler.js)"]:::engine
+        HIGHLIGHT["RED OUTLINE MARKER<br/>(markLocator Highlight)"]:::engine
+        EXEC_SPEC["executed.spec.ts<br/>(Parameterized Loops)"]:::data
         
-        COMPILER -->|"Web Branch"| PW_TEST["PLAYWRIGHT WORKERS<br/>(Chromium Native)"]:::dev
-        COMPILER -->|"Mobile Branch"| WDIO_TEST["WEBDRIVERIO WORKERS<br/>(Appium Remote)"]:::dev
-        TRANSLATOR -.-> WDIO_TEST
+        BLUEPRINT & MAPPINGS & RUNTIME --> COMPILER
+        COMPILER --> HIGHLIGHT
+        HIGHLIGHT --> EXEC_SPEC
     end
 
-    %% 6. VALIDATION & DELIVERY (Certification)
-    subgraph Validation_Gates ["fa:fa-certificate FINAL CERTIFICATION"]
+    %% 6. EXECUTION & RESULTS (Server execution & directory listing)
+    subgraph Execution_Layer ["fa:fa-play BACKGROUND RUNNER"]
         direction TB
-        RESULTS["RESULTS DASHBOARD<br/>(Pass/Fail Chips)"]:::supervisor
-        ARTIFACTS["HIGH-FIDELITY ARTIFACTS<br/>(800ms Rendered PNGs)"]:::data
-        UAT["100-SCENARIO UAT<br/>(Zero-Defect Stress Test)"]:::qa
+        PW_CLI["PLAYWRIGHT CLI<br/>(Local DRIVERS/ Executable)"]:::engine
+        STATUS["STATUS ROUTE<br/>(/run-status & /run-cancel)"]:::dev
+        REPORT["report.json<br/>(Execution Metrics)"]:::data
         
-        PW_TEST & WDIO_TEST --> ARTIFACTS
-        ARTIFACTS --> RESULTS
-        RESULTS --> UAT
-        UAT ==>|"KPI CERTIFIED"| RELEASE("PRODUCTION MASTER"):::pm
+        EXEC_SPEC --> PW_CLI
+        PW_CLI --> STATUS
+        PW_CLI --> REPORT
+    end
+
+    %% 7. AUDIT & STATIC SERVING (Results view & evidence)
+    subgraph Audit_Gates ["fa:fa-certificate RESULTS & EVIDENCE AUDIT"]
+        direction TB
+        STATIC_SERV["STATIC FILES SERV<br/>(results/ directory route)"]:::engine
+        CUSTOM_INDEX["CUSTOM DIR INDEX<br/>(results/ directory page)"]:::supervisor
+        UAT_EVIDENCE["HIGH-FIDELITY ARTIFACTS<br/>(FINAL.png & trace.zip)"]:::data
+        verification["21-SCENARIO VERIFICATION<br/>(hitl_scenario_test.js)"]:::qa
+        
+        REPORT --> STATIC_SERV
+        STATIC_SERV --> CUSTOM_INDEX
+        CUSTOM_INDEX --> UAT_EVIDENCE
+        UAT_EVIDENCE --> verification
     end
 
     %% WORKFLOW FLOWS
-    PM ==> Control_Plane
     Control_Plane ==> Ingestion_Layer
     Ingestion_Layer ==> Mapping_Core
     Mapping_Core ==> Stabilization_Layer
     Stabilization_Layer ==> Compiler_Core
-    Compiler_Core ==> Validation_Gates
+    Compiler_Core ==> Execution_Layer
+    Execution_Layer ==> Audit_Gates
 
-    %% MANDATES
-    Note1["fa:fa-soul SOUL MANDATE:<br/>1. MINIMAL CHANGES TO WORKING CODE<br/>2. 100% DPR TEMPLATE COMPLIANCE<br/>3. ZERO WHITE PNG ARTIFACTS"]
-    Note1 --- PM
+    %% SOUL MANDATES
+    Note1["fa:fa-soul SYSTEM PREREQUISITES:<br/>1. Resilient page.goto (no networkidle hangs)<br/>2. Zero-install hybrid dependencies fallback<br/>3. Precise regex-based scenario ID cleaning"]
+    Note1 --- UI_SPA

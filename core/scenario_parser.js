@@ -17,7 +17,7 @@ const XLSX = require('xlsx');
  */
 function generateBlueprintFromExcel(excelPath) {
     if (!fs.existsSync(excelPath)) {
-        console.error(`❌ Excel file not found: ${excelPath}`);
+        console.error(`Excel file not found: ${excelPath}`);
         return;
     }
 
@@ -28,25 +28,33 @@ function generateBlueprintFromExcel(excelPath) {
     const blueprint = [];
     let currentScenario = null;
     if (!rows.length || rows[0].length < 3) {
-        throw new Error('❌ Invalid Excel structure: expected scenario matrix with at least 3 columns.');
+        throw new Error('Invalid Excel structure: expected scenario matrix with at least 3 columns.');
     }
 
-    // Dynamic Header Detection
-    const headers = rows[0].map(h => String(h || '').toLowerCase());
-    const scenarioIdx = headers.findIndex(h => h.includes('scenario number') || h.includes('scenario id'));
-    const labelIdx = headers.findIndex(h => h.includes('scenario name') || h.includes('label'));
-    const testDataIdx = headers.findIndex(h => h.includes('test data'));
-
-    if (scenarioIdx === -1 || labelIdx === -1) {
-        throw new Error('❌ Malformed Template: Could not find required columns.');
+    // Dynamic Header Detection across first 10 rows
+    let headerRowIdx = -1;
+    let scenarioIdx = -1, labelIdx = -1, testDataIdx = -1;
+    for (let i = 0; i < Math.min(rows.length, 10); i++) {
+        const headers = rows[i].map(h => String(h || '').toLowerCase());
+        scenarioIdx = headers.findIndex(h => h.includes('scenario number') || h.includes('scenario id'));
+        labelIdx = headers.findIndex(h => h.includes('scenario name') || h.includes('label'));
+        testDataIdx = headers.findIndex(h => h.includes('test data'));
+        if (scenarioIdx !== -1 && labelIdx !== -1) {
+            headerRowIdx = i;
+            break;
+        }
     }
 
-    for (let r = 1; r < rows.length; r++) {
+    if (headerRowIdx === -1) {
+        throw new Error('Malformed Template: Could not find required columns.');
+    }
+
+    for (let r = headerRowIdx + 1; r < rows.length; r++) {
         const scenarioNum = String(rows[r][scenarioIdx] || "").trim();
         const labelOrTitle = String(rows[r][labelIdx] || "").trim();
         const testDataRaw = testDataIdx !== -1 ? String(rows[r][testDataIdx] || "").trim() : "";
 
-        if (scenarioNum.match(/^(?!\d+$)[a-zA-Z0-9_.-]+$/)) {
+        if (scenarioNum.match(/^(?!\d+$).+/)) {
             // Start of a new scenario
             currentScenario = {
                 Scenario_ID: scenarioNum,
@@ -81,10 +89,10 @@ function generateBlueprintFromExcel(excelPath) {
 
     const outputPath = path.join(process.cwd(), 'core', 'blueprint.json');
     if (blueprint.length === 0) {
-        throw new Error('❌ No scenarios parsed from the uploaded file.');
+        throw new Error('No scenarios parsed from the uploaded file.');
     }
     fs.writeFileSync(outputPath, JSON.stringify(blueprint, null, 2));
-    console.log(`✅ Blueprint generated successfully at ${outputPath}`);
+    console.log(`Blueprint generated successfully at ${outputPath}`);
 }
 
 const filePath = process.argv[2] || 'scenario_uploaded.xlsx';

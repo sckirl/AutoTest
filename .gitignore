@@ -7,10 +7,16 @@ playwright-report/
 test-results/
 blob-report/
 scenario_uploaded*.xlsx
-replay_*.js
-replay_*.spec.js
+core/replay_*.js
+core/replay_*.ts
+core/replay_*.spec.js
+core/replay_*.spec.ts
+codegen_*.js
 core/blueprint.json
 core/executed.spec.ts
+core/executed.mobile.js
+core/runtime_data.json
+core/platform_state.json
 .current_upload
 DPR TEMPLATE.xlsx
 test_dump.csv
@@ -46,3 +52,4 @@ studio_audit.log
 .env.*
 !.env.example
 DRIVERS/ms-playwright/
+.playwright-mcp/

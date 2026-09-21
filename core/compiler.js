@@ -13,7 +13,9 @@ function compile() {
     const blueprintPath = path.join(__dirname, 'blueprint.json');
     const mappingsPath = path.join(__dirname, 'mappings.json');
     const runtimeDataPath = path.join(__dirname, 'runtime_data.json');
-    const outputPath = path.join(__dirname, 'executed.spec.ts');
+    const isMobile = process.env.AUTOTEST_PLATFORM === 'mobile';
+    // ponytail: mobile output is plain CommonJS (no test framework bundled in DRIVERS/), web stays Playwright Test
+    const outputPath = path.join(__dirname, isMobile ? 'executed.mobile.js' : 'executed.spec.ts');
 
     if (!fs.existsSync(blueprintPath) || !fs.existsSync(mappingsPath)) return;
 
@@ -24,8 +26,10 @@ function compile() {
         try { runtimeData = JSON.parse(fs.readFileSync(runtimeDataPath, 'utf8')); } catch(e) {}
     }
 
-    const q = (v) => JSON.stringify(String(v ?? ''));
-    
+    // ponytail: use shared helpers module
+    const { isSafeChain, interpolate, q } = require('./helpers');
+    const ActionDB = require('./action_db');
+
     function translateToMobileLocator(pwLocator, finalValue) {
         if (!pwLocator) return "";
         if (pwLocator.startsWith('/') || pwLocator.startsWith('#') || pwLocator.startsWith('.')) return pwLocator;
@@ -43,42 +47,16 @@ function compile() {
         return pwLocator;
     }
 
-    const isSafeChain = (target) => {
-        if (typeof target !== 'string') return null;
-        if (!target.match(/^(getBy|locator|frameLocator)/)) return null;
-        if (/\b(require|exec|eval|process|import|global|constructor|window|document)\b/.test(target)) return null;
-        return target;
-    };
-
-    const interpolate = (templateStr, iterData, fallbackObj) => {
-        if (!templateStr) return "";
-        let processedStr = String(templateStr);
-        processedStr = processedStr.replace(/['"]\{([a-zA-Z0-9_]+)\}['"]/g, '{$1}');
-        processedStr = processedStr.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => {
-            let val = "";
-            if (iterData && iterData[key] !== undefined && iterData[key] !== null && iterData[key] !== "") {
-                val = iterData[key];
-            } else if (fallbackObj && fallbackObj[key] !== undefined && fallbackObj[key] !== null) {
-                val = fallbackObj[key];
-            }
-            return val;
-        });
-        return processedStr;
-    };
-
-    const isMobile = process.env.AUTOTEST_PLATFORM === 'mobile';
     let code = '';
-    
+
     if (isMobile) {
+        // ponytail: no Mocha/@wdio-cli bundled in DRIVERS/ (air-gapped), run as a plain
+        // async script via `node`, not a test-framework file (was describe/it/before, which
+        // has no runner to interpret it and made every mobile /run fail with 0 tests found).
         code += `const { remote } = require('webdriverio');\nconst path = require('path');\nconst fs = require('fs');\n\n`;
-        code += `describe('Automated UAT Execution (Mobile)', function() {\n`;
-        code += `  let driver;\n`;
-        code += `  before(async () => {\n`;
-        code += `    driver = await remote({ capabilities: { platformName: 'Android', 'appium:automationName': 'UiAutomator2' } });\n`;
-        code += `  });\n`;
-        code += `  after(async () => {\n`;
-        code += `    if (driver) await driver.deleteSession();\n`;
-        code += `  });\n\n`;
+        code += `(async () => {\n`;
+        code += `  const driver = await remote({ capabilities: { platformName: 'Android', 'appium:automationName': 'UiAutomator2' } });\n`;
+        code += `  try {\n`;
     } else {
         code += `import { test, expect } from '@playwright/test';\nimport * as path from 'path';\nimport * as fs from 'fs';\n\n`;
         code += `async function markLocator(locator) {\n    try {\n        await locator.first().evaluate((el) => {\n            el.style.outline = '3px solid #ff1f1f'; el.style.boxShadow = '0 0 0 4px rgba(255,31,31,0.25)';\n        });\n    } catch (e) {}\n}\n\n`;
@@ -86,6 +64,7 @@ function compile() {
     }
 
     for (const scenario of scenarios) {
+        if (!scenario.Flow || scenario.Flow.length === 0) continue;
         let iterations = runtimeData[scenario.Scenario_ID];
         if (!Array.isArray(iterations) || iterations.length === 0) {
             iterations = [null];
@@ -98,7 +77,7 @@ function compile() {
             const safeTitle = String(scenario.Role || '').replace(/'/g, "\\'").replace(/\r?\n|\r/g, " ");
             
             if (isMobile) {
-                code += `  it('Scenario ${scenario.Scenario_ID}${testSuffix}: ${safeTitle}', async () => {\n`;
+                code += `  try {\n    console.log('Scenario ${scenario.Scenario_ID}${testSuffix}: ${safeTitle}');\n`;
             } else {
                 code += `  test('Scenario ${scenario.Scenario_ID}${testSuffix}: ${safeTitle}', async ({ page }) => {\n`;
             }
@@ -113,12 +92,12 @@ function compile() {
 
             for (let i = 0; i < scenario.Flow.length; i++) {
                 const step = scenario.Flow[i];
-                const mapping = mappings[step.Mapping_Key];
-                if (mapping) {
+                const actionSteps = (mappings[step.Mapping_Key] && mappings[step.Mapping_Key].steps) || ActionDB.resolveSteps(step.Mapping_Key);
+                if (actionSteps && actionSteps.length > 0) {
                     const safeKey = String(step.Mapping_Key).replace(/'/g, "\\'").replace(/\r?\n|\r/g, " ");
                     if (!isMobile) code += `      await test.step('${safeKey}', async () => {\n`;
                     
-                    for (const action of mapping.steps) {
+                    for (const action of actionSteps) {
                         const finalTarget = interpolate(action.target, iterData, step.Data);
                         const finalValue = interpolate(action.value, iterData, step.Data);
                         
@@ -133,13 +112,16 @@ function compile() {
                         } else {
                             const safeTarget = isSafeChain(finalTarget);
                             const loc = safeTarget ? `page.${safeTarget}` : `page.locator(${q(finalTarget)})`;
-                            if (action.type === 'goto') code += `        await page.goto(${q(finalTarget)}, { waitUntil: 'networkidle' });\n`;
+                            if (action.type === 'goto') code += `        await page.goto(${q(finalTarget)});\n`;
                             else if (action.type === 'click') {
                                 code += `        await markLocator(${loc});\n`;
                                 code += `        await ${loc}.click();\n`;
                             }
                             else if (action.type === 'fill') code += `        await markLocator(${loc}); await ${loc}.fill(${q(finalValue)});\n`;
                             else if (action.type === 'press') code += `        await markLocator(${loc}); await ${loc}.press(${q(finalValue || 'Enter')});\n`;
+                            else if (action.type === 'selectOption') code += `        await markLocator(${loc}); await ${loc}.selectOption(${q(finalValue)});\n`;
+                            else if (action.type === 'check') code += `        await markLocator(${loc}); await ${loc}.check();\n`;
+                            else if (action.type === 'uncheck') code += `        await markLocator(${loc}); await ${loc}.uncheck();\n`;
                             else if (action.type === 'toBeVisible') code += `        await markLocator(${loc}); await expect(${loc}).toBeVisible();\n`;
                             else if (action.type === 'toHaveText') code += `        await markLocator(${loc}); await expect(${loc}).toHaveText(${q(finalValue)});\n`;
                         }
@@ -149,7 +131,8 @@ function compile() {
                         code += `      await driver.pause(800);\n`;
                         code += `      await driver.saveScreenshot(path.join(resultsDir, 'STEP_${i + 1}.png'));\n`;
                     } else {
-                        code += `      await page.waitForTimeout(1000); await page.waitForLoadState('networkidle').catch(() => {});\n`;
+                        code += `      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});\n`;
+                        code += `      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});\n`;
                         code += `      await page.screenshot({ path: path.join(resultsDir, 'STEP_${i + 1}.png'), fullPage: true });\n`;
                         code += `      });\n`;
                     }
@@ -160,15 +143,20 @@ function compile() {
                 code += `      await driver.pause(800);\n`;
                 code += `      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));\n`;
             } else {
-                code += `      await page.waitForTimeout(1000); await page.waitForLoadState('networkidle').catch(() => {});\n`;
+                code += `      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});\n`;
+                code += `      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});\n`;
                 code += `      await page.screenshot({ path: path.join(resultsDir, 'FINAL.png'), fullPage: true });\n`;
                 // DEF-NEW-004 FIX: Stop tracing and save trace.zip per scenario
                 code += `      await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') });\n`;
             }
-            code += `    }\n  });\n\n`;
+            if (isMobile) {
+                code += `    }\n  } catch (e) { console.error('Scenario ${scenario.Scenario_ID}${testSuffix} failed:', e.stack || e); }\n\n`;
+            } else {
+                code += `    }\n  });\n\n`;
+            }
         }
     }
-    code += `});\n`;
+    code += isMobile ? `  } finally {\n    await driver.deleteSession();\n  }\n})();\n` : `});\n`;
     fs.writeFileSync(outputPath, code);
 }
 compile();
