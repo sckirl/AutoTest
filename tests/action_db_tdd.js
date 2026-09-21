@@ -12,10 +12,10 @@ let failed = 0;
 
 function check(id, title, condition) {
   if (condition) {
-    console.log(`  ✅ PASS [${id}] ${title}`);
+    console.log(`  PASS [${id}] ${title}`);
     passed++;
   } else {
-    console.error(`  ❌ FAIL [${id}] ${title}`);
+    console.error(`  FAIL [${id}] ${title}`);
     failed++;
   }
 }
@@ -46,7 +46,7 @@ function req(method, urlPath, body) {
 
 async function runTdd() {
   console.log('══════════════════════════════════════════════════════════════════════');
-  console.log(' 🧪 TDD SUITE: ACTION DATABASE, SYNONYMS & ACTION GROUPS');
+  console.log(' TDD SUITE: ACTION DATABASE, SYNONYMS & ACTION GROUPS');
   console.log('══════════════════════════════════════════════════════════════════════\n');
 
   const ActionDB = require('../core/action_db');

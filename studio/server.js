@@ -19,7 +19,7 @@ const XLSX = require('xlsx');
 const multer = require('multer');
 
 // ponytail: shared helpers module
-const { isSafeChain, interpolate, q } = require('../core/helpers');
+const { isSafeChain, interpolate, q, tokenizeLiterals } = require('../core/helpers');
 const ActionDB = require('../core/action_db');
 
 const CORE_DIR = path.join(__dirname, '../core');
@@ -59,7 +59,7 @@ if (fs.existsSync(PLATFORM_STATE_PATH)) {
 }
 
 function cleanupAll() {
-    console.log("\n🛑 Shutdown signal received. Killing all tracked processes...");
+    console.log("\nShutdown signal received. Killing all tracked processes...");
     for (const proc of trackedProcesses) {
         try { proc.kill('SIGKILL'); } catch (e) {}
     }
@@ -84,11 +84,11 @@ function getBundledBrowserPath() {
     ];
     for (const p of paths) {
         if (fs.existsSync(p)) {
-            console.log(`✅ FOUND bundled Chromium: ${p}`);
+            console.log(`FOUND bundled Chromium: ${p}`);
             return p;
         }
     }
-    console.log(`⚠️ NO bundled browser found in DRIVERS/. Using system Playwright defaults.`);
+    console.log(`NO bundled browser found in DRIVERS/. Using system Playwright defaults.`);
     return null;
 }
 
@@ -159,7 +159,7 @@ app.get('/results', (req, res) => {
             </style>
         </head>
         <body>
-            <h1>📁 AutoTest Studio: Results Directory Listing</h1>
+            <h1>AutoTest Studio: Results Directory Listing</h1>
             <a href="/" style="color:#2563eb; text-decoration:none; font-size:14px;">&larr; Back to Studio UI</a>
             <div class="grid">
         `;
@@ -172,7 +172,7 @@ app.get('/results', (req, res) => {
             const files = fs.readdirSync(path.join(RESULTS_DIR, dir)).filter(f => !f.startsWith('.'));
             html += `
                 <div class="folder-card">
-                    <div class="folder-title">📁 ${dir}</div>
+                    <div class="folder-title">${dir}</div>
                     <ul class="file-list">
             `;
             if (files.length === 0) {
@@ -180,7 +180,7 @@ app.get('/results', (req, res) => {
             } else {
                 files.forEach(f => {
                     const ext = path.extname(f).toLowerCase();
-                    const icon = ext === '.png' ? '📷' : ext === '.zip' ? '📦' : '📄';
+                    const icon = ext === '.png' ? '[PNG]' : ext === '.zip' ? '[ZIP]' : '[FILE]';
                     html += `<li><a href="/results/${dir}/${f}" target="_blank">${icon} ${f}</a></li>`;
                 });
             }
@@ -208,9 +208,9 @@ app.post('/upload', upload.single('excel'), (req, res) => {
     // Regenerate blueprint.json immediately on upload so we have the steps mapping structure
     try {
         execSync(`node core/scenario_parser.js scenario_uploaded.xlsx`, { stdio: 'inherit', cwd: ROOT_DIR });
-        console.log("✅ Blueprint generated successfully on upload");
+        console.log("Blueprint generated successfully on upload");
     } catch (e) {
-        console.error("⚠️ Error generating blueprint on upload:", e);
+        console.error("Error generating blueprint on upload:", e);
     }
     res.json({ message: "Uploaded." });
 });
@@ -334,14 +334,14 @@ app.get('/scan', (req, res) => {
 });
 
 app.post('/record', (req, res) => {
-    // DEF-CRIT-001 FIX: Guard FIRST — before any computation. Sentinel is set synchronously.
+    // DEF-CRIT-001 FIX: Guard FIRST, before any computation. Sentinel is set synchronously.
     if (activeCodegen && !activeCodegen.killed && activeCodegen.exitCode === null) {
         return res.status(409).json({ error: 'A recording session is already active. Close the browser or click Cancel first.' });
     }
-    activeCodegen = { killed: false, exitCode: null }; // sentinel — blocks any concurrent request before spawn returns
+    activeCodegen = { killed: false, exitCode: null }; // sentinel: blocks any concurrent request before spawn returns
 
     const { label, url, scenarioId } = req.body;
-    console.log(`\n🎬 Codegen launched for: "${label}" in scenario: "${scenarioId}"`);
+    console.log(`\nCodegen launched for: "${label}" in scenario: "${scenarioId}"`);
 
     const sessionId = Date.now().toString();
 
@@ -362,8 +362,13 @@ app.post('/record', (req, res) => {
                 const targetIdx = scenario.Flow.findIndex(step => step.Mapping_Key === label);
                 if (targetIdx > 0) {
                     const slice = scenario.Flow.slice(0, targetIdx);
-                    // ponytail: only include preceding steps that actually have recorded actions
-                    precedingMappedSteps = slice.filter(s => mappings[s.Mapping_Key] && Array.isArray(mappings[s.Mapping_Key].steps) && mappings[s.Mapping_Key].steps.length > 0);
+                    // ponytail: a step can be "mapped" either directly in mappings.json or via an
+                    // Action Library synonym/name match (same fallback every other route uses:
+                    // /scan, /mapping, /preview, compiler.js). This was checking mappings.json only,
+                    // so Library-resolved steps silently dropped out of the preceding-steps replay.
+                    precedingMappedSteps = slice
+                        .map(s => ({ ...s, resolvedSteps: (mappings[s.Mapping_Key] && mappings[s.Mapping_Key].steps) || ActionDB.resolveSteps(s.Mapping_Key) }))
+                        .filter(s => Array.isArray(s.resolvedSteps) && s.resolvedSteps.length > 0);
                 }
             }
         } catch (e) {
@@ -386,9 +391,8 @@ app.post('/record', (req, res) => {
         replayCode += `  test.setTimeout(0);\n\n`;
 
         for (const step of precedingMappedSteps) {
-            const mapping = mappings[step.Mapping_Key];
             replayCode += `  // Step: ${step.Mapping_Key}\n`;
-            for (const action of mapping.steps) {
+            for (const action of step.resolvedSteps) {
                 const finalTarget = interpolate(action.target, iterData, step.Data);
                 const finalValue = interpolate(action.value, iterData, step.Data);
                 const safeTarget = isSafeChain(finalTarget);
@@ -438,7 +442,7 @@ app.post('/record', (req, res) => {
         });
         child.on('error', err => console.error('[REPLAY SPAWN ERROR]', err.message));
 
-        return res.json({ sessionId, isReplay: true, message: 'Replay launched — preceding steps executing. Perform and copy new steps from Playwright Inspector.' });
+        return res.json({ sessionId, isReplay: true, message: 'Replay launched, preceding steps executing. Perform and copy new steps from Playwright Inspector.' });
     }
 
     // Otherwise, normal codegen:
@@ -468,10 +472,10 @@ app.post('/record', (req, res) => {
     });
     child.on('error', err => console.error('[CODEGEN SPAWN ERROR]', err.message));
 
-    res.json({ sessionId, isReplay: false, message: 'Codegen launched — record in the browser, then close it.' });
+    res.json({ sessionId, isReplay: false, message: 'Codegen launched, record in the browser, then close it.' });
 });
 
-// GET /codegen-result/:sessionId — returns recorded code once codegen writes the file
+// GET /codegen-result/:sessionId: returns recorded code once codegen writes the file
 // Client polls this every 1.5s after /record. File deleted after first read.
 app.get('/codegen-result/:sessionId', (req, res) => {
     const outputPath = path.join(CORE_DIR, `codegen_${req.params.sessionId}.js`);
@@ -487,8 +491,8 @@ app.get('/codegen-result/:sessionId', (req, res) => {
 
 
 app.post('/save-mapping', (req, res) => {
-    const { label, code } = req.body;
-    // DEF-NEW-003 FIX: Validate label — prevent empty/null key corruption in mappings.json
+    const { label, code, scenarioId } = req.body;
+    // DEF-NEW-003 FIX: Validate label, prevent empty/null key corruption in mappings.json
     if (!label || typeof label !== 'string' || label.trim() === '') {
         return res.status(400).json({ error: 'Invalid label: must be a non-empty string.' });
     }
@@ -497,6 +501,18 @@ app.post('/save-mapping', (req, res) => {
     }
     try {
         const steps = parseRecordedCode(code);
+        // ponytail: codegen bakes in a literal (e.g. "admin123"), never a {key} placeholder.
+        // If this Mapping_Key is shared by another scenario with different Data (a negative-path
+        // scenario reusing "Input Password" with a wrong password), rewrite the literal back to
+        // {key} so every scenario's own Data is honored on replay, not just the one recorded.
+        if (scenarioId) {
+            try {
+                const blueprint = JSON.parse(fs.readFileSync(path.join(CORE_DIR, 'blueprint.json'), 'utf8'));
+                const scenario = blueprint.find(s => s.Scenario_ID === scenarioId);
+                const row = scenario && Array.isArray(scenario.Flow) && scenario.Flow.find(s => s.Mapping_Key === label.trim());
+                if (row && row.Data) tokenizeLiterals(steps, row.Data);
+            } catch (e) { /* no blueprint yet, or scenario/row not found: save the literal as-is */ }
+        }
         const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
         mappings[label.trim()] = { steps };
         fs.writeFileSync(MAPPINGS_PATH, JSON.stringify(mappings, null, 2));
@@ -527,19 +543,29 @@ app.post('/run', async (req, res) => {
     try {
         activeRun = { phase: 'compiling' };
         const numWorkers = workers || 2;
-        console.log("🚀 Generating blueprint...");
+        console.log("Generating blueprint...");
         // DEF-CRIT-006 FIX: explicit cwd so paths resolve from project root, not studio/
         execSync(`node core/scenario_parser.js ${UPLOADED_EXCEL}`, { stdio: 'inherit', cwd: ROOT_DIR });
 
-        console.log("🔨 Compiling scenarios into explicit code...");
+        console.log("Compiling scenarios into explicit code...");
         execSync(`node core/compiler.js`, { stdio: 'inherit', cwd: ROOT_DIR });
 
-        console.log(`🏃 Launching Playwright with ${numWorkers} workers...`);
+        console.log(`Launching Playwright with ${numWorkers} workers...`);
         
         // Use headless from request body; default false (headed) for UAT evidence
         const isHeadless = headless ? '1' : '0';
-        const pwArgs = [PLAYWRIGHT_CLI, 'test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'];
-        if (!headless) pwArgs.push('--headed');
+        // ponytail: mobile has no bundled test-runner CLI, compiler.js emits a plain async
+        // script for it (core/executed.mobile.js), so run it directly with `node` instead of
+        // the Playwright Test CLI (which doesn't recognize that file's syntax).
+        const isMobileRun = process.env.AUTOTEST_PLATFORM === 'mobile';
+        const pwArgs = isMobileRun
+            ? [path.join(CORE_DIR, 'executed.mobile.js')]
+            : [PLAYWRIGHT_CLI, 'test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'];
+        if (!isMobileRun && !headless) pwArgs.push('--headed');
+        // ponytail: clear stale report.json so a run with no reporter (mobile) never inherits
+        // a prior run's results, and a leftover timer below can't null out a newer run's state
+        try { fs.unlinkSync(path.join(RESULTS_DIR, 'report.json')); } catch (e) {}
+        const thisRun = activeRun;
         const pw = spawn(process.execPath, pwArgs, {
             env: getBrowserEnv({ 
                 PW_HEADLESS: isHeadless, 
@@ -566,7 +592,7 @@ app.post('/run', async (req, res) => {
         pw.on('close', (code) => {
             trackedProcesses.delete(pw);
             if (activeRunner === pw) activeRunner = null;  // DEF-HIGH-004: clear on close
-            console.log(`✅ Playwright process closed with code ${code}`);
+            console.log(`Playwright process closed with code ${code}`);
             if (activeRun && activeRun.phase !== 'cancelled') {
                 activeRun.phase = code === 0 ? 'completed' : 'failed';
                 if (code !== 0) {
@@ -587,7 +613,8 @@ app.post('/run', async (req, res) => {
                     }
                 } catch (e) { console.error("Report Parsing Error:", e); }
             }
-            setTimeout(() => { activeRun = null; }, 60000); // Keep results for 1 min
+            // Keep results for 1 min, but only clear if a newer /run hasn't already replaced activeRun
+            setTimeout(() => { if (activeRun === thisRun) activeRun = null; }, 60000);
         });
         
         res.json({ 
@@ -726,7 +753,7 @@ app.post('/link-synonym', (req, res) => {
     } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-// GET /mapping/:label — returns current saved mapping for a step label
+// GET /mapping/:label: returns current saved mapping for a step label
 app.get('/mapping/:label', (req, res) => {
     try {
         const label = decodeURIComponent(req.params.label);
@@ -745,7 +772,7 @@ app.get('/mapping/:label', (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /preview/:label — reconstructs readable Playwright code from stored steps
+// GET /preview/:label: reconstructs readable Playwright code from stored steps
 // ponytail: one function, no class, no template engine
 app.get('/preview/:label', (req, res) => {
     try {
@@ -774,7 +801,7 @@ app.get('/preview/:label', (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /preview-scenario/:scenarioId — all steps for a scenario in execution order
+// GET /preview-scenario/:scenarioId: all steps for a scenario in execution order
 app.get('/preview-scenario/:scenarioId', (req, res) => {
     try {
         const scenarioId = decodeURIComponent(req.params.scenarioId);
@@ -783,11 +810,11 @@ app.get('/preview-scenario/:scenarioId', (req, res) => {
         const mappings = fs.existsSync(MAPPINGS_PATH) ? JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8')) : {};
         const scenario = blueprint.find(s => s.Scenario_ID === scenarioId);
         if (!scenario) return res.json({ code: `// Scenario '${scenarioId}' not found in blueprint.` });
-        const lines = [`// Scenario: ${scenario.Scenario_ID} — ${scenario.Role}`, ''];
+        const lines = [`// Scenario: ${scenario.Scenario_ID}: ${scenario.Role}`, ''];
         for (const step of scenario.Flow) {
             lines.push(`// Step: ${step.Mapping_Key}`);
             const steps = (mappings[step.Mapping_Key] && mappings[step.Mapping_Key].steps) || ActionDB.resolveSteps(step.Mapping_Key);
-            if (!steps || steps.length === 0) { lines.push('// ⚠️  NOT MAPPED YET', ''); continue; }
+            if (!steps || steps.length === 0) { lines.push('// NOT MAPPED YET', ''); continue; }
             for (const s of steps) {
                 const loc = s.target && s.target.match(/^(getBy|locator|frameLocator)/) ? `page.${s.target}` : `page.locator('${s.target}')`;
                 if (s.type === 'goto')        lines.push(`await page.goto('${s.target}');`);
@@ -830,7 +857,7 @@ app.get('/run-status', (req, res) => {
 });
 
 app.post('/record-cancel', (req, res) => {
-    console.log('🛑 Record cancellation requested. Closing codegen...');
+    console.log('Record cancellation requested. Closing codegen...');
     // DEF-HIGH-004 FIX: Only kill the codegen process, NOT the test runner
     if (activeCodegen && !activeCodegen.killed) {
         try { activeCodegen.kill('SIGKILL'); } catch (e) {}
@@ -839,10 +866,10 @@ app.post('/record-cancel', (req, res) => {
     res.json({ message: "Cancelled." });
 });
 
-// DEF-NEW-005 FIX: /run-cancel endpoint — kills tracked Playwright process
+// DEF-NEW-005 FIX: /run-cancel endpoint, kills tracked Playwright process
 app.post('/run-cancel', (req, res) => {
     if (!activeRun) return res.json({ message: 'No active run to cancel.' });
-    console.log('🛑 Run cancellation requested.');
+    console.log('Run cancellation requested.');
     // DEF-HIGH-004 FIX: Only kill the runner, NOT the codegen session
     if (activeRunner && !activeRunner.killed) {
         try { activeRunner.kill('SIGKILL'); } catch (e) {}
@@ -856,7 +883,7 @@ app.post('/run-cancel', (req, res) => {
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-    console.log(`🚀 Studio Live on ${port}`);
+    console.log(`Studio Live on ${port}`);
 
     // ponytail: consolidate startup replay script cleanup across dirs
     [CORE_DIR, ROOT_DIR].forEach(dir => {
@@ -868,18 +895,18 @@ app.listen(port, () => {
                 });
         }
     });
-    console.log(`🧹 Startup cleanup: swept orphaned replay scripts.`);
+    console.log(`Startup cleanup: swept orphaned replay scripts.`);
 
     if (!fs.existsSync(UPLOADED_EXCEL)) {
         fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
-        console.log("🧹 Startup cleanup: scenario_uploaded.xlsx not found, cleared mappings.json");
+        console.log("Startup cleanup: scenario_uploaded.xlsx not found, cleared mappings.json");
     } else {
         // Run scenario parser to rebuild blueprint.json
         try {
             execSync(`node core/scenario_parser.js scenario_uploaded.xlsx`, { stdio: 'inherit', cwd: ROOT_DIR });
-            console.log("✅ Blueprint generated successfully on startup");
+            console.log("Blueprint generated successfully on startup");
         } catch (e) {
-            console.error("⚠️ Error generating blueprint on startup:", e);
+            console.error("Error generating blueprint on startup:", e);
         }
     }
 });

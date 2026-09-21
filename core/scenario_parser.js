@@ -17,7 +17,7 @@ const XLSX = require('xlsx');
  */
 function generateBlueprintFromExcel(excelPath) {
     if (!fs.existsSync(excelPath)) {
-        console.error(`❌ Excel file not found: ${excelPath}`);
+        console.error(`Excel file not found: ${excelPath}`);
         return;
     }
 
@@ -28,7 +28,7 @@ function generateBlueprintFromExcel(excelPath) {
     const blueprint = [];
     let currentScenario = null;
     if (!rows.length || rows[0].length < 3) {
-        throw new Error('❌ Invalid Excel structure: expected scenario matrix with at least 3 columns.');
+        throw new Error('Invalid Excel structure: expected scenario matrix with at least 3 columns.');
     }
 
     // Dynamic Header Detection across first 10 rows
@@ -46,7 +46,7 @@ function generateBlueprintFromExcel(excelPath) {
     }
 
     if (headerRowIdx === -1) {
-        throw new Error('❌ Malformed Template: Could not find required columns.');
+        throw new Error('Malformed Template: Could not find required columns.');
     }
 
     for (let r = headerRowIdx + 1; r < rows.length; r++) {
@@ -89,10 +89,10 @@ function generateBlueprintFromExcel(excelPath) {
 
     const outputPath = path.join(process.cwd(), 'core', 'blueprint.json');
     if (blueprint.length === 0) {
-        throw new Error('❌ No scenarios parsed from the uploaded file.');
+        throw new Error('No scenarios parsed from the uploaded file.');
     }
     fs.writeFileSync(outputPath, JSON.stringify(blueprint, null, 2));
-    console.log(`✅ Blueprint generated successfully at ${outputPath}`);
+    console.log(`Blueprint generated successfully at ${outputPath}`);
 }
 
 const filePath = process.argv[2] || 'scenario_uploaded.xlsx';

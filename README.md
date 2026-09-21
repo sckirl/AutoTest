@@ -1,17 +1,17 @@
-# 🤖 AutoTest Studio
+# AutoTest Studio
 
 AutoTest Studio is a **Zero-Install, Air-Gapped, Data-Driven Playwright Engine** built specifically for hardened corporate and banking environments. It completely decouples Playwright logic from UAT Excel matrices, allowing manual testers to build dynamic, automated E2E test suites entirely from a web UI without ever writing code or using the command line.
 
 ---
 
-## 🎯 The Vision
+## The Vision
 In many enterprise environments, QA and UAT testers lack the technical ability to write Playwright scripts, while developers struggle to keep test scripts synced with rapidly changing Excel testing matrices. Furthermore, strict banking networks block `npm install`, `npx`, and external browser downloads. 
 
-AutoTest Studio bridges this gap by offering a **Zero-Trust, offline-first orchestration engine**. You drop an Excel file into the UI, record your actions visually, and the engine natively stitches, compiles, and executes the tests in the background—saving flawless screenshot evidence and traces into neatly organized folders.
+AutoTest Studio bridges this gap by offering a **Zero-Trust, offline-first orchestration engine**. You drop an Excel file into the UI, record your actions visually, and the engine natively stitches, compiles, and executes the tests in the background, saving flawless screenshot evidence and traces into neatly organized folders.
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## Tech Stack & Architecture
 - **Backend Orchestrator**: Node.js & Express.js
 - **Automation Engine**: Playwright & Playwright Test Runner
 - **AST Parsing Engine**: Acorn (JavaScript AST parser) for securely extracting locators and verification assertions from raw Playwright codegen.
@@ -26,7 +26,7 @@ This framework was engineered with a strict "Air-Gapped" ideology.
 
 ---
 
-## 🚀 Quick Start Guide
+## Quick Start Guide
 
 Because AutoTest Studio is entirely self-contained, no installation is required assuming you have Node.js installed.
 

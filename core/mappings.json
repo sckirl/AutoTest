@@ -3,7 +3,7 @@
     "steps": [
       {
         "type": "goto",
-        "target": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login"
+        "target": "{url}"
       }
     ]
   },
@@ -25,19 +25,11 @@
       }
     ]
   },
-  "Submit Login": {
-    "steps": [
-      {
-        "type": "click",
-        "target": "getByRole('button', { name: 'Login' })"
-      }
-    ]
-  },
   "Verify Dashboard": {
     "steps": [
       {
         "type": "toBeVisible",
-        "target": "getByRole('heading', { name: 'Dashboard' })"
+        "target": "locator(\"div\").filter({ hasText: \"Time at WorkPunched\" }).nth(3)"
       }
     ]
   },
@@ -45,7 +37,15 @@
     "steps": [
       {
         "type": "toBeVisible",
-        "target": "getByText('Invalid credentials')"
+        "target": "getByText(\"Invalid credentials\")"
+      },
+      {
+        "type": "toBeVisible",
+        "target": "getByText(\"Password\", { exact: true })"
+      },
+      {
+        "type": "toBeVisible",
+        "target": "getByText(\"Username\", { exact: true })"
       }
     ]
   },
@@ -53,7 +53,11 @@
     "steps": [
       {
         "type": "toBeVisible",
-        "target": "locator('form').filter({ hasText: 'Required' })"
+        "target": "getByText(\"Required\").first()"
+      },
+      {
+        "type": "toBeVisible",
+        "target": "getByText(\"Required\").nth(1)"
       }
     ]
   }

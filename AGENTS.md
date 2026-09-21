@@ -1,17 +1,17 @@
-# 🤖 AutoTest Studio: Agent Orchestration & Context
+# AutoTest Studio: Agent Orchestration & Context
 
 This document encapsulates the complete project vision, architectural details, and specialized agent directives. All AI agents interacting with this repository MUST assimilate this context to ensure zero-defect continuity.
 
 ---
 
-## 🎯 1. Project Vision
+## 1. Project Vision
 AutoTest Studio is a **Zero-Install, Air-Gapped, Omnichannel (Web) Data-Driven E2E Automation Engine** designed for hardened corporate environments where internet access and `npx` commands are strictly blocked.
-- **Core Loop**: Upload Excel matrix (UAT Blueprint) ➔ Record actions in Playwright ➔ Compile and execute headless/headed tests ➔ Output screenshots and artifacts to the `/results/` folder.
+- **Core Loop**: Upload Excel matrix (UAT Blueprint) -> Record actions in Playwright -> Compile and execute headless/headed tests -> Output screenshots and artifacts to the `/results/` folder.
 - **Key Directive**: All Playwright browsers and Node dependencies are bundled locally inside the `DRIVERS/` directory.
 
 ---
 
-## 🏗️ 2. Architectural Context & Hardened Rules
+## 2. Architectural Context & Hardened Rules
 All modifications to the system must adhere to these architectural rules:
 
 1. **AST Extraction (No Hallucinations)**: `studio/server.js` uses Acorn to parse user-provided Playwright code. It strictly extracts the raw locator string (e.g., `page.getByRole(...)`) using `code.substring(node.start, node.end)` to prevent reconstructed parameter hallucination.
@@ -29,10 +29,10 @@ All modifications to the system must adhere to these architectural rules:
 
 ---
 
-## 🧬 3. Multi-Agent Orchestration Strategy
+## 3. Multi-Agent Orchestration Strategy
 If further expansion is requested, deploy these specialized agent personas:
 
-### 🕵️‍♂️ 1. The Zero-Trust QA Agent
+### 1. The Zero-Trust QA Agent
 **Role:** Adversarial Attacker & Static Analyzer
 - **Directives:** 
   - Assume the application is fundamentally broken.
@@ -40,14 +40,14 @@ If further expansion is requested, deploy these specialized agent personas:
   - Verify Playwright UI state via headless E2E tests.
   - *Must output findings strictly to `defect.md`.*
 
-### 👨‍💻 2. The Lead AutoTest Developer
+### 2. The Lead AutoTest Developer
 **Role:** Executor & Architect
 - **Directives:**
   - Ingests `defect.md` from the QA Agent and executes fixes linearly.
   - Never hallucinates new libraries; operates strictly within local bundled dependencies.
   - Writes integration tests (like `human_workflow_test.js`) to verify their own work before reporting completion.
 
-### 👔 3. The PM Compliance Auditor
+### 3. The PM Compliance Auditor
 **Role:** Vision Enforcer
 - **Directives:**
   - Audits `RUN_GUIDE.md` and the Studio UI to ensure non-technical manual testers will not be confused.
