@@ -491,3 +491,51 @@ Server log confirms all 5 setInputFiles rejections (`1a`, `1b`, `2a`, `2b`, `3a`
 
 ### Verdict
 **PASS — fix confirmed complete.** `SetInputFiles` (capital S) and `setinputfiles` (all-lowercase) are both rejected with a non-200 error mentioning `setInputFiles` on both `POST /save-mapping` and `POST /action-db/action`. Neither variant is persisted. Exact-case `setInputFiles` continues to be correctly rejected (no regression). This closes the gap previously reported as a FAIL in the Black-Box Pass dated 2026-09-22 above.
+
+## Black-Box Pass — 2026-09-22 — scope: `resolveDriversRoot()` shared helper (core/helpers.js, studio/server.js) + dynamic port binding (studio/server.js, A1.2/A1.3)
+
+Scope per the dev note: no route logic changed, only (1) how `DRIVERS_PATH`/`MS_PLAYWRIGHT_PATH` are
+computed (now via a shared `resolveDriversRoot()`, byte-identical in dev/test since
+`process.resourcesPath` is undefined) and (2) the server now binds `process.env.PORT || 0` instead of
+hardcoded `3000`, logging `STUDIO_PORT=<port>`. `PORT` env var still forces the exact port. Full offline
+suite (`node tests/run_all.js`, 14 files incl. new `tests/state_dir_test.js`) run first, then live
+manual checks against a real `node studio/server.js` process, plus one level beyond what was asked
+(concurrent instances, an explicit-PORT collision).
+
+| # | Scenario | Result | Evidence |
+|---|---|---|---|
+| 1 | `resolveDriversRoot()` dev/test resolution unchanged | PASS | Direct call comparison: old inline `path.resolve(__dirname, '../DRIVERS/node_modules')` vs new `resolveDriversRoot(__dirname)` + `path.join(..., 'node_modules')` both produced `/Users/alvin/CodeProjects/AutoTest/DRIVERS/node_modules`; `process.resourcesPath` confirmed `undefined` in this environment. |
+| 2 | `node tests/run_all.js` (full offline suite, 14 files, real spawned server on port 3000) | PASS | Exit code 0. Every sub-suite reported full score: sweep/dead-server/safe-chain/trace-redaction (line-by-line PASS), scenario_parser (PASS), action_db_corruption (PASS), mutual_exclusion 4/4, tokenize_literal, mobile_compile 22/22, ui_behavior 11/11, api_test 55/55, and the new `state_dir_test.js` — `PASS: state_dir_test — DRIVERS_ROOT + dynamic port` (covers A-5/A-7 from FUTURE_ARCHITECTURE.md directly: packaged `resourcesPath`-based resolution, dev fallback resolution, and dynamic-port announcement). Full log captured at `/tmp/run_all.log`. |
+| 3 | `PORT=3000 node studio/server.js` boots and serves normally | PASS | stdout: `FOUND bundled Chromium: .../DRIVERS/ms-playwright/chromium-1223/...` (proves `MS_PLAYWRIGHT_PATH` via `resolveDriversRoot` still resolves the bundled browser), `Studio Live on 3000`, `STUDIO_PORT=3000`, `Startup cleanup: swept 0 orphaned script(s).` — no errors. `GET /env` → `200 {"platform":"web"}`. `GET /` → real UI HTML (`<title>Automation Studio</title>`). |
+| 4 | No `PORT` set at all — server still boots and serves on an OS-assigned port | PASS | stdout: `Studio Live on 50305`, `STUDIO_PORT=50305`, bundled Chromium found, no errors. Parsed `STUDIO_PORT=` from stdout per the dev's own instruction. `GET /env` on port 50305 → `200 {"platform":"web"}`. `GET /scan` → `200 {"steps":[]}`. `POST /save-mapping` with empty label → `400 {"error":"Invalid label: must be a non-empty string."}` (route logic unaffected). Confirmed port 3000 was *not* touched by this instance (`curl` to :3000 timed out/refused). |
+| 5 (beyond) | Two instances, both `PORT` unset, running concurrently | PASS | Two server processes both booted cleanly with distinct OS-assigned ports (`50319`, `50318`), both served `GET /env` → `200` simultaneously. No collision, matches FUTURE_ARCHITECTURE.md matrix item A-4. |
+| 6 (beyond) | Two instances, both forced to the same explicit `PORT=3000` (collision) | **FAIL** (new defect, see below) | Second instance crashes with an unrelated `TypeError`, not a clear "port in use" message. Reproduced 2/2 times. |
+
+### Defects found
+
+**New defect — misleading crash on explicit `PORT` collision, introduced by this diff.**
+- Exact repro: start `PORT=3000 node studio/server.js`, wait for it to be listening, then start a second `PORT=3000 node studio/server.js` in the same environment.
+- Exact response/output (second process's stdout, full):
+  ```
+  /Users/alvin/CodeProjects/AutoTest/studio/server.js:929
+      const port = server.address().port;
+                                   ^
+
+  TypeError: Cannot read properties of null (reading 'port')
+      at Server.<anonymous> (/Users/alvin/CodeProjects/AutoTest/studio/server.js:929:34)
+      at Server.f (/Users/alvin/CodeProjects/AutoTest/DRIVERS/node_modules/once/once.js:25:25)
+      at Object.onceWrapper (node:events:631:12)
+      at Server.emit (node:events:509:20)
+      at emitErrorNT (node:net:2044:8)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+  ```
+  No `Error: listen EADDRINUSE` message appears anywhere in the log — the real cause is fully masked.
+- Root cause confirmed independent of this app's other code: isolated repro with bare `express()` + `.listen(3000, cb)` twice in one process shows the same race — on port collision, the `listening` callback can still fire with `server.address()` returning `null` (confirmed via a minimal Node script, `ERR2 EADDRINUSE` fires on `server.on('error', ...)` in the same tick as the callback executing with a null address).
+- What TEST_SCENARIOS.md/AGENTS.md says should happen: not a scenario-catalog row (no existing row covers "explicit PORT already occupied at startup"), but this repo's own test suite explicitly values this class of behavior — `tests/run_all.js`'s suite includes `PASS: dead server produces a readable message, not a raw ECONNREFUSED stack`, i.e. clear/readable error messages on connection-related failures are a house standard this diff's own touched code path now violates.
+- Before this diff: `const port = process.env.PORT || 3000; app.listen(port, callback)` never called `.address()`, so a collision on an explicit `PORT` crashed with Node's own unhandled `Error: listen EADDRINUSE: address already in use :::3000` — a correct, clear, standard message.
+- After this diff: the crash still happens (second instance still fails to start — no functional regression in "does it refuse to double-bind"), but the message is now a confusing internal `TypeError` pointing at `server.js:929`, which reads like a bug in this new code rather than "the port is taken." A developer hitting this (e.g. forgetting a previous instance is still running on `PORT=3000`, which the dev's own instructions here suggested doing repeatedly) will be misdirected.
+- Confidence: **confirmed** — reproduced live 2/2 times against the real unmodified `studio/server.js`, plus isolated in a minimal standalone repro outside this app to rule out coincidence.
+- Severity: low/edge — does not affect any cataloged TEST_SCENARIOS.md row (no row exists for this), does not affect the no-`PORT`/dynamic-port default path at all (only explicit same-`PORT` double-start), and the end-user-visible outcome (second instance fails to start) is unchanged. Flagging because the dev's own diff introduced the `.address()` call and the dev's own test instructions here involve repeatedly restarting on `PORT=3000`.
+
+### Verdict
+PASS — safe to proceed. All in-scope behavior (DRIVERS resolution, `PORT` honored exactly as before, dynamic-port default, full 216-assertion offline suite, live route smoke checks) is confirmed working with no regressions. One new low-severity, edge-case defect found one level beyond the ask (misleading error message — not a functional break — when two instances are forced onto the same explicit `PORT`); does not block this change, but worth a one-line `server.on('error', ...)` guard before this ships to anyone who scripts repeated `PORT=3000` restarts.

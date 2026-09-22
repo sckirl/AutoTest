@@ -10,6 +10,15 @@ function getAcorn() {
     return _acorn;
 }
 
+// A1.3: under Electron, DRIVERS/ ships unpacked in extraResources (process.resourcesPath),
+// not __dirname-relative — inside app.asar, '../DRIVERS' only escapes to the asar root.
+// process.resourcesPath is undefined outside Electron, so dev/test resolution is unchanged.
+function resolveDriversRoot(baseDirname) {
+    return process.resourcesPath
+        ? path.join(process.resourcesPath, 'DRIVERS')
+        : path.resolve(baseDirname, '../DRIVERS');
+}
+
 /**
  * Banking Block Compliance: Strict DRIVERS/ Resolution. This bundled-dependency bootstrap was
  * copy-pasted verbatim in core/compiler.js and core/scenario_parser.js (and a larger variant
@@ -17,7 +26,7 @@ function getAcorn() {
  * per-file, not shared.
  */
 function ensureDriversPath(callerModule, callerDirname) {
-    const DRIVERS_PATH = path.join(callerDirname, '../DRIVERS/node_modules');
+    const DRIVERS_PATH = path.join(resolveDriversRoot(callerDirname), 'node_modules');
     if (fs.existsSync(DRIVERS_PATH)) {
         callerModule.paths.unshift(DRIVERS_PATH);
         process.env.NODE_PATH = DRIVERS_PATH;
@@ -188,5 +197,6 @@ module.exports = {
     hasSensitiveKey,
     normalizePlatform,
     ensureDriversPath,
+    resolveDriversRoot,
     q
 };

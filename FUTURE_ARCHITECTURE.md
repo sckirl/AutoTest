@@ -564,20 +564,20 @@ A-42 is the one that would catch accidentally depending on a developer's system 
 
 ## A5. Phase A sequence
 
-| Step | Gate |
-|---|---|
-| A0.0 — **path traversal (A0.6.1)** | Standalone blocker, fix before anything else touches this codebase |
-| A0 — test harness | `npm test` exits 0, tree clean |
-| A0.5 — four confirmed defects | AST `isSafeChain`, trace redaction, `setInputFiles`, `interpolate` strictness |
-| A0.6 — seven confirmed defects | upload false-success, DB corruption wipe, merged-cell drop, duplicate-ID collisions, record/run race |
-| A0.7 — nine confirmed defects | mobile Record is a no-op, mobile failures always report "completed", drop zone has no handler, silent fetch failures, XPath injection |
-| A0.8 — code review notes (max) | RCE in `isSafeChain` args, Excel row-0 length check, `process.cwd()` paths, Data Matrix blank override fallback |
-| A1 — relocatable server | A-1…A-7 (esp. the **widened** A-3) |
-| A2 — fixture app + record goldens | A-10…A-19 |
-| A3 — analyst journeys | A-20…A-27 |
-| A4 — Electron shell | A-30…A-35 |
-| A5 — air-gap hardening | A-40…A-44 |
-| A6 — CI | GitHub Actions running `npm test` (15 lines once A0 lands; impossible before) |
+| Step | Status | Gate |
+|---|---|---|
+| A0.0 — **path traversal (A0.6.1)** | ✅ Done | Standalone blocker, fix before anything else touches this codebase |
+| A0 — test harness | ✅ Done | `npm test` exits 0, tree clean |
+| A0.5 — four confirmed defects | ✅ Done | AST `isSafeChain`, trace redaction, `setInputFiles`, `interpolate` strictness |
+| A0.6 — seven confirmed defects | ✅ Done | upload false-success, DB corruption wipe, merged-cell drop, duplicate-ID collisions, record/run race |
+| A0.7 — nine confirmed defects | ✅ Done | mobile Record is a no-op, mobile failures always report "completed", drop zone has no handler, silent fetch failures, XPath injection |
+| A0.8 — code review notes (max) | ✅ Done | RCE in `isSafeChain` args, Excel row-0 length check, `process.cwd()` paths, Data Matrix blank override fallback (incl. PR #9 rounds 1+2 review fixes) |
+| A1 — relocatable server | 🟡 Partial | A-5 (dynamic port + clean `EADDRINUSE`) and A-7 (`DRIVERS_ROOT` via `resolveDriversRoot()`, `process.resourcesPath`-aware) done — `tests/state_dir_test.js`. A-1/A-2/A-3/A-4/A-6 (full `STATE_DIR`/`DATA_DIR`/`RESULTS_DIR` relocation across server.js, compiler.js, scenario_parser.js) deferred: no consumer exists yet — add when A2's Electron shell lands and actually needs a writable-outside-asar path. |
+| A2 — fixture app + record goldens | ⬜ Not started | A-10…A-19 |
+| A3 — analyst journeys | ⬜ Not started | A-20…A-27 |
+| A4 — Electron shell | ⬜ Not started | A-30…A-35 |
+| A5 — air-gap hardening | ⬜ Not started | A-40…A-44 |
+| A6 — CI | ⬜ Not started | GitHub Actions running `npm test` (15 lines once A0 lands; impossible before) |
 
 **Phase A ships here.** Phase B begins only after A5 is green.
 

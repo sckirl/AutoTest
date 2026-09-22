@@ -1,8 +1,11 @@
 // High-Security Banking Compliance: Strict DRIVERS/ Resolution
 const fs = require('fs');
 const path = require('path');
-const DRIVERS_PATH = path.resolve(__dirname, '../DRIVERS/node_modules');
-const MS_PLAYWRIGHT_PATH = path.resolve(__dirname, '../DRIVERS/ms-playwright');
+// A1.3: resourcesPath-aware so this still resolves once Electron packages DRIVERS/ unpacked.
+const { resolveDriversRoot } = require('../core/helpers');
+const DRIVERS_ROOT = resolveDriversRoot(__dirname);
+const DRIVERS_PATH = path.join(DRIVERS_ROOT, 'node_modules');
+const MS_PLAYWRIGHT_PATH = path.join(DRIVERS_ROOT, 'ms-playwright');
 
 if (fs.existsSync(DRIVERS_PATH)) {
     module.paths.unshift(DRIVERS_PATH);
@@ -18,7 +21,7 @@ const { exec, execSync, spawn } = require('child_process');
 const XLSX = require('xlsx');
 const multer = require('multer');
 
-// ponytail: shared helpers module
+// ponytail: shared helpers module (resolveDriversRoot already pulled in above, before DRIVERS bootstrap)
 const { isSafeChain, interpolate, q, tokenizeLiterals, sweepOrphans, safeSessionId, normalizePlatform } = require('../core/helpers');
 const ActionDB = require('../core/action_db');
 const { generateBlueprintFromExcel } = require('../core/scenario_parser');
@@ -920,9 +923,20 @@ app.post('/run-cancel', (req, res) => {
     res.json({ message: 'Cancelled.' });
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
+// A1.2: default to an OS-assigned free port so two instances (or anything else on 3000) don't
+// collide; PORT stays honored for the existing test harness and manual overrides.
+// blackbox-found: listen() can still invoke its callback after a bind failure (server.address()
+// null), turning EADDRINUSE into an opaque TypeError. Split listening/error so a taken PORT fails
+// with a clear message instead.
+const server = app.listen(process.env.PORT || 0);
+server.on('error', (err) => {
+    console.error(`Failed to start server: ${err.message}`);
+    process.exit(1);
+});
+server.on('listening', () => {
+    const port = server.address().port;
     console.log(`Studio Live on ${port}`);
+    console.log(`STUDIO_PORT=${port}`); // A2's Electron main.js parses this to know where to load
 
     // ponytail: one predicate covers replay_ and codegen_ orphans, both write dirs
     const swept = [CORE_DIR, ROOT_DIR].flatMap(sweepOrphans);
