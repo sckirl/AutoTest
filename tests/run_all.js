@@ -6,7 +6,7 @@ const http = require('http');
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
-const OFFLINE_SUITE = ['sweep_test.js', 'run_all_test.js', 'path_traversal_test.js', 'safe_chain_test.js', 'trace_redaction_test.js', 'interpolate_strict_test.js', 'scenario_parser_test.js', 'action_db_corruption_test.js', 'mutual_exclusion_test.js', 'tokenize_literal_test.js', 'mobile_compile_test.js', 'ui_behavior_test.js', 'api_test.js', 'state_dir_test.js'];
+const OFFLINE_SUITE = ['sweep_test.js', 'run_all_test.js', 'path_traversal_test.js', 'safe_chain_test.js', 'trace_redaction_test.js', 'interpolate_strict_test.js', 'scenario_parser_test.js', 'action_db_corruption_test.js', 'mutual_exclusion_test.js', 'tokenize_literal_test.js', 'mobile_compile_test.js', 'ui_behavior_test.js', 'api_test.js', 'state_dir_test.js', 'fixtures_smoke_test.js'];
 
 function ping(port) {
   return new Promise(resolve => {

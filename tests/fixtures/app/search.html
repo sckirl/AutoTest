@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Search — Fixture App</title></head>
+<body>
+<h1>Search</h1>
+<label for="q">Search</label>
+<input id="q" name="q" type="search">
+<label for="category">Category</label>
+<select id="category" name="category">
+  <option value="">All</option>
+  <option value="fruit">Fruit</option>
+  <option value="veg">Vegetable</option>
+</select>
+<table id="results">
+  <thead><tr><th>Name</th><th>Category</th></tr></thead>
+  <tbody></tbody>
+</table>
+<p id="count"></p>
+<script>
+const ROWS = [
+  { name: 'Apple', category: 'fruit' },
+  { name: 'Banana', category: 'fruit' },
+  { name: 'Carrot', category: 'veg' },
+  { name: 'Daikon', category: 'veg' },
+  { name: 'Elderberry', category: 'fruit' },
+];
+const q = document.getElementById('q');
+const category = document.getElementById('category');
+const tbody = document.querySelector('#results tbody');
+const count = document.getElementById('count');
+function render() {
+  const query = q.value.trim().toLowerCase();
+  const cat = category.value;
+  const rows = ROWS.filter(r =>
+    (!query || r.name.toLowerCase().includes(query)) &&
+    (!cat || r.category === cat)
+  );
+  tbody.innerHTML = '';
+  for (const r of rows) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.name}</td><td>${r.category}</td>`;
+    tbody.appendChild(tr);
+  }
+  count.textContent = `${rows.length} result(s)`;
+}
+q.addEventListener('input', render);
+category.addEventListener('change', render);
+render();
+</script>
+</body>
+</html>

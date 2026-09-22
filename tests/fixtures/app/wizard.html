@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Wizard — Fixture App</title></head>
+<body>
+<h1>Setup Wizard</h1>
+
+<section id="step-1" class="step">
+  <h2>Step 1: Name</h2>
+  <label for="wizard-name">Name</label>
+  <input id="wizard-name" name="name" type="text">
+  <button class="next-btn" data-next="2">Next</button>
+</section>
+
+<section id="step-2" class="step" hidden>
+  <h2>Step 2: Email</h2>
+  <label for="wizard-email">Email</label>
+  <input id="wizard-email" name="email" type="email">
+  <button class="back-btn" data-back="1">Back</button>
+  <button class="next-btn" data-next="3">Next</button>
+</section>
+
+<section id="step-3" class="step" hidden>
+  <h2>Step 3: Review</h2>
+  <p>Name: <span id="review-name"></span></p>
+  <p>Email: <span id="review-email"></span></p>
+  <button class="back-btn" data-back="2">Back</button>
+  <button id="wizard-submit">Submit</button>
+</section>
+
+<div id="wizard-done" hidden>Wizard complete.</div>
+
+<script>
+function showStep(n) {
+  document.querySelectorAll('.step').forEach(s => s.hidden = true);
+  document.getElementById(`step-${n}`).hidden = false;
+  if (n === 3) {
+    document.getElementById('review-name').textContent = document.getElementById('wizard-name').value;
+    document.getElementById('review-email').textContent = document.getElementById('wizard-email').value;
+  }
+}
+document.querySelectorAll('.next-btn').forEach(b => b.addEventListener('click', () => showStep(b.dataset.next)));
+document.querySelectorAll('.back-btn').forEach(b => b.addEventListener('click', () => showStep(b.dataset.back)));
+document.getElementById('wizard-submit').addEventListener('click', () => {
+  document.querySelectorAll('.step').forEach(s => s.hidden = true);
+  document.getElementById('wizard-done').hidden = false;
+});
+</script>
+</body>
+</html>

@@ -378,6 +378,8 @@ const DRIVERS_ROOT = process.resourcesPath
 
 This is a required code change that AGENTS.md §5's "wrap them, don't rewrite them" quietly assumes away. It is small, but it is not zero, and it must be applied at all four sites.
 
+**Known gap, found by cross-model doubt review, not yet fixable or testable — no Electron shell exists yet to verify against:** `resolveDriversRoot()` reads `process.resourcesPath`, which Electron sets on *its own* process object. `server.js` spawns `core/scenario_parser.js` and `core/compiler.js` as separate `execSync('node ...')` subprocesses (not `require()`d), which run under plain system Node — `process.resourcesPath` is `undefined` in that child regardless of what the parent Electron process had, so their own `ensureDriversPath()` call falls back to dev-mode `__dirname`-relative resolution, which is wrong inside a packaged asar. A2's `main.js` will need to bridge this explicitly (e.g. `env: { ...process.env, RESOURCES_PATH: process.resourcesPath }`, read by `resolveDriversRoot()` as a fallback when the native property is absent) — add when A2 lands and this becomes testable via `playwright._electron`.
+
 ## A2. Electron shell
 
 `electron/main.js`, ~40 lines:
@@ -573,7 +575,7 @@ A-42 is the one that would catch accidentally depending on a developer's system 
 | A0.7 — nine confirmed defects | ✅ Done | mobile Record is a no-op, mobile failures always report "completed", drop zone has no handler, silent fetch failures, XPath injection |
 | A0.8 — code review notes (max) | ✅ Done | RCE in `isSafeChain` args, Excel row-0 length check, `process.cwd()` paths, Data Matrix blank override fallback (incl. PR #9 rounds 1+2 review fixes) |
 | A1 — relocatable server | 🟡 Partial | A-5 (dynamic port + clean `EADDRINUSE`) and A-7 (`DRIVERS_ROOT` via `resolveDriversRoot()`, `process.resourcesPath`-aware) done — `tests/state_dir_test.js`. A-1/A-2/A-3/A-4/A-6 (full `STATE_DIR`/`DATA_DIR`/`RESULTS_DIR` relocation across server.js, compiler.js, scenario_parser.js) deferred: no consumer exists yet — add when A2's Electron shell lands and actually needs a writable-outside-asar path. |
-| A2 — fixture app + record goldens | ⬜ Not started | A-10…A-19 |
+| A2 — fixture app + record goldens | 🟡 Partial | A4.1 offline fixture app done (`tests/fixtures/app/*.html`, `tests/fixtures_smoke_test.js`) — 8 pages, served via `npm run fixtures:serve`. A4.2 golden codegen recording is a **human-only step** (doc's own rule: "real codegen output, recorded by a human — never fabricated") — cannot be looped by an agent. A-10…A-19 blocked on those goldens existing. |
 | A3 — analyst journeys | ⬜ Not started | A-20…A-27 |
 | A4 — Electron shell | ⬜ Not started | A-30…A-35 |
 | A5 — air-gap hardening | ⬜ Not started | A-40…A-44 |

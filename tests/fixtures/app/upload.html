@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Upload — Fixture App</title></head>
+<body>
+<h1>Attach a File</h1>
+<form id="upload-form">
+  <label for="attachment">Attachment</label>
+  <input id="attachment" name="attachment" type="file">
+  <button type="submit">Upload</button>
+</form>
+<p id="filename" hidden></p>
+<script>
+document.getElementById('attachment').addEventListener('change', e => {
+  const f = e.target.files[0];
+  const p = document.getElementById('filename');
+  p.hidden = !f;
+  if (f) p.textContent = `Selected: ${f.name}`;
+});
+document.getElementById('upload-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = document.getElementById('attachment').files[0];
+  const p = document.getElementById('filename');
+  p.hidden = false;
+  p.textContent = f ? `Uploaded: ${f.name}` : 'No file selected.';
+});
+</script>
+</body>
+</html>

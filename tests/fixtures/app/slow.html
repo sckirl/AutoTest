@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Slow — Fixture App</title></head>
+<body>
+<h1>Report</h1>
+<div id="spinner" role="status">Loading…</div>
+<div id="content" hidden>
+  <p>Report ready.</p>
+  <button id="download">Download</button>
+</div>
+<script>
+setTimeout(() => {
+  document.getElementById('spinner').hidden = true;
+  document.getElementById('content').hidden = false;
+}, 2000);
+</script>
+</body>
+</html>

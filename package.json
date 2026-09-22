@@ -5,7 +5,8 @@
   "main": "start.js",
   "scripts": {
     "start": "node start.js",
-    "test": "node tests/run_all.js"
+    "test": "node tests/run_all.js",
+    "fixtures:serve": "node tests/fixtures/serve.js"
   },
   "repository": {
     "type": "git",

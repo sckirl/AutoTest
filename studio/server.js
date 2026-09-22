@@ -926,9 +926,12 @@ app.post('/run-cancel', (req, res) => {
 // A1.2: default to an OS-assigned free port so two instances (or anything else on 3000) don't
 // collide; PORT stays honored for the existing test harness and manual overrides.
 // doubt-review-found: a non-numeric PORT ("abc") isn't a valid port to Node's listen() — it's
-// silently treated as a Unix socket *path*, creating a stray file instead of erroring.
-if (process.env.PORT && !/^\d+$/.test(process.env.PORT)) {
-    console.error(`Invalid PORT "${process.env.PORT}" — must be numeric.`);
+// silently treated as a Unix socket *path*, creating a stray file instead of erroring. An
+// out-of-range numeric PORT (>65535) passes a digits-only check but still throws synchronously
+// (ERR_SOCKET_BAD_PORT) before app.listen() even returns, so the 'error' handler below never
+// gets attached — must be caught here too.
+if (process.env.PORT && (!/^\d+$/.test(process.env.PORT) || Number(process.env.PORT) > 65535)) {
+    console.error(`Invalid PORT "${process.env.PORT}" — must be a number between 0 and 65535.`);
     process.exit(1);
 }
 // blackbox-found: listen() can still invoke its callback after a bind failure (server.address()
