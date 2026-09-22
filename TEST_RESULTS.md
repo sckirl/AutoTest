@@ -469,3 +469,25 @@ FAIL — 1 defect blocks calling the Action Library `setInputFiles` guard comple
 - `#status-box` visibility: **fully fixed**, confirmed live in a real browser without any tab switch.
 - `/preview`, `/preview-scenario`, `/scan` regressions from the dedup refactors: **no regressions found**, all output shapes unchanged.
 - Action Library `setInputFiles` guard: **partially fixed**. It correctly rejects the exact string `setInputFiles`, closing the literal scenario this fix targeted — but `SetInputFiles` and `setinputfiles` both bypass it and save an action with an empty `steps` array, which is the identical "silently never attaches anything" defect the fix exists to prevent, just reached via a typo'd cast. Given the Action Library's code field is manually editable (not exclusively codegen output, which is always correctly cased), this is a real, reachable gap, not a contrived attack. Root-cause fix is a single case-insensitive check in whatever shared helper both `/save-mapping` and the Action Library's `parseCodeToSteps` call for this guard — not a defect confined to one call site, so it should be fixed once where both route through, matching the note that `/save-mapping` has the identical pre-existing gap.
+
+## Focused Re-check — 2026-09-22 — cbed0ae setInputFiles case-sensitivity fix
+
+Ran live against `PORT=3993 node studio/server.js` on throwaway copy at `/tmp/at-blackbox2` (own symlinked `node_modules`/`DRIVERS`, port 3993). `git status` confirmed clean on `Ponytail` branch at `cbed0ae`. Cleaned up after: process killed, `/tmp/at-blackbox2` deleted, repo unmodified.
+
+| # | Scenario | Result | Evidence |
+|---|----------|--------|----------|
+| 1a | `POST /save-mapping` with `SetInputFiles` (capital S) | **PASS** | `400 {"error":"Syntax error in Playwright code: Invalid Playwright Code Syntax: File upload (setInputFiles) isn't supported yet..."}` — `GET /preview/Upload%20Resume%20Cap` → `{"code":"// Not mapped yet"}`, confirmed not saved |
+| 1b | `POST /save-mapping` with `setinputfiles` (all lowercase) | **PASS** | `400`, same error body — `GET /preview/Upload%20Resume%20Low` → `{"code":"// Not mapped yet"}`, confirmed not saved |
+| 2a | `POST /action-db/action` with `SetInputFiles` (capital S) | **PASS** | `400 {"error":"File upload (setInputFiles) isn't supported yet..."}` — `GET /action-db` immediately after: still exactly 4 default actions, no "Attach Resume Cap" entry |
+| 2b | `POST /action-db/action` with `setinputfiles` (all lowercase) | **PASS** | `400`, same error body — `GET /action-db`: still 4 default actions, no "Attach Resume Low" entry |
+| 3a | `POST /save-mapping` with exact-case `setInputFiles` (regression) | **PASS** | `400`, same error body — no regression introduced |
+| 3b | `POST /action-db/action` with exact-case `setInputFiles` (regression) | **PASS** | `400`, same error body — action-db remains 4 entries |
+| edge | `SETINPUTFILES` (all-caps) on `/save-mapping` | **PASS** | `400` |
+| edge | `SetInputfiles` (mixed) on `/save-mapping` | **PASS** | `400` |
+| edge | `SetInputFiles` buried after a valid `click()` in multi-step code, `/action-db/action` | **PASS** | `400` — mid-chain wrong-case variant also caught |
+| positive | Normal `click()`-only code on `/save-mapping` | **PASS** | `200 {"message":"Saved."}` — guard not overly broad |
+
+Server log confirms all 5 setInputFiles rejections (`1a`, `1b`, `2a`, `2b`, `3a`/`3b` + edges) hit the identical `server.js:685` call path — single unified guard, no crashes, no unhandled exceptions.
+
+### Verdict
+**PASS — fix confirmed complete.** `SetInputFiles` (capital S) and `setinputfiles` (all-lowercase) are both rejected with a non-200 error mentioning `setInputFiles` on both `POST /save-mapping` and `POST /action-db/action`. Neither variant is persisted. Exact-case `setInputFiles` continues to be correctly rejected (no regression). This closes the gap previously reported as a FAIL in the Black-Box Pass dated 2026-09-22 above.
