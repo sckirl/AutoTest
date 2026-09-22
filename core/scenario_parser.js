@@ -1,13 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-// Banking Block Compliance: Strict DRIVERS/ Resolution
-const DRIVERS_PATH = path.join(__dirname, '../DRIVERS/node_modules');
-if (fs.existsSync(DRIVERS_PATH)) {
-    module.paths.unshift(DRIVERS_PATH);
-    process.env.NODE_PATH = DRIVERS_PATH;
-    require('module').Module._initPaths();
-}
+require('./helpers').ensureDriversPath(module, __dirname);
 
 const XLSX = require('xlsx');
 

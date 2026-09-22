@@ -15,6 +15,13 @@ function extractVariables(text) {
 function parseCodeToSteps(code) {
     const steps = [];
     if (!code || typeof code !== 'string') return steps;
+    // A0.5.3 follow-up: server.js's /save-mapping rejects setInputFiles via its own parser
+    // (parseRecordedCode) — this one, used by the Action Library save path, didn't, so a
+    // Library-saved action could carry the same unsupported-and-silently-dropped upload step.
+    // Checked before the try/catch below so it can't be swallowed by that catch's fallback.
+    if (/\.setInputFiles\s*\(/.test(code)) {
+        throw new Error("File upload (setInputFiles) isn't supported yet. Use Manual entry for a non-upload step, or contact support.");
+    }
     try {
         const ast = acorn.parse(code, { ecmaVersion: 2020, allowAwaitOutsideFunction: true, sourceType: 'module' });
         walk.simple(ast, {
@@ -58,6 +65,7 @@ function parseCodeToSteps(code) {
 }
 
 const ActionDB = {
+    extractVariables, // shared with server.js's /scan, was reimplemented there inline
     init() {
         if (!fs.existsSync(DB_PATH)) {
             const initial = { version: 1, actions: [], groups: [] };

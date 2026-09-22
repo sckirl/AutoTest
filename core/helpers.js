@@ -3,6 +3,22 @@ const fs = require('fs');
 const path = require('path');
 const acorn = require('acorn');
 
+/**
+ * Banking Block Compliance: Strict DRIVERS/ Resolution. This bundled-dependency bootstrap was
+ * copy-pasted verbatim in core/compiler.js and core/scenario_parser.js (and a larger variant
+ * in studio/server.js). Callers pass their own `module`/`__dirname` since module.paths is
+ * per-file, not shared.
+ */
+function ensureDriversPath(callerModule, callerDirname) {
+    const DRIVERS_PATH = path.join(callerDirname, '../DRIVERS/node_modules');
+    if (fs.existsSync(DRIVERS_PATH)) {
+        callerModule.paths.unshift(DRIVERS_PATH);
+        process.env.NODE_PATH = DRIVERS_PATH;
+        require('module').Module._initPaths();
+    }
+    return DRIVERS_PATH;
+}
+
 // A0.5.1: the closed set of Playwright locator-chain methods this app is allowed to emit.
 // Anything else (evaluate, context, goto, constructor, ...) is rejected structurally, not by keyword.
 const SAFE_LOCATOR_METHODS = new Set([
@@ -140,5 +156,6 @@ module.exports = {
     safeSessionId,
     hasSensitiveKey,
     normalizePlatform,
+    ensureDriversPath,
     q
 };

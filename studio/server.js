@@ -295,8 +295,7 @@ app.get('/scan', (req, res) => {
                 if (resolvedSteps && Array.isArray(resolvedSteps)) {
                     for (const action of resolvedSteps) {
                         const str = (action.target || "") + " " + (action.value || "");
-                        const matches = str.match(/\{([a-zA-Z0-9_]+)\}/g);
-                        if (matches) matches.forEach(m => vars.add(m.replace(/[{}]/g, '')));
+                        ActionDB.extractVariables(str).forEach(v => vars.add(v));
                     }
                 }
             }
@@ -794,6 +793,20 @@ app.get('/mapping/:label', (req, res) => {
 
 // GET /preview/:label: reconstructs readable Playwright code from stored steps
 // ponytail: one function, no class, no template engine
+// shared by /preview and /preview-scenario, which used to duplicate this rendering verbatim
+function stepsToLines(steps) {
+    return steps.map(s => {
+        const loc = s.target && s.target.match(/^(getBy|locator|frameLocator)/) ? `page.${s.target}` : `page.locator('${s.target}')`;
+        if (s.type === 'goto')        return `await page.goto('${s.target}');`;
+        if (s.type === 'click')       return `await ${loc}.click();`;
+        if (s.type === 'fill')        return `await ${loc}.fill('${s.value || ''}');`;
+        if (s.type === 'press')       return `await ${loc}.press('${s.value || 'Enter'}');`;
+        if (s.type === 'toBeVisible') return `await expect(${loc}).toBeVisible();`;
+        if (s.type === 'toHaveText')  return `await expect(${loc}).toHaveText('${s.value || ''}');`;
+        return `// ${s.type}: ${s.target}`;
+    });
+}
+
 app.get('/preview/:label', (req, res) => {
     try {
         const label = decodeURIComponent(req.params.label);
@@ -806,18 +819,7 @@ app.get('/preview/:label', (req, res) => {
         }
         if (!steps) steps = ActionDB.resolveSteps(label);
         if (!steps || steps.length === 0) return res.json({ code: '// Not mapped yet' });
-
-        const lines = steps.map(s => {
-            const loc = s.target && s.target.match(/^(getBy|locator|frameLocator)/) ? `page.${s.target}` : `page.locator('${s.target}')`;
-            if (s.type === 'goto')       return `await page.goto('${s.target}');`;
-            if (s.type === 'click')      return `await ${loc}.click();`;
-            if (s.type === 'fill')       return `await ${loc}.fill('${s.value || ''}');`;
-            if (s.type === 'press')      return `await ${loc}.press('${s.value || 'Enter'}');`;
-            if (s.type === 'toBeVisible') return `await expect(${loc}).toBeVisible();`;
-            if (s.type === 'toHaveText') return `await expect(${loc}).toHaveText('${s.value || ''}');`;
-            return `// ${s.type}: ${s.target}`;
-        });
-        res.json({ code: lines.join('\n') });
+        res.json({ code: stepsToLines(steps).join('\n') });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -835,16 +837,7 @@ app.get('/preview-scenario/:scenarioId', (req, res) => {
             lines.push(`// Step: ${step.Mapping_Key}`);
             const steps = (mappings[step.Mapping_Key] && mappings[step.Mapping_Key].steps) || ActionDB.resolveSteps(step.Mapping_Key);
             if (!steps || steps.length === 0) { lines.push('// NOT MAPPED YET', ''); continue; }
-            for (const s of steps) {
-                const loc = s.target && s.target.match(/^(getBy|locator|frameLocator)/) ? `page.${s.target}` : `page.locator('${s.target}')`;
-                if (s.type === 'goto')        lines.push(`await page.goto('${s.target}');`);
-                else if (s.type === 'click')  lines.push(`await ${loc}.click();`);
-                else if (s.type === 'fill')   lines.push(`await ${loc}.fill('${s.value || ''}');`);
-                else if (s.type === 'press')  lines.push(`await ${loc}.press('${s.value || 'Enter'}');`);
-                else if (s.type === 'toBeVisible') lines.push(`await expect(${loc}).toBeVisible();`);
-                else if (s.type === 'toHaveText')  lines.push(`await expect(${loc}).toHaveText('${s.value || ''}');`);
-            }
-            lines.push('');
+            lines.push(...stepsToLines(steps), '');
         }
         res.json({ code: lines.join('\n') });
     } catch (err) { res.status(500).json({ error: err.message }); }

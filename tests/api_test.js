@@ -237,6 +237,12 @@ async function run() {
     await req('POST', '/record-cancel'); // a bypass would have spawned a real codegen session
   }
 
+  // --- A0.5.3 follow-up: the Action Library save path has its own parser (action_db.js
+  // parseCodeToSteps) that must reject setInputFiles too, not just /save-mapping's ---
+  r = await req('POST', '/action-db/action', { name: 'Upload File Action', code: "await page.getByLabel('Upload').setInputFiles('/tmp/x.pdf');" });
+  check('T39 Action Library save rejects setInputFiles, not a silent no-op step', r.status !== 200);
+  check('T39b rejection names setInputFiles', JSON.parse(r.body).error && JSON.parse(r.body).error.includes('setInputFiles'));
+
   console.log('\n=== AutoTest Studio API Test Suite v2 ===');
   log.forEach(l => console.log(l));
   console.log(`\n--- Score: ${pass}/${pass + fail} PASSED ---`);
