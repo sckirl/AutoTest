@@ -678,7 +678,10 @@ function parseRecordedCode(code) {
                     // A0.5.3 FIX: setInputFiles isn't wired through the compiler yet — reject the
                     // mapping and name the step, rather than silently dropping it (the recorded
                     // step used to vanish with no error, and the test then "passed" attaching nothing).
-                    if (method === 'setInputFiles') {
+                    // Case-insensitive (blackbox follow-up): manually-pasted/edited code isn't
+                    // guaranteed correct casing, and a mistyped method name must not slip past
+                    // this guard just because it doesn't match the exact string.
+                    if (method.toLowerCase() === 'setinputfiles') {
                         throw new Error("File upload (setInputFiles) isn't supported yet. Use Manual entry for a non-upload step, or contact support.");
                     }
                     if (['click', 'fill', 'press', 'goto', 'selectOption', 'check', 'uncheck', 'toBeVisible', 'toHaveText'].includes(method)) {

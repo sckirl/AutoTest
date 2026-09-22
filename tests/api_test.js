@@ -182,6 +182,12 @@ async function run() {
   check('T33 setInputFiles rejected, not silently dropped', r.status !== 200);
   check('T33b rejection names setInputFiles', JSON.parse(r.body).error && JSON.parse(r.body).error.includes('setInputFiles'));
 
+  // --- A0.5.3 blackbox follow-up: case must not let a mistyped method name bypass the guard ---
+  for (const variant of ['SetInputFiles', 'setinputfiles', 'SETINPUTFILES']) {
+    r = await req('POST', '/save-mapping', { label: 'Upload File', code: `await page.getByLabel('Upload').${variant}('/tmp/x.pdf');` });
+    check(`T33c /save-mapping rejects ${variant} (case bypass)`, r.status !== 200);
+  }
+
   // --- A0.6.2: /upload must report real failures, not always "Uploaded." ---
   const backupExcel = path.join(__dirname, '..', 'scenario_uploaded.xlsx');
   const backupExcelData = fs.existsSync(backupExcel) ? fs.readFileSync(backupExcel) : null;
@@ -242,6 +248,12 @@ async function run() {
   r = await req('POST', '/action-db/action', { name: 'Upload File Action', code: "await page.getByLabel('Upload').setInputFiles('/tmp/x.pdf');" });
   check('T39 Action Library save rejects setInputFiles, not a silent no-op step', r.status !== 200);
   check('T39b rejection names setInputFiles', JSON.parse(r.body).error && JSON.parse(r.body).error.includes('setInputFiles'));
+
+  // --- blackbox follow-up: case must not let a mistyped method name bypass this guard either ---
+  for (const variant of ['SetInputFiles', 'setinputfiles']) {
+    r = await req('POST', '/action-db/action', { name: `Upload ${variant}`, code: `await page.getByLabel('Upload').${variant}('/tmp/x.pdf');` });
+    check(`T39c Action Library rejects ${variant} (case bypass)`, r.status !== 200);
+  }
 
   console.log('\n=== AutoTest Studio API Test Suite v2 ===');
   log.forEach(l => console.log(l));

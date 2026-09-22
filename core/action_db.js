@@ -16,10 +16,12 @@ function parseCodeToSteps(code) {
     const steps = [];
     if (!code || typeof code !== 'string') return steps;
     // A0.5.3 follow-up: server.js's /save-mapping rejects setInputFiles via its own parser
-    // (parseRecordedCode) — this one, used by the Action Library save path, didn't, so a
-    // Library-saved action could carry the same unsupported-and-silently-dropped upload step.
-    // Checked before the try/catch below so it can't be swallowed by that catch's fallback.
-    if (/\.setInputFiles\s*\(/.test(code)) {
+    // (parseRecordedCode) — this one, used by the Action Library's free-text code field, didn't.
+    // Case-insensitive: a human typing this by hand isn't guaranteed to get the casing a real
+    // Playwright method needs at runtime right, and a mistyped step must fail loudly, not
+    // silently do nothing. Checked before the try/catch below so it can't be swallowed by that
+    // catch's syntax-error fallback.
+    if (/\.setInputFiles\s*\(/i.test(code)) {
         throw new Error("File upload (setInputFiles) isn't supported yet. Use Manual entry for a non-upload step, or contact support.");
     }
     try {
