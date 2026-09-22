@@ -33,7 +33,7 @@
 function showStep(n) {
   document.querySelectorAll('.step').forEach(s => s.hidden = true);
   document.getElementById(`step-${n}`).hidden = false;
-  if (n === 3) {
+  if (Number(n) === 3) {
     document.getElementById('review-name').textContent = document.getElementById('wizard-name').value;
     document.getElementById('review-email').textContent = document.getElementById('wizard-email').value;
   }

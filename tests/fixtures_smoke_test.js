@@ -74,7 +74,10 @@ async function main() {
     await page.locator('#step-1 .next-btn').click();
     await page.getByLabel('Email').fill('wiz@example.com');
     await page.locator('#step-2 .next-btn').click();
-    if (!(await page.locator('#review-name').textContent()) === 'Wiz Ard') throw new Error('FAIL wizard.html: review step lost entered name');
+    // blackbox-found: this assertion used to be `!(await x) === 'Wiz Ard'`, which parses as
+    // `(!x) === 'Wiz Ard'` — always false, so it silently never checked anything. It masked
+    // a real bug in wizard.html (Number(n) === 3 fix, sibling commit).
+    if ((await page.locator('#review-name').textContent()) !== 'Wiz Ard') throw new Error('FAIL wizard.html: review step lost entered name');
     await page.getByRole('button', { name: 'Submit' }).click();
     if (!(await page.getByText('Wizard complete.').isVisible())) throw new Error('FAIL wizard.html: completion not shown');
 
