@@ -1,7 +1,14 @@
 // ponytail: shared helpers module, zero-dependency, pure stdlib logic
 const fs = require('fs');
 const path = require('path');
-const acorn = require('acorn');
+let _acorn = null;
+function getAcorn() {
+    if (!_acorn) {
+        ensureDriversPath(module, __dirname);
+        _acorn = require('acorn');
+    }
+    return _acorn;
+}
 
 /**
  * Banking Block Compliance: Strict DRIVERS/ Resolution. This bundled-dependency bootstrap was
@@ -39,7 +46,7 @@ function isSafeChain(target) {
     if (typeof target !== 'string' || !target) return null;
     const src = 'page.' + target;
     let ast;
-    try { ast = acorn.parseExpressionAt(src, 0, { ecmaVersion: 2020 }); }
+    try { ast = getAcorn().parseExpressionAt(src, 0, { ecmaVersion: 2020 }); }
     catch (e) { return null; }
     if (ast.end !== src.length) return null; // trailing junk (e.g. "; more code") = injection
     let n = ast;
