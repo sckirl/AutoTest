@@ -381,9 +381,10 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const res = await fetch('/run-status');
             const data = await res.json();
+            // A0.7.8 FIX: switchTab('execution') already calls pollRunStatus() itself (below) —
+            // calling it again here started two concurrent pollers on page load.
             if (data.phase && data.phase !== 'idle') {
                 switchTab('execution');
-                pollRunStatus();
             }
         });
 
@@ -405,15 +406,31 @@
 
         dropZone.onclick = () => fileInput.click();
         fileInput.onchange = (e) => handleFile(e.target.files[0]);
+        // A0.7.3 FIX: the drop zone's own copy says "Drag and drop... here" but had no
+        // dragover/drop listener — dropping a file triggered the browser's default (navigate
+        // away, losing all session state). Route it through the same upload path as click.
+        dropZone.addEventListener('dragover', (e) => e.preventDefault());
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            handleFile(e.dataTransfer.files[0]);
+        });
 
         async function handleFile(file) {
             if (!file) return; // DEF-LOW-012 FIX: Guard against canceled file dialog
             const keepMappings = confirm("Keep existing Playwright mappings? (Click Cancel to wipe mappings and start a fresh project)");
-            const formData = new FormData(); 
+            const formData = new FormData();
             formData.append('excel', file);
             formData.append('keepMappings', keepMappings);
-            const res = await fetch('/upload', { method: 'POST', body: formData });
-            if (res.ok) { await scanSteps(); switchTab('mappings'); }
+            // A0.7.4 FIX: no try/catch, and no else branch on !res.ok — an upload failure (or a
+            // network error) left the tester looking at a UI that silently did nothing.
+            try {
+                const res = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) { showStatus(data.message || 'Uploaded.', 'success'); await scanSteps(); switchTab('mappings'); }
+                else showStatus(data.error || 'Upload failed.', 'error');
+            } catch (e) {
+                showStatus('Upload failed: ' + e.message, 'error');
+            }
         }
 
         async function scanSteps() {
@@ -1074,7 +1091,15 @@
                     if (data.sessionId) startCodegenPoll(data.sessionId);
                 }
             } catch (e) {
-                guideBanner.innerHTML = `<span style="color:#DC2626;"><strong>Launch Error:</strong> ${e.message}</span>`;
+                // A0.7.9 FIX: every other dynamic render in this file was deliberately moved off
+                // innerHTML for exactly this reason (DEF-H8/DEF-CRIT-002/003) — this one still
+                // interpolated a caught message directly into markup.
+                guideBanner.textContent = '';
+                const strong = document.createElement('strong');
+                strong.textContent = 'Launch Error:';
+                strong.style.color = '#DC2626';
+                guideBanner.appendChild(strong);
+                guideBanner.appendChild(document.createTextNode(' ' + e.message));
                 showStatus('Failed to launch: ' + e.message, 'error');
             }
         }
@@ -1143,8 +1168,12 @@
         runBtn.onclick = async () => {
             runBtn.disabled = true;
             document.getElementById('cancel-run-btn').style.display = 'block';
-            try { 
-                await window.saveDataMatrix();
+            try {
+                // A0.7.5 FIX: this used to ignore saveDataMatrix's outcome entirely — Execute
+                // could run against stale server-side data with no indication the tester's
+                // just-edited Data Matrix failed to save.
+                const saved = await window.saveDataMatrix();
+                if (!saved) throw new Error('Data Matrix failed to save; fix it before running.');
                 const platform = document.getElementById('platform-toggle').value;
                 const headless = document.getElementById('headless-toggle').checked;
                 const res = await fetch('/run', { 
@@ -1157,8 +1186,7 @@
                     }) 
                 });
                 if (!res.ok) throw new Error((await res.json()).error);
-                switchTab('execution'); 
-                pollRunStatus();
+                switchTab('execution'); // A0.7.8 FIX: switchTab already starts the poller itself
             } catch (e) {
                 showStatus("Execution Error: " + e.message, "error");
                 runBtn.disabled = false;
@@ -1176,18 +1204,23 @@
             }
         }
 
+        let pollRunStatusInterval = null; // A0.7.8 FIX: tracked so a repeat call can't stack pollers
         function pollRunStatus() {
             console.log("Starting pollRunStatus interval...");
-            const interval = setInterval(async () => {
+            if (pollRunStatusInterval) clearInterval(pollRunStatusInterval);
+            pollRunStatusInterval = setInterval(async () => {
                 try {
                     const res = await fetch('/run-status');
                     const data = await res.json();
                     console.log(`Polled run status: phase=${data.phase}, message=${data.message}`);
-                    showStatus(data.message || `Status: ${data.phase}`, data.failureType === 'system' ? 'error' : 'info');
+                    // A0.7.7 FIX: failureType was never set anywhere server-side (dead
+                    // conditional) — a failing run always rendered the neutral info style.
+                    // phase/error are the real fields /run-status actually populates.
+                    showStatus(data.message || `Status: ${data.phase}`, (data.phase === 'failed' || data.error) ? 'error' : 'info');
                     
                     if (['completed', 'failed', 'cancelled'].includes(data.phase)) {
                         console.log(`Poll complete, phase reached: ${data.phase}`);
-                        clearInterval(interval); 
+                        clearInterval(pollRunStatusInterval); 
                         runBtn.disabled = false;
                         document.getElementById('cancel-run-btn').style.display = 'none';
                         if (data.error && !data.results) {
@@ -1502,14 +1535,24 @@
             });
         }
 
+        // A0.7.5 FIX: had no failure branch at all — a failed save just silently didn't show
+        // "Saved!," with nothing telling the tester their edits weren't applied. Now returns
+        // success/failure so callers (runBtn.onclick) can act on it.
         window.saveDataMatrix = async (silent = false) => {
             saveDataMatrixStateFromDOM();
-            const res = await fetch('/data-matrix', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(currentRuntimeData) 
-            });
-            if (res.ok && !silent) showStatus('Saved!', 'success');
+            try {
+                const res = await fetch('/data-matrix', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentRuntimeData)
+                });
+                if (res.ok) { if (!silent) showStatus('Saved!', 'success'); return true; }
+                showStatus('Failed to save Data Matrix: ' + ((await res.json().catch(() => ({}))).error || res.status), 'error');
+                return false;
+            } catch (e) {
+                showStatus('Failed to save Data Matrix: ' + e.message, 'error');
+                return false;
+            }
         };
     </script>
 </body>
