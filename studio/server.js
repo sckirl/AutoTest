@@ -19,8 +19,9 @@ const XLSX = require('xlsx');
 const multer = require('multer');
 
 // ponytail: shared helpers module
-const { isSafeChain, interpolate, q, tokenizeLiterals } = require('../core/helpers');
+const { isSafeChain, interpolate, q, tokenizeLiterals, sweepOrphans, safeSessionId } = require('../core/helpers');
 const ActionDB = require('../core/action_db');
+const { generateBlueprintFromExcel } = require('../core/scenario_parser');
 
 const CORE_DIR = path.join(__dirname, '../core');
 const RESULTS_DIR = path.join(__dirname, '../results');
@@ -206,13 +207,22 @@ app.post('/upload', upload.single('excel'), (req, res) => {
         fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
     }
     // Regenerate blueprint.json immediately on upload so we have the steps mapping structure
+    // A0.6.2 FIX: this used to respond {message:"Uploaded."} unconditionally, even when parsing
+    // failed outright (bad headers) or silently no-opped (missing file, exit 0). Both are now
+    // real thrown errors from scenario_parser.js, so a non-zero exit here is a genuine failure.
+    const warningsPath = path.join(CORE_DIR, 'blueprint_warnings.json');
+    try { fs.unlinkSync(warningsPath); } catch (e) {}
     try {
         execSync(`node core/scenario_parser.js scenario_uploaded.xlsx`, { stdio: 'inherit', cwd: ROOT_DIR });
         console.log("Blueprint generated successfully on upload");
     } catch (e) {
-        console.error("Error generating blueprint on upload:", e);
+        let reason = e.message;
+        try { reason = JSON.parse(fs.readFileSync(warningsPath, 'utf8')).error || reason; } catch (e2) {}
+        return res.status(400).json({ error: "Failed to parse the uploaded Excel file: " + reason });
     }
-    res.json({ message: "Uploaded." });
+    let warnings = [];
+    try { warnings = JSON.parse(fs.readFileSync(warningsPath, 'utf8')); } catch (e) {}
+    res.json({ message: "Uploaded.", warnings });
 });
 
 app.get('/data-matrix', (req, res) => {
@@ -251,55 +261,29 @@ app.get('/scan', (req, res) => {
         if (!fs.existsSync(MAPPINGS_PATH)) fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
         const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
         if (!fs.existsSync(UPLOADED_EXCEL)) return res.json({ steps: [] });
-        
-        const workbook = XLSX.readFile(UPLOADED_EXCEL);
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-        
-        if (rows.length < 2) {
-             return res.status(400).json({ error: "Malformed Template: Excel file is empty or missing data rows." });
-        }
 
-        // Dynamic Header Detection across first 10 rows
-        let headerRowIdx = -1;
-        let scenarioIdx = -1, labelIdx = -1, testDataIdx = -1;
-        for (let i = 0; i < Math.min(rows.length, 10); i++) {
-            const headers = rows[i].map(h => String(h || '').toLowerCase());
-            scenarioIdx = headers.findIndex(h => h.includes('scenario number') || h.includes('scenario id'));
-            labelIdx = headers.findIndex(h => h.includes('scenario name') || h.includes('label'));
-            testDataIdx = headers.findIndex(h => h.includes('test data'));
-            if (scenarioIdx !== -1 && labelIdx !== -1) {
-                headerRowIdx = i;
-                break;
-            }
-        }
+        // A0.6.5 follow-up: this used to re-walk the raw Excel with its own copy of the
+        // parsing loop, so the Scenario_ID dedup (and every other) fix in scenario_parser.js
+        // never applied here. Route through the one real parser instead.
+        const { blueprint } = generateBlueprintFromExcel(UPLOADED_EXCEL);
 
-        if (headerRowIdx === -1) {
-             return res.status(400).json({ error: "Malformed Template: Could not find 'Scenario Number' and 'Scenario Name' columns." });
-        }
-        
         const stepMap = new Map();
         const scenarios = [];
         const scenarioVariables = {};
-        let currentScenario = null;
 
-        // Hierarchical Parser: Detects A.1, A.2 and their steps
-        for (let r = headerRowIdx + 1; r < rows.length; r++) {
-            const scenarioNum = String(rows[r][scenarioIdx] || "").trim();
-            const label = String(rows[r][labelIdx] || "").trim();
+        for (const scenario of blueprint) {
+            const currentScenario = scenario.Scenario_ID;
+            scenarios.push(currentScenario);
+            const vars = new Set();
 
-            if (scenarioNum.match(/^(?!\d+$).+/)) {
-                currentScenario = scenarioNum;
-                scenarios.push(currentScenario);
-                scenarioVariables[currentScenario] = new Set();
-            } else if (currentScenario && scenarioNum.match(/^\d+$/) && label) {
-                // This is a step within a scenario
+            for (const step of scenario.Flow) {
+                const label = step.Mapping_Key;
                 const resolvedSteps = (mappings[label] && mappings[label].steps) || ActionDB.resolveSteps(label);
                 const isMapped = !!(resolvedSteps && resolvedSteps.length > 0);
 
                 if (!stepMap.has(label)) {
-                    stepMap.set(label, { 
-                        label, 
+                    stepMap.set(label, {
+                        label,
                         status: isMapped ? 'mapped' : 'missing',
                         flows: [currentScenario],
                         scenarioId: currentScenario
@@ -308,28 +292,21 @@ app.get('/scan', (req, res) => {
                     stepMap.get(label).flows.push(currentScenario);
                 }
 
-                // Harvest variables for this scenario
                 if (resolvedSteps && Array.isArray(resolvedSteps)) {
                     for (const action of resolvedSteps) {
                         const str = (action.target || "") + " " + (action.value || "");
                         const matches = str.match(/\{([a-zA-Z0-9_]+)\}/g);
-                        if (matches) {
-                            matches.forEach(m => scenarioVariables[currentScenario].add(m.replace(/[{}]/g, '')));
-                        }
+                        if (matches) matches.forEach(m => vars.add(m.replace(/[{}]/g, '')));
                     }
                 }
             }
-        }
-
-        // Convert Sets to Arrays for JSON
-        for (const s of Object.keys(scenarioVariables)) {
-            scenarioVariables[s] = Array.from(scenarioVariables[s]);
+            scenarioVariables[currentScenario] = Array.from(vars);
         }
 
         res.json({ steps: Array.from(stepMap.values()), scenarios, scenarioVariables });
-    } catch (err) { 
+    } catch (err) {
         console.error("Scan Error:", err);
-        res.status(500).json({ error: err.message }); 
+        res.status(400).json({ error: err.message });
     }
 });
 
@@ -337,6 +314,11 @@ app.post('/record', (req, res) => {
     // DEF-CRIT-001 FIX: Guard FIRST, before any computation. Sentinel is set synchronously.
     if (activeCodegen && !activeCodegen.killed && activeCodegen.exitCode === null) {
         return res.status(409).json({ error: 'A recording session is already active. Close the browser or click Cancel first.' });
+    }
+    // A0.6.7 FIX: symmetric with /run's guard below — a live test run touching the same
+    // target app must not race with a live recording session starting mid-run.
+    if (activeRun && (activeRun.phase === 'compiling' || activeRun.phase === 'running')) {
+        return res.status(409).json({ error: 'A test run is in progress. Wait for it to finish before recording.' });
     }
     activeCodegen = { killed: false, exitCode: null }; // sentinel: blocks any concurrent request before spawn returns
 
@@ -478,7 +460,15 @@ app.post('/record', (req, res) => {
 // GET /codegen-result/:sessionId: returns recorded code once codegen writes the file
 // Client polls this every 1.5s after /record. File deleted after first read.
 app.get('/codegen-result/:sessionId', (req, res) => {
-    const outputPath = path.join(CORE_DIR, `codegen_${req.params.sessionId}.js`);
+    // A0.6.1 FIX: unauthenticated path traversal — reject anything but a real session id
+    // (the server only ever generates digit-string ids), then confirm defense-in-depth
+    // that the resolved path never leaves CORE_DIR before reading OR deleting it.
+    const id = safeSessionId(req.params.sessionId);
+    if (!id) return res.status(400).json({ error: 'Invalid session id.' });
+    const outputPath = path.join(CORE_DIR, `codegen_${id}.js`);
+    if (path.resolve(outputPath) !== outputPath || !outputPath.startsWith(CORE_DIR + path.sep)) {
+        return res.status(400).json({ error: 'Invalid session id.' });
+    }
     if (!fs.existsSync(outputPath)) return res.json({ ready: false });
     try {
         const raw = fs.readFileSync(outputPath, 'utf8');
@@ -540,6 +530,11 @@ app.post('/run', async (req, res) => {
     if (activeRun && (activeRun.phase === 'compiling' || activeRun.phase === 'running')) {
         return res.status(409).json({ error: "Execution already in progress." });
     }
+    // A0.6.7 FIX: /record's guard only checked activeCodegen and /run's only checked activeRun —
+    // a live recording session and a live test run could race on the same target app's state.
+    if (activeCodegen && !activeCodegen.killed && activeCodegen.exitCode === null) {
+        return res.status(409).json({ error: "A recording session is in progress. Close it before running tests." });
+    }
     try {
         activeRun = { phase: 'compiling' };
         const numWorkers = workers || 2;
@@ -548,6 +543,10 @@ app.post('/run', async (req, res) => {
         execSync(`node core/scenario_parser.js ${UPLOADED_EXCEL}`, { stdio: 'inherit', cwd: ROOT_DIR });
 
         console.log("Compiling scenarios into explicit code...");
+        // A0.5.4 follow-up: clear any stale error from a previous failed compile first, so a
+        // DIFFERENT failure below (or none) can't be misattributed to an old leftover message.
+        const compileErrorPath = path.join(CORE_DIR, 'compile_error.json');
+        try { fs.unlinkSync(compileErrorPath); } catch (e) {}
         execSync(`node core/compiler.js`, { stdio: 'inherit', cwd: ROOT_DIR });
 
         console.log(`Launching Playwright with ${numWorkers} workers...`);
@@ -624,7 +623,11 @@ app.post('/run', async (req, res) => {
     } catch (err) {
         console.error("Run Error:", err);
         activeRun = null;
-        res.status(500).json({ error: err.message });
+        // A0.5.4 follow-up: execSync's error only ever says "Command failed: ..." — read back
+        // the compiler's real reason (e.g. an unresolved {key}) when it wrote one.
+        let reason = err.message;
+        try { reason = JSON.parse(fs.readFileSync(path.join(CORE_DIR, 'compile_error.json'), 'utf8')).error || reason; } catch (e) {}
+        res.status(500).json({ error: reason });
     }
 });
 
@@ -662,6 +665,12 @@ function parseRecordedCode(code) {
                     // RCE payload in test uses page.getByRole("button") ? global.constructor...
                     // So we must fall back to saving target exactly as-is so it gets picked up as target
                     const method = node.callee.property.name;
+                    // A0.5.3 FIX: setInputFiles isn't wired through the compiler yet — reject the
+                    // mapping and name the step, rather than silently dropping it (the recorded
+                    // step used to vanish with no error, and the test then "passed" attaching nothing).
+                    if (method === 'setInputFiles') {
+                        throw new Error("File upload (setInputFiles) isn't supported yet. Use Manual entry for a non-upload step, or contact support.");
+                    }
                     if (['click', 'fill', 'press', 'goto', 'selectOption', 'check', 'uncheck', 'toBeVisible', 'toHaveText'].includes(method)) {
                         let target = null;
 
@@ -885,17 +894,9 @@ const port = process.env.PORT || 3000;
 app.listen(port, () => {
     console.log(`Studio Live on ${port}`);
 
-    // ponytail: consolidate startup replay script cleanup across dirs
-    [CORE_DIR, ROOT_DIR].forEach(dir => {
-        if (fs.existsSync(dir)) {
-            fs.readdirSync(dir)
-                .filter(f => f.startsWith('replay_') && (f.endsWith('.js') || f.endsWith('.ts') || f.endsWith('.spec.js') || f.endsWith('.spec.ts')))
-                .forEach(f => {
-                    try { fs.unlinkSync(path.join(dir, f)); } catch (e) {}
-                });
-        }
-    });
-    console.log(`Startup cleanup: swept orphaned replay scripts.`);
+    // ponytail: one predicate covers replay_ and codegen_ orphans, both write dirs
+    const swept = [CORE_DIR, ROOT_DIR].flatMap(sweepOrphans);
+    console.log(`Startup cleanup: swept ${swept.length} orphaned script(s).`);
 
     if (!fs.existsSync(UPLOADED_EXCEL)) {
         fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));

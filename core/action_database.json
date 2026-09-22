@@ -15,7 +15,8 @@
       "synonyms": [
         "Go to URL",
         "Open Page",
-        "Visit Website"
+        "Visit Website",
+        "Verify Login Success"
       ],
       "platform": "web",
       "variables": [

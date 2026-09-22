@@ -67,6 +67,9 @@ const ActionDB = {
         try {
             return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
         } catch (e) {
+            // A0.6.3: never destroy a corrupt file without a backup — a truncated write or a
+            // bad hand-edit is exactly the "recover by hand" scenario this app must not foreclose.
+            try { fs.copyFileSync(DB_PATH, `${DB_PATH}.corrupt-${Date.now()}`); } catch (e2) {}
             const initial = { version: 1, actions: [], groups: [] };
             fs.writeFileSync(DB_PATH, JSON.stringify(initial, null, 2));
             return initial;

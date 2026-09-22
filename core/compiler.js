@@ -27,24 +27,46 @@ function compile() {
     }
 
     // ponytail: use shared helpers module
-    const { isSafeChain, interpolate, q } = require('./helpers');
+    const { isSafeChain, interpolate, q, hasSensitiveKey } = require('./helpers');
     const ActionDB = require('./action_db');
+
+    // A0.7.6: an accessible name containing a literal `"` (e.g. `Delete "All" Records`) used
+    // to be interpolated into the XPath string unescaped, producing a broken or hijacked
+    // expression. XPath 1.0 (what Appium's UiAutomator2 speaks) has no escape character for
+    // quotes inside a string literal — concat() is the standard workaround when a name has both.
+    function xpathEscape(v) {
+        if (!v.includes('"')) return `"${v}"`;
+        if (!v.includes("'")) return `'${v}'`;
+        return `concat(${v.split('"').map(p => `"${p}"`).join(", '\"', ")})`;
+    }
 
     function translateToMobileLocator(pwLocator, finalValue) {
         if (!pwLocator) return "";
         if (pwLocator.startsWith('/') || pwLocator.startsWith('#') || pwLocator.startsWith('.')) return pwLocator;
 
-        const roleMatch = pwLocator.match(/getByRole\(['"](.*?)['"],\s*\{\s*name:\s*['"](.*?)['"]\s*\}\)/);
-        if (roleMatch) return `//*[@text="${roleMatch[2]}" or @content-desc="${roleMatch[2]}"]`;
+        // A0.7.6: the role/text/label regexes below use a backreference (\2 / \1) so the
+        // closing quote must match whichever quote character opened the name — otherwise an
+        // embedded quote of the OTHER type (e.g. Delete "All" Records) truncates the match
+        // before it even reaches xpathEscape, which is exactly the confirmed bypass.
+        const roleMatch = pwLocator.match(/getByRole\(['"](.*?)['"],\s*\{\s*name:\s*(['"])(.*?)\2\s*\}\)/);
+        if (roleMatch) return `//*[@text=${xpathEscape(roleMatch[3])} or @content-desc=${xpathEscape(roleMatch[3])}]`;
 
-        const textMatch = pwLocator.match(/getByText\(['"](.*?)['"]\)/);
-        if (textMatch) return `//*[@text="${textMatch[1]}" or @content-desc="${textMatch[1]}"]`;
+        const textMatch = pwLocator.match(/getByText\((['"])(.*?)\1\)/);
+        if (textMatch) return `//*[@text=${xpathEscape(textMatch[2])} or @content-desc=${xpathEscape(textMatch[2])}]`;
 
-        const labelMatch = pwLocator.match(/getByLabel\(['"](.*?)['"]\)/);
-        if (labelMatch) return `//*[@text="${labelMatch[1]}" or @content-desc="${labelMatch[1]}"]`;
+        const labelMatch = pwLocator.match(/getByLabel\((['"])(.*?)\1\)/);
+        if (labelMatch) return `//*[@text=${xpathEscape(labelMatch[2])} or @content-desc=${xpathEscape(labelMatch[2])}]`;
 
-        if (finalValue && !finalValue.includes('{')) return `//*[@text="${finalValue}" or @content-desc="${finalValue}"]`;
-        return pwLocator;
+        // Only a genuinely bare/non-getBy* target falls back to using the typed value as the
+        // accessible name — a recognized-but-untranslated getBy*() call must throw below, not
+        // silently reuse whatever value happened to be typed as a bogus locator guess.
+        if (!/^getBy\w+\(/.test(pwLocator) && finalValue && !finalValue.includes('{')) {
+            return `//*[@text=${xpathEscape(finalValue)} or @content-desc=${xpathEscape(finalValue)}]`;
+        }
+        // A0.7.6: an unsupported locator type (getByPlaceholder, getByTestId, raw CSS, ...) used
+        // to fall through here unchanged and get handed to driver.$() as invalid Playwright-syntax
+        // text. Fail loudly at compile time instead of producing a selector that can't work.
+        throw new Error(`Unsupported locator for mobile: "${pwLocator}" — re-record this step using a role/text/label-based locator.`);
     }
 
     let code = '';
@@ -75,7 +97,11 @@ function compile() {
             const testSuffix = iterData ? ` - Iteration ${itIdx + 1}` : '';
             const scenarioIdClean = scenario.Scenario_ID.replace(/[^a-z0-9]/gi, '_') + (iterData ? `_Iter${itIdx + 1}` : '');
             const safeTitle = String(scenario.Role || '').replace(/'/g, "\\'").replace(/\r?\n|\r/g, " ");
-            
+            // A0.5.2: tracing.start() has no way to redact a single value it just records the
+            // whole call log verbatim, confirmed by running it. So skip tracing entirely, for
+            // this scenario+iteration, if any Data key it's drawing from looks like a credential.
+            const isSensitive = hasSensitiveKey(iterData) || scenario.Flow.some(s => hasSensitiveKey(s.Data));
+
             if (isMobile) {
                 code += `  try {\n    console.log('Scenario ${scenario.Scenario_ID}${testSuffix}: ${safeTitle}');\n`;
             } else {
@@ -85,8 +111,10 @@ function compile() {
             code += `    const resultsDir = path.join(process.cwd(), 'results', '${scenarioIdClean}');\n`;
             code += `    if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });\n\n`;
             // DEF-NEW-004 FIX: Start per-scenario Playwright tracing for UAT evidence
-            if (!isMobile) {
+            if (!isMobile && !isSensitive) {
                 code += `    await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });\n`;
+            } else if (!isMobile) {
+                code += `    fs.writeFileSync(path.join(resultsDir, 'TRACE_WITHHELD.txt'), 'trace.zip omitted: this scenario\\'s Test Data includes a password/secret/token/pin-like value. Screenshots are still captured as evidence.');\n`;
             }
             code += `    try {\n`;
 
@@ -147,7 +175,9 @@ function compile() {
                 code += `      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});\n`;
                 code += `      await page.screenshot({ path: path.join(resultsDir, 'FINAL.png'), fullPage: true });\n`;
                 // DEF-NEW-004 FIX: Stop tracing and save trace.zip per scenario
-                code += `      await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') });\n`;
+                if (!isSensitive) {
+                    code += `      await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') });\n`;
+                }
             }
             if (isMobile) {
                 code += `    }\n  } catch (e) { console.error('Scenario ${scenario.Scenario_ID}${testSuffix} failed:', e.stack || e); }\n\n`;
@@ -159,4 +189,14 @@ function compile() {
     code += isMobile ? `  } finally {\n    await driver.deleteSession();\n  }\n})();\n` : `});\n`;
     fs.writeFileSync(outputPath, code);
 }
-compile();
+
+try {
+    compile();
+} catch (e) {
+    // A0.5.4 follow-up: server.js's /run spawns this via execSync, which only sees a
+    // generic "Command failed" — the real reason (e.g. an unresolved {key}) never reached
+    // the tester. Write it where /run can read it back regardless of the child's stdio.
+    try { fs.writeFileSync(path.join(__dirname, 'compile_error.json'), JSON.stringify({ error: e.message })); } catch (e2) {}
+    console.error(e.message);
+    process.exitCode = 1;
+}

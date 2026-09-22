@@ -11,8 +11,11 @@ core/replay_*.js
 core/replay_*.ts
 core/replay_*.spec.js
 core/replay_*.spec.ts
-codegen_*.js
+core/codegen_*.js
 core/blueprint.json
+core/blueprint_warnings.json
+core/compile_error.json
+core/*.corrupt-*
 core/executed.spec.ts
 core/executed.mobile.js
 core/runtime_data.json

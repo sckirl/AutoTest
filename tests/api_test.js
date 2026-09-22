@@ -1,12 +1,32 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const XLSX = require('xlsx');
+
+function uploadExcel(fileBuffer) {
+  return new Promise((resolve, reject) => {
+    const boundary = '----AutoTestBoundary' + Date.now();
+    const pre = `--${boundary}\r\nContent-Disposition: form-data; name="excel"; filename="upload.xlsx"\r\nContent-Type: application/octet-stream\r\n\r\n`;
+    const post = `\r\n--${boundary}--\r\n`;
+    const body = Buffer.concat([Buffer.from(pre), fileBuffer, Buffer.from(post)]);
+    const opts = {
+      hostname: 'localhost', port: process.env.PORT || 3000, path: '/upload', method: 'POST',
+      headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': body.length }
+    };
+    const r = http.request(opts, res => {
+      let d = ''; res.on('data', c => d += c); res.on('end', () => resolve({ status: res.statusCode, body: d }));
+    });
+    r.on('error', reject);
+    r.write(body);
+    r.end();
+  });
+}
 
 function req(method, urlPath, body) {
   return new Promise((resolve, reject) => {
     const data = body !== undefined ? JSON.stringify(body) : null;
     const opts = {
-      hostname: 'localhost', port: 3000, path: urlPath, method,
+      hostname: 'localhost', port: process.env.PORT || 3000, path: urlPath, method,
       headers: { 'Content-Type': 'application/json', 'Content-Length': data ? Buffer.byteLength(data) : 0 }
     };
     const r = http.request(opts, res => {
@@ -137,6 +157,8 @@ async function run() {
   // Don't actually run playwright (no mapped steps for current blueprint), just test the endpoint accepts headless param
   r = await req('POST', '/run', { workers: 1, headless: true, platform: 'web' });
   check('T29 POST /run headless:true accepted (200 or 500)', r.status === 200 || r.status === 500 || r.status === 409);
+  // A0.6.7 (mutual exclusion between /record and /run) has its own self-contained test:
+  // tests/mutual_exclusion_test.js — this suite's blueprint state is too unpredictable by here.
 
   // Cancel it
   r = await req('POST', '/run-cancel', {});
@@ -145,6 +167,63 @@ async function run() {
   // --- Restart ---
   r = await req('POST', '/restart', {});
   check('T31 POST /restart final', r.status === 200);
+
+  // --- A0.6.1: path traversal in GET /codegen-result/:sessionId ---
+  const serverJsPath = path.join(__dirname, '..', 'studio', 'server.js');
+  const serverJsBefore = fs.readFileSync(serverJsPath, 'utf8');
+  r = await req('GET', '/codegen-result/' + encodeURIComponent('../../../studio/server'));
+  check('T32 path traversal sessionId rejected 400', r.status === 400);
+  check('T32b studio/server.js untouched on disk', fs.readFileSync(serverJsPath, 'utf8') === serverJsBefore);
+  r = await req('GET', '/codegen-result/' + encodeURIComponent('..\\..\\studio\\server'));
+  check('T32c backslash traversal sessionId rejected 400', r.status === 400);
+
+  // --- A0.5.3: setInputFiles must be rejected at save time, not silently dropped ---
+  r = await req('POST', '/save-mapping', { label: 'Upload File', code: "await page.getByLabel('Upload').setInputFiles('/tmp/x.pdf');" });
+  check('T33 setInputFiles rejected, not silently dropped', r.status !== 200);
+  check('T33b rejection names setInputFiles', JSON.parse(r.body).error && JSON.parse(r.body).error.includes('setInputFiles'));
+
+  // --- A0.6.2: /upload must report real failures, not always "Uploaded." ---
+  const backupExcel = path.join(__dirname, '..', 'scenario_uploaded.xlsx');
+  const backupExcelData = fs.existsSync(backupExcel) ? fs.readFileSync(backupExcel) : null;
+  try {
+    const badWb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(badWb, XLSX.utils.aoa_to_sheet([['Not', 'The', 'Right', 'Headers']]));
+    r = await uploadExcel(XLSX.write(badWb, { type: 'buffer', bookType: 'xlsx' }));
+    check('T34 malformed-header upload rejected, non-200', r.status !== 200);
+    check('T34b rejection names the real reason', JSON.parse(r.body).error && /column/i.test(JSON.parse(r.body).error));
+
+    const warnWb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(warnWb, XLSX.utils.aoa_to_sheet([
+      ['Scenario Number', 'Scenario Name', 'Test Data'],
+      ['A.1', 'Login Flow', ''],
+      ['1', 'Enter Username', 'username=alice'],
+      ['2', '', 'password=secret123'],
+    ]));
+    r = await uploadExcel(XLSX.write(warnWb, { type: 'buffer', bookType: 'xlsx' }));
+    check('T35 upload with a merged-cell gap still succeeds', r.status === 200);
+    check('T35b response surfaces the dropped-row warning', (JSON.parse(r.body).warnings || []).some(w => /blank|missing/i.test(w)));
+
+    // --- A0.6.5 follow-up: GET /scan had its own independent parser with no dedup ---
+    const dupWb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(dupWb, XLSX.utils.aoa_to_sheet([
+      ['Scenario Number', 'Scenario Name', 'Test Data'],
+      ['A.1', 'Login Flow', ''],
+      ['1', 'Enter Username', 'username=alice'],
+      ['A.1', 'Login Flow Again', ''],
+      ['1', 'Enter Username', 'username=bob'],
+    ]));
+    r = await uploadExcel(XLSX.write(dupWb, { type: 'buffer', bookType: 'xlsx' }));
+    check('T36 upload with duplicate Scenario_ID still succeeds', r.status === 200);
+    r = await req('GET', '/scan');
+    const scanScenarios = JSON.parse(r.body).scenarios || [];
+    check('T36b GET /scan dedupes the same Scenario_ID it warned about on upload', new Set(scanScenarios).size === scanScenarios.length && scanScenarios.includes('A.1_dup2'));
+  } finally {
+    if (backupExcelData === null) { try { fs.unlinkSync(backupExcel); } catch (e) {} }
+    else {
+      fs.writeFileSync(backupExcel, backupExcelData);
+      try { execSync('node core/scenario_parser.js scenario_uploaded.xlsx', { stdio: 'pipe', cwd: path.join(__dirname, '..') }); } catch (e) {}
+    }
+  }
 
   console.log('\n=== AutoTest Studio API Test Suite v2 ===');
   log.forEach(l => console.log(l));
