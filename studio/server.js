@@ -19,8 +19,9 @@ const XLSX = require('xlsx');
 const multer = require('multer');
 
 // ponytail: shared helpers module
-const { isSafeChain, interpolate, q, tokenizeLiterals } = require('../core/helpers');
+const { isSafeChain, interpolate, q, tokenizeLiterals, sweepOrphans, safeSessionId, normalizePlatform } = require('../core/helpers');
 const ActionDB = require('../core/action_db');
+const { generateBlueprintFromExcel } = require('../core/scenario_parser');
 
 const CORE_DIR = path.join(__dirname, '../core');
 const RESULTS_DIR = path.join(__dirname, '../results');
@@ -125,9 +126,11 @@ app.use('/results', express.static(RESULTS_DIR));
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, ROOT_DIR),
-    filename: (req, file, cb) => cb(null, 'scenario_uploaded.xlsx')
+    // A0.8.10 FIX: a shared staging filename let two overlapping /upload requests clobber
+    // each other's workbook mid-parse. crypto.randomUUID() gives each request its own file.
+    filename: (req, file, cb) => cb(null, `scenario_upload_staging_${require('crypto').randomUUID()}.xlsx`)
 });
-const upload = multer({ 
+const upload = multer({
     storage: storage,
     limits: { fileSize: 5 * 1024 * 1024 } // DEF-MED-011 FIX: 5MB strict limit
 });
@@ -201,18 +204,37 @@ app.get('/results', (req, res) => {
     }
 });
 app.post('/upload', upload.single('excel'), (req, res) => {
-    if (fs.existsSync(RUNTIME_DATA_PATH)) fs.unlinkSync(RUNTIME_DATA_PATH);
-    if (req.body.keepMappings === 'false') {
-        fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
+    // A0.8.11 FIX: existsSync(stagedFile) only proved *some* file was there, including a stale
+    // one left by a process that died mid-request (never swept at startup). Trust req.file,
+    // which multer only sets when this request actually carried an upload.
+    if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded." });
     }
+    const stagedFile = req.file.path;
     // Regenerate blueprint.json immediately on upload so we have the steps mapping structure
+    // A0.6.2 FIX: this used to respond {message:"Uploaded."} unconditionally, even when parsing
+    // failed outright (bad headers) or silently no-opped (missing file, exit 0). Both are now
+    // real thrown errors from scenario_parser.js, so a non-zero exit here is a genuine failure.
+    const warningsPath = path.join(CORE_DIR, 'blueprint_warnings.json');
+    try { fs.unlinkSync(warningsPath); } catch (e) {}
     try {
-        execSync(`node core/scenario_parser.js scenario_uploaded.xlsx`, { stdio: 'inherit', cwd: ROOT_DIR });
+        execSync(`node core/scenario_parser.js ${path.basename(stagedFile)}`, { stdio: 'inherit', cwd: ROOT_DIR });
         console.log("Blueprint generated successfully on upload");
+        // Atomically replace active workbook and reset project state only after validation succeeds
+        fs.renameSync(stagedFile, UPLOADED_EXCEL);
+        if (fs.existsSync(RUNTIME_DATA_PATH)) fs.unlinkSync(RUNTIME_DATA_PATH);
+        if (req.body.keepMappings === 'false') {
+            fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
+        }
     } catch (e) {
-        console.error("Error generating blueprint on upload:", e);
+        try { fs.unlinkSync(stagedFile); } catch (e2) {}
+        let reason = e.message;
+        try { reason = JSON.parse(fs.readFileSync(warningsPath, 'utf8')).error || reason; } catch (e2) {}
+        return res.status(400).json({ error: "Failed to parse the uploaded Excel file: " + reason });
     }
-    res.json({ message: "Uploaded." });
+    let warnings = [];
+    try { warnings = JSON.parse(fs.readFileSync(warningsPath, 'utf8')); } catch (e) {}
+    res.json({ message: "Uploaded.", warnings });
 });
 
 app.get('/data-matrix', (req, res) => {
@@ -251,55 +273,29 @@ app.get('/scan', (req, res) => {
         if (!fs.existsSync(MAPPINGS_PATH)) fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
         const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
         if (!fs.existsSync(UPLOADED_EXCEL)) return res.json({ steps: [] });
-        
-        const workbook = XLSX.readFile(UPLOADED_EXCEL);
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-        
-        if (rows.length < 2) {
-             return res.status(400).json({ error: "Malformed Template: Excel file is empty or missing data rows." });
-        }
 
-        // Dynamic Header Detection across first 10 rows
-        let headerRowIdx = -1;
-        let scenarioIdx = -1, labelIdx = -1, testDataIdx = -1;
-        for (let i = 0; i < Math.min(rows.length, 10); i++) {
-            const headers = rows[i].map(h => String(h || '').toLowerCase());
-            scenarioIdx = headers.findIndex(h => h.includes('scenario number') || h.includes('scenario id'));
-            labelIdx = headers.findIndex(h => h.includes('scenario name') || h.includes('label'));
-            testDataIdx = headers.findIndex(h => h.includes('test data'));
-            if (scenarioIdx !== -1 && labelIdx !== -1) {
-                headerRowIdx = i;
-                break;
-            }
-        }
+        // A0.6.5 follow-up: this used to re-walk the raw Excel with its own copy of the
+        // parsing loop, so the Scenario_ID dedup (and every other) fix in scenario_parser.js
+        // never applied here. Route through the one real parser instead.
+        const { blueprint } = generateBlueprintFromExcel(UPLOADED_EXCEL);
 
-        if (headerRowIdx === -1) {
-             return res.status(400).json({ error: "Malformed Template: Could not find 'Scenario Number' and 'Scenario Name' columns." });
-        }
-        
         const stepMap = new Map();
         const scenarios = [];
         const scenarioVariables = {};
-        let currentScenario = null;
 
-        // Hierarchical Parser: Detects A.1, A.2 and their steps
-        for (let r = headerRowIdx + 1; r < rows.length; r++) {
-            const scenarioNum = String(rows[r][scenarioIdx] || "").trim();
-            const label = String(rows[r][labelIdx] || "").trim();
+        for (const scenario of blueprint) {
+            const currentScenario = scenario.Scenario_ID;
+            scenarios.push(currentScenario);
+            const vars = new Set();
 
-            if (scenarioNum.match(/^(?!\d+$).+/)) {
-                currentScenario = scenarioNum;
-                scenarios.push(currentScenario);
-                scenarioVariables[currentScenario] = new Set();
-            } else if (currentScenario && scenarioNum.match(/^\d+$/) && label) {
-                // This is a step within a scenario
+            for (const step of scenario.Flow) {
+                const label = step.Mapping_Key;
                 const resolvedSteps = (mappings[label] && mappings[label].steps) || ActionDB.resolveSteps(label);
                 const isMapped = !!(resolvedSteps && resolvedSteps.length > 0);
 
                 if (!stepMap.has(label)) {
-                    stepMap.set(label, { 
-                        label, 
+                    stepMap.set(label, {
+                        label,
                         status: isMapped ? 'mapped' : 'missing',
                         flows: [currentScenario],
                         scenarioId: currentScenario
@@ -308,28 +304,20 @@ app.get('/scan', (req, res) => {
                     stepMap.get(label).flows.push(currentScenario);
                 }
 
-                // Harvest variables for this scenario
                 if (resolvedSteps && Array.isArray(resolvedSteps)) {
                     for (const action of resolvedSteps) {
                         const str = (action.target || "") + " " + (action.value || "");
-                        const matches = str.match(/\{([a-zA-Z0-9_]+)\}/g);
-                        if (matches) {
-                            matches.forEach(m => scenarioVariables[currentScenario].add(m.replace(/[{}]/g, '')));
-                        }
+                        ActionDB.extractVariables(str).forEach(v => vars.add(v));
                     }
                 }
             }
-        }
-
-        // Convert Sets to Arrays for JSON
-        for (const s of Object.keys(scenarioVariables)) {
-            scenarioVariables[s] = Array.from(scenarioVariables[s]);
+            scenarioVariables[currentScenario] = Array.from(vars);
         }
 
         res.json({ steps: Array.from(stepMap.values()), scenarios, scenarioVariables });
-    } catch (err) { 
+    } catch (err) {
         console.error("Scan Error:", err);
-        res.status(500).json({ error: err.message }); 
+        res.status(400).json({ error: err.message });
     }
 });
 
@@ -337,6 +325,18 @@ app.post('/record', (req, res) => {
     // DEF-CRIT-001 FIX: Guard FIRST, before any computation. Sentinel is set synchronously.
     if (activeCodegen && !activeCodegen.killed && activeCodegen.exitCode === null) {
         return res.status(409).json({ error: 'A recording session is already active. Close the browser or click Cancel first.' });
+    }
+    // A0.6.7 FIX: symmetric with /run's guard below — a live test run touching the same
+    // target app must not race with a live recording session starting mid-run.
+    if (activeRun && (activeRun.phase === 'compiling' || activeRun.phase === 'running')) {
+        return res.status(409).json({ error: 'A test run is in progress. Wait for it to finish before recording.' });
+    }
+    // A0.7.1 FIX: this handler unconditionally spawned Playwright's Web codegen regardless
+    // of the platform toggle — selecting Mobile silently recorded a Web mapping. No Appium
+    // recording flow exists in this codebase; reject clearly instead of building one, until
+    // that's actually implemented.
+    if (normalizePlatform(req.body.platform) === 'mobile') {
+        return res.status(400).json({ error: 'Mobile recording isn\'t supported yet. Use Manual entry for mobile steps, or switch to Web to record.' });
     }
     activeCodegen = { killed: false, exitCode: null }; // sentinel: blocks any concurrent request before spawn returns
 
@@ -478,7 +478,15 @@ app.post('/record', (req, res) => {
 // GET /codegen-result/:sessionId: returns recorded code once codegen writes the file
 // Client polls this every 1.5s after /record. File deleted after first read.
 app.get('/codegen-result/:sessionId', (req, res) => {
-    const outputPath = path.join(CORE_DIR, `codegen_${req.params.sessionId}.js`);
+    // A0.6.1 FIX: unauthenticated path traversal — reject anything but a real session id
+    // (the server only ever generates digit-string ids), then confirm defense-in-depth
+    // that the resolved path never leaves CORE_DIR before reading OR deleting it.
+    const id = safeSessionId(req.params.sessionId);
+    if (!id) return res.status(400).json({ error: 'Invalid session id.' });
+    const outputPath = path.join(CORE_DIR, `codegen_${id}.js`);
+    if (path.resolve(outputPath) !== outputPath || !outputPath.startsWith(CORE_DIR + path.sep)) {
+        return res.status(400).json({ error: 'Invalid session id.' });
+    }
     if (!fs.existsSync(outputPath)) return res.json({ ready: false });
     try {
         const raw = fs.readFileSync(outputPath, 'utf8');
@@ -525,7 +533,11 @@ app.post('/save-mapping', (req, res) => {
 // ... existing code ...
 
 app.post('/run', async (req, res) => {
-    const { workers, headless, platform } = req.body;
+    const { workers, headless } = req.body;
+    // A0.7.1 follow-up: 'Mobile'/'MOBILE'/'mobile ' bypassed a strict === 'mobile' check here
+    // too — normalize once, at the top, so every use below (env, activePlatform, the mobile
+    // dependency check) sees the same canonical value.
+    const platform = req.body.platform ? normalizePlatform(req.body.platform) : req.body.platform;
 
     if (platform === 'mobile') {
         try { require.resolve('webdriverio'); } catch (e) {
@@ -540,10 +552,20 @@ app.post('/run', async (req, res) => {
     if (activeRun && (activeRun.phase === 'compiling' || activeRun.phase === 'running')) {
         return res.status(409).json({ error: "Execution already in progress." });
     }
+    // A0.6.7 FIX: /record's guard only checked activeCodegen and /run's only checked activeRun —
+    // a live recording session and a live test run could race on the same target app's state.
+    if (activeCodegen && !activeCodegen.killed && activeCodegen.exitCode === null) {
+        return res.status(409).json({ error: "A recording session is in progress. Close it before running tests." });
+    }
     try {
         activeRun = { phase: 'compiling' };
         const numWorkers = workers || 2;
         console.log("Generating blueprint...");
+        // A0.5.4 & A0.8.5: clear stale errors from prior runs before executing child scripts
+        const compileErrorPath = path.join(CORE_DIR, 'compile_error.json');
+        const warningsPath = path.join(CORE_DIR, 'blueprint_warnings.json');
+        try { fs.unlinkSync(compileErrorPath); } catch (e) {}
+        try { fs.unlinkSync(warningsPath); } catch (e) {}
         // DEF-CRIT-006 FIX: explicit cwd so paths resolve from project root, not studio/
         execSync(`node core/scenario_parser.js ${UPLOADED_EXCEL}`, { stdio: 'inherit', cwd: ROOT_DIR });
 
@@ -624,7 +646,19 @@ app.post('/run', async (req, res) => {
     } catch (err) {
         console.error("Run Error:", err);
         activeRun = null;
-        res.status(500).json({ error: err.message });
+        // A0.5.4 & A0.8.5: execSync's error only ever says "Command failed: ..." — read back
+        // the compiler's or scenario_parser's real reason when either wrote one.
+        let reason = err.message;
+        try {
+            const compileErr = path.join(CORE_DIR, 'compile_error.json');
+            const warningsErr = path.join(CORE_DIR, 'blueprint_warnings.json');
+            if (fs.existsSync(compileErr)) {
+                reason = JSON.parse(fs.readFileSync(compileErr, 'utf8')).error || reason;
+            } else if (fs.existsSync(warningsErr)) {
+                reason = JSON.parse(fs.readFileSync(warningsErr, 'utf8')).error || reason;
+            }
+        } catch (e) {}
+        res.status(500).json({ error: reason });
     }
 });
 
@@ -661,7 +695,18 @@ function parseRecordedCode(code) {
 
                     // RCE payload in test uses page.getByRole("button") ? global.constructor...
                     // So we must fall back to saving target exactly as-is so it gets picked up as target
-                    const method = node.callee.property.name;
+                    const method = (!node.callee.computed && node.callee.property.type === 'Identifier')
+                        ? node.callee.property.name
+                        : (node.callee.property.type === 'Literal' ? String(node.callee.property.value) : (node.callee.property.name || ''));
+                    // A0.5.3 FIX: setInputFiles isn't wired through the compiler yet — reject the
+                    // mapping and name the step, rather than silently dropping it (the recorded
+                    // step used to vanish with no error, and the test then "passed" attaching nothing).
+                    // Case-insensitive (blackbox follow-up): manually-pasted/edited code isn't
+                    // guaranteed correct casing, and a mistyped method name must not slip past
+                    // this guard just because it doesn't match the exact string.
+                    if (method.toLowerCase() === 'setinputfiles') {
+                        throw new Error("File upload (setInputFiles) isn't supported yet. Use Manual entry for a non-upload step, or contact support.");
+                    }
                     if (['click', 'fill', 'press', 'goto', 'selectOption', 'check', 'uncheck', 'toBeVisible', 'toHaveText'].includes(method)) {
                         let target = null;
 
@@ -774,6 +819,20 @@ app.get('/mapping/:label', (req, res) => {
 
 // GET /preview/:label: reconstructs readable Playwright code from stored steps
 // ponytail: one function, no class, no template engine
+// shared by /preview and /preview-scenario, which used to duplicate this rendering verbatim
+function stepsToLines(steps) {
+    return steps.map(s => {
+        const loc = s.target && s.target.match(/^(getBy|locator|frameLocator)/) ? `page.${s.target}` : `page.locator('${s.target}')`;
+        if (s.type === 'goto')        return `await page.goto('${s.target}');`;
+        if (s.type === 'click')       return `await ${loc}.click();`;
+        if (s.type === 'fill')        return `await ${loc}.fill('${s.value || ''}');`;
+        if (s.type === 'press')       return `await ${loc}.press('${s.value || 'Enter'}');`;
+        if (s.type === 'toBeVisible') return `await expect(${loc}).toBeVisible();`;
+        if (s.type === 'toHaveText')  return `await expect(${loc}).toHaveText('${s.value || ''}');`;
+        return `// ${s.type}: ${s.target}`;
+    });
+}
+
 app.get('/preview/:label', (req, res) => {
     try {
         const label = decodeURIComponent(req.params.label);
@@ -786,18 +845,7 @@ app.get('/preview/:label', (req, res) => {
         }
         if (!steps) steps = ActionDB.resolveSteps(label);
         if (!steps || steps.length === 0) return res.json({ code: '// Not mapped yet' });
-
-        const lines = steps.map(s => {
-            const loc = s.target && s.target.match(/^(getBy|locator|frameLocator)/) ? `page.${s.target}` : `page.locator('${s.target}')`;
-            if (s.type === 'goto')       return `await page.goto('${s.target}');`;
-            if (s.type === 'click')      return `await ${loc}.click();`;
-            if (s.type === 'fill')       return `await ${loc}.fill('${s.value || ''}');`;
-            if (s.type === 'press')      return `await ${loc}.press('${s.value || 'Enter'}');`;
-            if (s.type === 'toBeVisible') return `await expect(${loc}).toBeVisible();`;
-            if (s.type === 'toHaveText') return `await expect(${loc}).toHaveText('${s.value || ''}');`;
-            return `// ${s.type}: ${s.target}`;
-        });
-        res.json({ code: lines.join('\n') });
+        res.json({ code: stepsToLines(steps).join('\n') });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -815,16 +863,7 @@ app.get('/preview-scenario/:scenarioId', (req, res) => {
             lines.push(`// Step: ${step.Mapping_Key}`);
             const steps = (mappings[step.Mapping_Key] && mappings[step.Mapping_Key].steps) || ActionDB.resolveSteps(step.Mapping_Key);
             if (!steps || steps.length === 0) { lines.push('// NOT MAPPED YET', ''); continue; }
-            for (const s of steps) {
-                const loc = s.target && s.target.match(/^(getBy|locator|frameLocator)/) ? `page.${s.target}` : `page.locator('${s.target}')`;
-                if (s.type === 'goto')        lines.push(`await page.goto('${s.target}');`);
-                else if (s.type === 'click')  lines.push(`await ${loc}.click();`);
-                else if (s.type === 'fill')   lines.push(`await ${loc}.fill('${s.value || ''}');`);
-                else if (s.type === 'press')  lines.push(`await ${loc}.press('${s.value || 'Enter'}');`);
-                else if (s.type === 'toBeVisible') lines.push(`await expect(${loc}).toBeVisible();`);
-                else if (s.type === 'toHaveText')  lines.push(`await expect(${loc}).toHaveText('${s.value || ''}');`);
-            }
-            lines.push('');
+            lines.push(...stepsToLines(steps), '');
         }
         res.json({ code: lines.join('\n') });
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -885,22 +924,14 @@ const port = process.env.PORT || 3000;
 app.listen(port, () => {
     console.log(`Studio Live on ${port}`);
 
-    // ponytail: consolidate startup replay script cleanup across dirs
-    [CORE_DIR, ROOT_DIR].forEach(dir => {
-        if (fs.existsSync(dir)) {
-            fs.readdirSync(dir)
-                .filter(f => f.startsWith('replay_') && (f.endsWith('.js') || f.endsWith('.ts') || f.endsWith('.spec.js') || f.endsWith('.spec.ts')))
-                .forEach(f => {
-                    try { fs.unlinkSync(path.join(dir, f)); } catch (e) {}
-                });
-        }
-    });
-    console.log(`Startup cleanup: swept orphaned replay scripts.`);
+    // ponytail: one predicate covers replay_ and codegen_ orphans, both write dirs
+    const swept = [CORE_DIR, ROOT_DIR].flatMap(sweepOrphans);
+    console.log(`Startup cleanup: swept ${swept.length} orphaned script(s).`);
 
-    if (!fs.existsSync(UPLOADED_EXCEL)) {
+    if (!fs.existsSync(MAPPINGS_PATH)) {
         fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
-        console.log("Startup cleanup: scenario_uploaded.xlsx not found, cleared mappings.json");
-    } else {
+    }
+    if (fs.existsSync(UPLOADED_EXCEL)) {
         // Run scenario parser to rebuild blueprint.json
         try {
             execSync(`node core/scenario_parser.js scenario_uploaded.xlsx`, { stdio: 'inherit', cwd: ROOT_DIR });

@@ -1,13 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-// Banking Block Compliance: Strict DRIVERS/ Resolution
-const DRIVERS_PATH = path.join(__dirname, '../DRIVERS/node_modules');
-if (fs.existsSync(DRIVERS_PATH)) {
-    module.paths.unshift(DRIVERS_PATH);
-    process.env.NODE_PATH = DRIVERS_PATH;
-    require('module').Module._initPaths();
-}
+require('./helpers').ensureDriversPath(module, __dirname);
 
 function compile() {
     const blueprintPath = path.join(__dirname, 'blueprint.json');
@@ -27,24 +21,49 @@ function compile() {
     }
 
     // ponytail: use shared helpers module
-    const { isSafeChain, interpolate, q } = require('./helpers');
+    const { isSafeChain, interpolate, q, hasSensitiveKey } = require('./helpers');
     const ActionDB = require('./action_db');
+
+    // A0.7.6: an accessible name containing a literal `"` (e.g. `Delete "All" Records`) used
+    // to be interpolated into the XPath string unescaped, producing a broken or hijacked
+    // expression. XPath 1.0 (what Appium's UiAutomator2 speaks) has no escape character for
+    // quotes inside a string literal — concat() is the standard workaround when a name has both.
+    function xpathEscape(v) {
+        if (!v.includes('"')) return `"${v}"`;
+        if (!v.includes("'")) return `'${v}'`;
+        return `concat(${v.split('"').map(p => `"${p}"`).join(", '\"', ")})`;
+    }
+
+    function unescapeJsString(s) {
+        return s.replace(/\\(['"\\])/g, '$1');
+    }
 
     function translateToMobileLocator(pwLocator, finalValue) {
         if (!pwLocator) return "";
         if (pwLocator.startsWith('/') || pwLocator.startsWith('#') || pwLocator.startsWith('.')) return pwLocator;
 
-        const roleMatch = pwLocator.match(/getByRole\(['"](.*?)['"],\s*\{\s*name:\s*['"](.*?)['"]\s*\}\)/);
-        if (roleMatch) return `//*[@text="${roleMatch[2]}" or @content-desc="${roleMatch[2]}"]`;
+        // A0.7.6 & A0.8.6: match accessible name and allow options objects like { exact: true }
+        // The backreference (\1) ensures the closing quote matches the opening quote character.
+        // unescapeJsString ensures backslashes from escaped quotes in JS string literals don't leak into XPath.
+        const roleMatch = pwLocator.match(/getByRole\(['"][^'"]*['"],\s*\{[^}]*\bname:\s*(['"])(.*?)\1[^}]*\}\)/);
+        if (roleMatch) return `//*[@text=${xpathEscape(unescapeJsString(roleMatch[2]))} or @content-desc=${xpathEscape(unescapeJsString(roleMatch[2]))}]`;
 
-        const textMatch = pwLocator.match(/getByText\(['"](.*?)['"]\)/);
-        if (textMatch) return `//*[@text="${textMatch[1]}" or @content-desc="${textMatch[1]}"]`;
+        const textMatch = pwLocator.match(/getByText\((['"])(.*?)\1(\s*,\s*\{[^}]*\})?\s*\)/);
+        if (textMatch) return `//*[@text=${xpathEscape(unescapeJsString(textMatch[2]))} or @content-desc=${xpathEscape(unescapeJsString(textMatch[2]))}]`;
 
-        const labelMatch = pwLocator.match(/getByLabel\(['"](.*?)['"]\)/);
-        if (labelMatch) return `//*[@text="${labelMatch[1]}" or @content-desc="${labelMatch[1]}"]`;
+        const labelMatch = pwLocator.match(/getByLabel\((['"])(.*?)\1(\s*,\s*\{[^}]*\})?\s*\)/);
+        if (labelMatch) return `//*[@text=${xpathEscape(unescapeJsString(labelMatch[2]))} or @content-desc=${xpathEscape(unescapeJsString(labelMatch[2]))}]`;
 
-        if (finalValue && !finalValue.includes('{')) return `//*[@text="${finalValue}" or @content-desc="${finalValue}"]`;
-        return pwLocator;
+        // Only a genuinely bare/non-getBy* target falls back to using the typed value as the
+        // accessible name — a recognized-but-untranslated getBy*() call must throw below, not
+        // silently reuse whatever value happened to be typed as a bogus locator guess.
+        if (!/^getBy\w+\(/.test(pwLocator) && finalValue && !finalValue.includes('{')) {
+            return `//*[@text=${xpathEscape(unescapeJsString(finalValue))} or @content-desc=${xpathEscape(unescapeJsString(finalValue))}]`;
+        }
+        // A0.7.6: an unsupported locator type (getByPlaceholder, getByTestId, raw CSS, ...) used
+        // to fall through here unchanged and get handed to driver.$() as invalid Playwright-syntax
+        // text. Fail loudly at compile time instead of producing a selector that can't work.
+        throw new Error(`Unsupported locator for mobile: "${pwLocator}" — re-record this step using a role/text/label-based locator.`);
     }
 
     let code = '';
@@ -55,6 +74,8 @@ function compile() {
         // has no runner to interpret it and made every mobile /run fail with 0 tests found).
         code += `const { remote } = require('webdriverio');\nconst path = require('path');\nconst fs = require('fs');\n\n`;
         code += `(async () => {\n`;
+        code += `  let __failures = 0;\n`; // A0.7.2 FIX: see below — turns a swallowed per-scenario
+        // error into a process exit code /run-status already knows how to read.
         code += `  const driver = await remote({ capabilities: { platformName: 'Android', 'appium:automationName': 'UiAutomator2' } });\n`;
         code += `  try {\n`;
     } else {
@@ -75,7 +96,11 @@ function compile() {
             const testSuffix = iterData ? ` - Iteration ${itIdx + 1}` : '';
             const scenarioIdClean = scenario.Scenario_ID.replace(/[^a-z0-9]/gi, '_') + (iterData ? `_Iter${itIdx + 1}` : '');
             const safeTitle = String(scenario.Role || '').replace(/'/g, "\\'").replace(/\r?\n|\r/g, " ");
-            
+            // A0.5.2: tracing.start() has no way to redact a single value it just records the
+            // whole call log verbatim, confirmed by running it. So skip tracing entirely, for
+            // this scenario+iteration, if any Data key it's drawing from looks like a credential.
+            const isSensitive = hasSensitiveKey(iterData) || scenario.Flow.some(s => hasSensitiveKey(s.Data));
+
             if (isMobile) {
                 code += `  try {\n    console.log('Scenario ${scenario.Scenario_ID}${testSuffix}: ${safeTitle}');\n`;
             } else {
@@ -85,8 +110,10 @@ function compile() {
             code += `    const resultsDir = path.join(process.cwd(), 'results', '${scenarioIdClean}');\n`;
             code += `    if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });\n\n`;
             // DEF-NEW-004 FIX: Start per-scenario Playwright tracing for UAT evidence
-            if (!isMobile) {
+            if (!isMobile && !isSensitive) {
                 code += `    await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });\n`;
+            } else if (!isMobile) {
+                code += `    fs.writeFileSync(path.join(resultsDir, 'TRACE_WITHHELD.txt'), 'trace.zip omitted: this scenario\\'s Test Data includes a password/secret/token/pin-like value. Screenshots are still captured as evidence.');\n`;
             }
             code += `    try {\n`;
 
@@ -102,13 +129,24 @@ function compile() {
                         const finalValue = interpolate(action.value, iterData, step.Data);
                         
                         if (isMobile) {
-                            const mobileTarget = translateToMobileLocator(finalTarget, finalValue);
-                            const loc = `driver.$(${q(mobileTarget)})`;
-                            
-                            if (action.type === 'goto') code += `        await driver.url(${q(finalTarget)});\n`;
-                            else if (action.type === 'click') code += `        await ${loc}.click();\n`;
-                            else if (action.type === 'fill') code += `        await ${loc}.setValue(${q(finalValue)});\n`;
-                            else if (action.type === 'press') code += `        await driver.keys(${q(finalValue || 'Enter')});\n`;
+                            if (action.type === 'goto') {
+                                code += `        await driver.url(${q(finalTarget)});\n`;
+                            } else {
+                                const mobileTarget = translateToMobileLocator(finalTarget, finalValue);
+                                const loc = `driver.$(${q(mobileTarget)})`;
+
+                                // A0.8.7: support all standard action types on mobile (assertions, check, selectOption)
+                                // rather than silently dropping them.
+                                if (action.type === 'click') code += `        await ${loc}.click();\n`;
+                                else if (action.type === 'fill') code += `        await ${loc}.setValue(${q(finalValue)});\n`;
+                                else if (action.type === 'press') code += `        await driver.keys(${q(finalValue || 'Enter')});\n`;
+                                else if (action.type === 'selectOption') code += `        await ${loc}.selectByVisibleText(${q(finalValue)});\n`;
+                                else if (action.type === 'check') code += `        { const el = await ${loc}; if (!await el.isSelected()) await el.click(); }\n`;
+                                else if (action.type === 'uncheck') code += `        { const el = await ${loc}; if (await el.isSelected()) await el.click(); }\n`;
+                                else if (action.type === 'toBeVisible') code += `        { const el = await ${loc}; if (!await el.isDisplayed()) throw new Error("Element not visible: " + ${q(mobileTarget)}); }\n`;
+                                else if (action.type === 'toHaveText') code += `        { const text = await ${loc}.getText(); if (!text.includes(${q(finalValue)})) throw new Error("Text mismatch: expected " + ${q(finalValue)} + " but got " + text); }\n`;
+                                else throw new Error(`Unsupported mobile action type: "${action.type}"`);
+                            }
                         } else {
                             const safeTarget = isSafeChain(finalTarget);
                             const loc = safeTarget ? `page.${safeTarget}` : `page.locator(${q(finalTarget)})`;
@@ -147,16 +185,31 @@ function compile() {
                 code += `      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});\n`;
                 code += `      await page.screenshot({ path: path.join(resultsDir, 'FINAL.png'), fullPage: true });\n`;
                 // DEF-NEW-004 FIX: Stop tracing and save trace.zip per scenario
-                code += `      await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') });\n`;
+                if (!isSensitive) {
+                    code += `      await page.context().tracing.stop({ path: path.join(resultsDir, 'trace.zip') });\n`;
+                }
             }
             if (isMobile) {
-                code += `    }\n  } catch (e) { console.error('Scenario ${scenario.Scenario_ID}${testSuffix} failed:', e.stack || e); }\n\n`;
+                // A0.7.2 FIX: this catch used to only console.error — the process always exited
+                // 0, so server.js's /run-status (`activeRun.error` set only `if (code !== 0)`)
+                // could never see a mobile failure. Count it and let it surface via exit code.
+                code += `    }\n  } catch (e) { __failures++; console.error('Scenario ${scenario.Scenario_ID}${testSuffix} failed:', e.stack || e); }\n\n`;
             } else {
                 code += `    }\n  });\n\n`;
             }
         }
     }
-    code += isMobile ? `  } finally {\n    await driver.deleteSession();\n  }\n})();\n` : `});\n`;
+    code += isMobile ? `  } finally {\n    await driver.deleteSession();\n    if (__failures > 0) process.exitCode = 1;\n  }\n})();\n` : `});\n`;
     fs.writeFileSync(outputPath, code);
 }
-compile();
+
+try {
+    compile();
+} catch (e) {
+    // A0.5.4 follow-up: server.js's /run spawns this via execSync, which only sees a
+    // generic "Command failed" — the real reason (e.g. an unresolved {key}) never reached
+    // the tester. Write it where /run can read it back regardless of the child's stdio.
+    try { fs.writeFileSync(path.join(__dirname, 'compile_error.json'), JSON.stringify({ error: e.message })); } catch (e2) {}
+    console.error(e.message);
+    process.exitCode = 1;
+}

@@ -57,6 +57,34 @@ If further expansion is requested, deploy these specialized agent personas:
   - Verifies that visual design (CSS) adheres to premium, modern enterprise standards.
   - Ensures the "Air-Gapped" vision is never compromised by unauthorized packages.
 
+### 4. The Black-Box Scenario Tester
+**Role:** Independent QA — Runtime Verification Only
+**Agent definition:** [.claude/agents/blackbox-tester.md](.claude/agents/blackbox-tester.md)
+
+Distinct from the Zero-Trust QA Agent (#1, which does *static* code analysis). This agent never reads `studio/server.js`, `core/*.js`, or `studio/studio-ui.html` to judge correctness — it only runs the live app and observes real behavior. It does not develop and does not fix; a tester who can also patch the code under test stops being independent.
+
+**Mandatory loop, run on every developer change to `studio/server.js`, `core/*.js`, or `studio/studio-ui.html`:**
+
+```
+1. Developer targets a change (a feature, a fix, a refactor).
+2. Developer implements it, states what changed and which routes/files it touches.
+3. Black-Box Scenario Tester is assigned exactly that scope — nothing more, nothing
+   assumed — and runs the affected rows from TEST_SCENARIOS.md plus one level of
+   adjacent probing (see agent definition) against the real running server.
+4. Tester writes an honest, evidence-backed report to TEST_RESULTS.md: every FAIL
+   includes the literal request, the literal response, and what the catalog says
+   should have happened instead.
+5. If any defect is found: developer fixes it, tester re-runs the SAME scope from
+   step 3 (not just the fixed row — regressions elsewhere are common).
+6. Loop 3-5 until the tester reports zero defects for that change's full scope.
+```
+
+This loop does not end until every row in `TEST_SCENARIOS.md` that the current work touches is a confirmed PASS — not "probably fine," not "should work now." **Mobile/Appium scenarios are explicitly excluded from this loop for the current phase** (see §4 Known Gaps) — the tester skips them rather than reporting them blocked or failing.
+
+**Ground truth for both roles in this loop:**
+- [TEST_SCENARIOS.md](TEST_SCENARIOS.md) — the scenario catalog; every row is a contract.
+- [FUTURE_ARCHITECTURE.md](FUTURE_ARCHITECTURE.md) §A0.5–A0.7 — 20 confirmed defects from doubt-driven review (security, data-integrity, UI, and reporting bugs — mobile-specific ones excluded per the above). Any change touching these areas must have its specific defect re-verified as fixed, not assumed fixed because the diff looks right.
+
 ---
 
 ## 4. Current State Checklist

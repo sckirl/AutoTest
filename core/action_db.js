@@ -15,14 +15,28 @@ function extractVariables(text) {
 function parseCodeToSteps(code) {
     const steps = [];
     if (!code || typeof code !== 'string') return steps;
+    // A0.5.3 follow-up: server.js's /save-mapping rejects setInputFiles via its own parser
+    // (parseRecordedCode) — this one, used by the Action Library's free-text code field, didn't.
+    // Case-insensitive: a human typing this by hand isn't guaranteed to get the casing a real
+    // Playwright method needs at runtime right, and a mistyped step must fail loudly, not
+    // silently do nothing. Checked before the try/catch below so it can't be swallowed by that
+    // catch's syntax-error fallback.
+    if (/\.setInputFiles\s*\(/i.test(code)) {
+        throw new Error("File upload (setInputFiles) isn't supported yet. Use Manual entry for a non-upload step, or contact support.");
+    }
     try {
         const ast = acorn.parse(code, { ecmaVersion: 2020, allowAwaitOutsideFunction: true, sourceType: 'module' });
         walk.simple(ast, {
             CallExpression(node) {
                 if (node.callee && node.callee.type === 'MemberExpression') {
                     if (node.callee.object && node.callee.object.type === 'ConditionalExpression') return;
+                    const method = (!node.callee.computed && node.callee.property.type === 'Identifier')
+                        ? node.callee.property.name
+                        : (node.callee.property.type === 'Literal' ? String(node.callee.property.value) : '');
+                    if (method && method.toLowerCase() === 'setinputfiles') {
+                        throw new Error("File upload (setInputFiles) isn't supported yet. Use Manual entry for a non-upload step, or contact support.");
+                    }
                     let targetRaw = code.substring(node.callee.object.start, node.callee.object.end).replace(/^page\./, '');
-                    const method = node.callee.property.name;
                     if (['click', 'fill', 'press', 'goto', 'selectOption', 'check', 'uncheck', 'toBeVisible', 'toHaveText'].includes(method)) {
                         let target = null;
                         if (method === 'goto' && node.arguments.length > 0) {
@@ -48,6 +62,7 @@ function parseCodeToSteps(code) {
             }
         });
     } catch (e) {
+        if (e.message && e.message.includes('setInputFiles')) throw e;
         // Fallback for simple goto
         if (code.includes('page.goto(')) {
             const m = code.match(/page\.goto\(['"]([^'"]+)['"]\)/);
@@ -58,6 +73,7 @@ function parseCodeToSteps(code) {
 }
 
 const ActionDB = {
+    extractVariables, // shared with server.js's /scan, was reimplemented there inline
     init() {
         if (!fs.existsSync(DB_PATH)) {
             const initial = { version: 1, actions: [], groups: [] };
@@ -67,6 +83,9 @@ const ActionDB = {
         try {
             return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
         } catch (e) {
+            // A0.6.3: never destroy a corrupt file without a backup — a truncated write or a
+            // bad hand-edit is exactly the "recover by hand" scenario this app must not foreclose.
+            try { fs.copyFileSync(DB_PATH, `${DB_PATH}.corrupt-${Date.now()}`); } catch (e2) {}
             const initial = { version: 1, actions: [], groups: [] };
             fs.writeFileSync(DB_PATH, JSON.stringify(initial, null, 2));
             return initial;
