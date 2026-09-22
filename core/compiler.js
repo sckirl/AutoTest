@@ -77,6 +77,8 @@ function compile() {
         // has no runner to interpret it and made every mobile /run fail with 0 tests found).
         code += `const { remote } = require('webdriverio');\nconst path = require('path');\nconst fs = require('fs');\n\n`;
         code += `(async () => {\n`;
+        code += `  let __failures = 0;\n`; // A0.7.2 FIX: see below — turns a swallowed per-scenario
+        // error into a process exit code /run-status already knows how to read.
         code += `  const driver = await remote({ capabilities: { platformName: 'Android', 'appium:automationName': 'UiAutomator2' } });\n`;
         code += `  try {\n`;
     } else {
@@ -180,13 +182,16 @@ function compile() {
                 }
             }
             if (isMobile) {
-                code += `    }\n  } catch (e) { console.error('Scenario ${scenario.Scenario_ID}${testSuffix} failed:', e.stack || e); }\n\n`;
+                // A0.7.2 FIX: this catch used to only console.error — the process always exited
+                // 0, so server.js's /run-status (`activeRun.error` set only `if (code !== 0)`)
+                // could never see a mobile failure. Count it and let it surface via exit code.
+                code += `    }\n  } catch (e) { __failures++; console.error('Scenario ${scenario.Scenario_ID}${testSuffix} failed:', e.stack || e); }\n\n`;
             } else {
                 code += `    }\n  });\n\n`;
             }
         }
     }
-    code += isMobile ? `  } finally {\n    await driver.deleteSession();\n  }\n})();\n` : `});\n`;
+    code += isMobile ? `  } finally {\n    await driver.deleteSession();\n    if (__failures > 0) process.exitCode = 1;\n  }\n})();\n` : `});\n`;
     fs.writeFileSync(outputPath, code);
 }
 

@@ -94,6 +94,50 @@ try {
   try { compile('mobile'); } catch (e) { threw = /Unsupported locator/.test(e.message) || /Unsupported locator/.test(String(e.stderr || '')); }
   check('Unsupported mobile locator type fails compile loudly, not silently', threw);
 
+  // A0.7.2: a mobile step that throws must fail the process, not exit 0 and report
+  // "completed" with no error. Stub webdriverio (no real Appium device in this environment)
+  // so the generated script actually runs, with driver.$().click() throwing.
+  fs.writeFileSync(blueprintPath, JSON.stringify([
+    { Scenario_ID: 'MOBILE_FAILS', Role: 'Self-check', Flow: [{ Mapping_Key: 'Tap Button', Data: {} }] }
+  ], null, 2));
+  fs.writeFileSync(mappingsPath, JSON.stringify({
+    'Tap Button': { steps: [{ type: 'click', target: "getByRole('button', { name: 'Go' })" }] }
+  }, null, 2));
+  compile('mobile');
+  // ponytail: a real webdriverio is installed (root + DRIVERS node_modules), which the normal
+  // ancestor node_modules walk finds before NODE_PATH is ever consulted — so redirecting via
+  // NODE_PATH alone can't win. Force the redirect with a resolver hook instead of touching any
+  // real dependency on disk.
+  const os = require('os');
+  const stubRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'wdio-stub-'));
+  const stubPath = path.join(stubRoot, 'stub.js');
+  fs.writeFileSync(stubPath, `
+    exports.remote = async () => ({
+      $: () => ({ click: () => { throw new Error('element not found'); }, setValue() {} }),
+      url() {}, keys() {}, pause() {}, saveScreenshot() {}, deleteSession() {}
+    });
+  `);
+  const harnessPath = path.join(stubRoot, 'harness.js');
+  fs.writeFileSync(harnessPath, `
+    const Module = require('module');
+    const orig = Module._resolveFilename;
+    Module._resolveFilename = function(request, ...args) {
+      if (request === 'webdriverio') return ${JSON.stringify(stubPath)};
+      return orig.call(this, request, ...args);
+    };
+    require(${JSON.stringify(mobileOut)});
+  `);
+  let mobileRunExitCode = null;
+  try {
+    execFileSync(process.execPath, [harnessPath], { cwd: ROOT });
+    mobileRunExitCode = 0;
+  } catch (e) {
+    mobileRunExitCode = e.status;
+  } finally {
+    fs.rmSync(stubRoot, { recursive: true, force: true });
+  }
+  check('A failing mobile step exits non-zero, not silently "completed"', mobileRunExitCode !== 0);
+
   compile('web');
   check('Web output file written', fs.existsSync(webOut));
   const webCode = fs.readFileSync(webOut, 'utf8');

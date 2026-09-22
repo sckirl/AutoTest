@@ -320,6 +320,13 @@ app.post('/record', (req, res) => {
     if (activeRun && (activeRun.phase === 'compiling' || activeRun.phase === 'running')) {
         return res.status(409).json({ error: 'A test run is in progress. Wait for it to finish before recording.' });
     }
+    // A0.7.1 FIX: this handler unconditionally spawned Playwright's Web codegen regardless
+    // of the platform toggle — selecting Mobile silently recorded a Web mapping. No Appium
+    // recording flow exists in this codebase; reject clearly instead of building one, until
+    // that's actually implemented.
+    if (req.body.platform === 'mobile') {
+        return res.status(400).json({ error: 'Mobile recording isn\'t supported yet. Use Manual entry for mobile steps, or switch to Web to record.' });
+    }
     activeCodegen = { killed: false, exitCode: null }; // sentinel: blocks any concurrent request before spawn returns
 
     const { label, url, scenarioId } = req.body;

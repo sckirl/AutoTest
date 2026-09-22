@@ -225,6 +225,11 @@ async function run() {
     }
   }
 
+  // --- A0.7.1: /record must reject mobile, never silently spawn a Web codegen ---
+  r = await req('POST', '/record', { label: 'Tap Button', scenarioId: 'A.1', url: 'http://x', platform: 'mobile' });
+  check('T37 /record with platform:mobile is rejected, not a silent Web codegen', r.status !== 200);
+  check('T37b rejection names mobile as unsupported', JSON.parse(r.body).error && /mobile/i.test(JSON.parse(r.body).error));
+
   console.log('\n=== AutoTest Studio API Test Suite v2 ===');
   log.forEach(l => console.log(l));
   console.log(`\n--- Score: ${pass}/${pass + fail} PASSED ---`);
