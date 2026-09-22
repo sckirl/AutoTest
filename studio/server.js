@@ -126,7 +126,9 @@ app.use('/results', express.static(RESULTS_DIR));
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, ROOT_DIR),
-    filename: (req, file, cb) => cb(null, 'scenario_upload_staging.xlsx')
+    // A0.8.10 FIX: a shared staging filename let two overlapping /upload requests clobber
+    // each other's workbook mid-parse. crypto.randomUUID() gives each request its own file.
+    filename: (req, file, cb) => cb(null, `scenario_upload_staging_${require('crypto').randomUUID()}.xlsx`)
 });
 const upload = multer({
     storage: storage,
@@ -202,10 +204,13 @@ app.get('/results', (req, res) => {
     }
 });
 app.post('/upload', upload.single('excel'), (req, res) => {
-    const stagedFile = path.join(ROOT_DIR, 'scenario_upload_staging.xlsx');
-    if (!fs.existsSync(stagedFile)) {
+    // A0.8.11 FIX: existsSync(stagedFile) only proved *some* file was there, including a stale
+    // one left by a process that died mid-request (never swept at startup). Trust req.file,
+    // which multer only sets when this request actually carried an upload.
+    if (!req.file) {
         return res.status(400).json({ error: "No file uploaded." });
     }
+    const stagedFile = req.file.path;
     // Regenerate blueprint.json immediately on upload so we have the steps mapping structure
     // A0.6.2 FIX: this used to respond {message:"Uploaded."} unconditionally, even when parsing
     // failed outright (bad headers) or silently no-opped (missing file, exit 0). Both are now
@@ -213,7 +218,7 @@ app.post('/upload', upload.single('excel'), (req, res) => {
     const warningsPath = path.join(CORE_DIR, 'blueprint_warnings.json');
     try { fs.unlinkSync(warningsPath); } catch (e) {}
     try {
-        execSync(`node core/scenario_parser.js scenario_upload_staging.xlsx`, { stdio: 'inherit', cwd: ROOT_DIR });
+        execSync(`node core/scenario_parser.js ${path.basename(stagedFile)}`, { stdio: 'inherit', cwd: ROOT_DIR });
         console.log("Blueprint generated successfully on upload");
         // Atomically replace active workbook and reset project state only after validation succeeds
         fs.renameSync(stagedFile, UPLOADED_EXCEL);

@@ -52,7 +52,7 @@ function compile() {
         if (textMatch) return `//*[@text=${xpathEscape(unescapeJsString(textMatch[2]))} or @content-desc=${xpathEscape(unescapeJsString(textMatch[2]))}]`;
 
         const labelMatch = pwLocator.match(/getByLabel\((['"])(.*?)\1(\s*,\s*\{[^}]*\})?\s*\)/);
-        if (labelMatch) return `//*[@text=${xpathEscape(unescapeJsString(labelMatch[2]))} or @content-desc=${xpathEscape(labelMatch[2])}]`;
+        if (labelMatch) return `//*[@text=${xpathEscape(unescapeJsString(labelMatch[2]))} or @content-desc=${xpathEscape(unescapeJsString(labelMatch[2]))}]`;
 
         // Only a genuinely bare/non-getBy* target falls back to using the typed value as the
         // accessible name — a recognized-but-untranslated getBy*() call must throw below, not
