@@ -925,6 +925,12 @@ app.post('/run-cancel', (req, res) => {
 
 // A1.2: default to an OS-assigned free port so two instances (or anything else on 3000) don't
 // collide; PORT stays honored for the existing test harness and manual overrides.
+// doubt-review-found: a non-numeric PORT ("abc") isn't a valid port to Node's listen() — it's
+// silently treated as a Unix socket *path*, creating a stray file instead of erroring.
+if (process.env.PORT && !/^\d+$/.test(process.env.PORT)) {
+    console.error(`Invalid PORT "${process.env.PORT}" — must be numeric.`);
+    process.exit(1);
+}
 // blackbox-found: listen() can still invoke its callback after a bind failure (server.address()
 // null), turning EADDRINUSE into an opaque TypeError. Split listening/error so a taken PORT fails
 // with a clear message instead.

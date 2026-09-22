@@ -4,6 +4,7 @@
 // ponytail: A1.1's full STATE_DIR/DATA_DIR/RESULTS_DIR relocation (A-1/A-2/A-3/A-4/A-6) has no
 // consumer yet (no Electron shell / A2 exists in this repo) — deferred until A2 lands, add then.
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const { resolveDriversRoot } = require('../core/helpers');
@@ -31,7 +32,7 @@ async function testDynamicPort() {
     server.stdout.on('data', d => out += d);
     try {
         const port = await new Promise((resolve, reject) => {
-            const timer = setTimeout(() => reject(new Error('FAIL: no STUDIO_PORT= line within 10s')), 10000);
+            const timer = setTimeout(() => { clearInterval(check); reject(new Error('FAIL: no STUDIO_PORT= line within 10s')); }, 10000);
             const check = setInterval(() => {
                 const m = /STUDIO_PORT=(\d+)/.exec(out);
                 if (m) { clearInterval(check); clearTimeout(timer); resolve(Number(m[1])); }
@@ -81,10 +82,26 @@ async function testPortCollision() {
     }
 }
 
+// doubt-review-found: a non-numeric PORT must be rejected, not silently become a Unix socket path
+async function testInvalidPort() {
+    const child = spawn('node', ['studio/server.js'], {
+        cwd: path.join(__dirname, '..'),
+        env: { ...process.env, PORT: 'abc' },
+        stdio: ['ignore', 'ignore', 'pipe'],
+    });
+    let stderr = '';
+    child.stderr.on('data', d => stderr += d);
+    const code = await new Promise(resolve => child.on('exit', resolve));
+    assert.notStrictEqual(code, 0, 'FAIL: non-numeric PORT should exit non-zero');
+    assert.ok(/Invalid PORT/.test(stderr), `FAIL: expected a clear "Invalid PORT" message, got: ${stderr}`);
+    assert.ok(!fs.existsSync(path.join(__dirname, '..', 'abc')), 'FAIL: must not create a stray socket file named after the bad PORT value');
+}
+
 Promise.resolve()
     .then(testDynamicPort)
     .then(testPortCollision)
-    .then(() => console.log('PASS: state_dir_test — DRIVERS_ROOT + dynamic port + clean EADDRINUSE'))
+    .then(testInvalidPort)
+    .then(() => console.log('PASS: state_dir_test — DRIVERS_ROOT + dynamic port + clean EADDRINUSE + invalid PORT guard'))
     .catch(e => {
         console.error(e.message);
         process.exit(1);
