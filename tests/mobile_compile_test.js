@@ -98,21 +98,36 @@ try {
   fs.writeFileSync(blueprintPath, JSON.stringify([
     {
       Scenario_ID: 'MOBILE_ADVANCED', Role: 'Self-check', Flow: [
+        { Mapping_Key: 'Nav Step', Data: {} },
         { Mapping_Key: 'Submit Step', Data: {} },
         { Mapping_Key: 'Verify Step', Data: {} }
       ]
     }
   ], null, 2));
   fs.writeFileSync(mappingsPath, JSON.stringify({
+    'Nav Step': { steps: [{ type: 'goto', target: 'https://example.com/login' }] },
     'Submit Step': { steps: [{ type: 'click', target: "getByRole('button', { name: 'Submit', exact: true })" }] },
     'Verify Step': { steps: [{ type: 'toBeVisible', target: "getByText('Welcome', { exact: true })" }] }
   }, null, 2));
   compile('mobile');
   const advCode = fs.readFileSync(mobileOut, 'utf8');
+  check('goto navigation step on mobile compiles without throwing', advCode.includes('driver.url("https://example.com/login")'));
   check('getByRole with options compiles to XPath without throwing', advCode.includes('text=\\"Submit\\"'));
   check('toBeVisible on mobile emits isDisplayed check', advCode.includes('.isDisplayed()'));
   execFileSync(process.execPath, ['--check', mobileOut]);
   check('Advanced mobile output is syntactically valid JS', true);
+
+  // Escaped quote in JS literal (e.g. Say \"Hi\") must not leak backslash into XPath
+  fs.writeFileSync(blueprintPath, JSON.stringify([
+    { Scenario_ID: 'MOBILE_ESCAPED_QUOTE', Role: 'Self-check', Flow: [{ Mapping_Key: 'Escaped Quote Step', Data: {} }] }
+  ], null, 2));
+  fs.writeFileSync(mappingsPath, JSON.stringify({
+    'Escaped Quote Step': { steps: [{ type: 'click', target: 'getByText("Say \\"Hi\\" to Bob")' }] }
+  }, null, 2));
+  compile('mobile');
+  const escCode = fs.readFileSync(mobileOut, 'utf8');
+  check('Escaped quote in JS literal does not leak backslash into XPath', !escCode.includes('\\\\"Hi'));
+  execFileSync(process.execPath, ['--check', mobileOut]);
 
   // A0.7.2: a mobile step that throws must fail the process, not exit 0 and report
   // "completed" with no error. Stub webdriverio (no real Appium device in this environment)

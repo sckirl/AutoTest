@@ -34,26 +34,31 @@ function compile() {
         return `concat(${v.split('"').map(p => `"${p}"`).join(", '\"', ")})`;
     }
 
+    function unescapeJsString(s) {
+        return s.replace(/\\(['"\\])/g, '$1');
+    }
+
     function translateToMobileLocator(pwLocator, finalValue) {
         if (!pwLocator) return "";
         if (pwLocator.startsWith('/') || pwLocator.startsWith('#') || pwLocator.startsWith('.')) return pwLocator;
 
         // A0.7.6 & A0.8.6: match accessible name and allow options objects like { exact: true }
         // The backreference (\1) ensures the closing quote matches the opening quote character.
+        // unescapeJsString ensures backslashes from escaped quotes in JS string literals don't leak into XPath.
         const roleMatch = pwLocator.match(/getByRole\(['"][^'"]*['"],\s*\{[^}]*\bname:\s*(['"])(.*?)\1[^}]*\}\)/);
-        if (roleMatch) return `//*[@text=${xpathEscape(roleMatch[2])} or @content-desc=${xpathEscape(roleMatch[2])}]`;
+        if (roleMatch) return `//*[@text=${xpathEscape(unescapeJsString(roleMatch[2]))} or @content-desc=${xpathEscape(unescapeJsString(roleMatch[2]))}]`;
 
         const textMatch = pwLocator.match(/getByText\((['"])(.*?)\1(\s*,\s*\{[^}]*\})?\s*\)/);
-        if (textMatch) return `//*[@text=${xpathEscape(textMatch[2])} or @content-desc=${xpathEscape(textMatch[2])}]`;
+        if (textMatch) return `//*[@text=${xpathEscape(unescapeJsString(textMatch[2]))} or @content-desc=${xpathEscape(unescapeJsString(textMatch[2]))}]`;
 
         const labelMatch = pwLocator.match(/getByLabel\((['"])(.*?)\1(\s*,\s*\{[^}]*\})?\s*\)/);
-        if (labelMatch) return `//*[@text=${xpathEscape(labelMatch[2])} or @content-desc=${xpathEscape(labelMatch[2])}]`;
+        if (labelMatch) return `//*[@text=${xpathEscape(unescapeJsString(labelMatch[2]))} or @content-desc=${xpathEscape(labelMatch[2])}]`;
 
         // Only a genuinely bare/non-getBy* target falls back to using the typed value as the
         // accessible name — a recognized-but-untranslated getBy*() call must throw below, not
         // silently reuse whatever value happened to be typed as a bogus locator guess.
         if (!/^getBy\w+\(/.test(pwLocator) && finalValue && !finalValue.includes('{')) {
-            return `//*[@text=${xpathEscape(finalValue)} or @content-desc=${xpathEscape(finalValue)}]`;
+            return `//*[@text=${xpathEscape(unescapeJsString(finalValue))} or @content-desc=${xpathEscape(unescapeJsString(finalValue))}]`;
         }
         // A0.7.6: an unsupported locator type (getByPlaceholder, getByTestId, raw CSS, ...) used
         // to fall through here unchanged and get handed to driver.$() as invalid Playwright-syntax
@@ -124,21 +129,24 @@ function compile() {
                         const finalValue = interpolate(action.value, iterData, step.Data);
                         
                         if (isMobile) {
-                            const mobileTarget = translateToMobileLocator(finalTarget, finalValue);
-                            const loc = `driver.$(${q(mobileTarget)})`;
+                            if (action.type === 'goto') {
+                                code += `        await driver.url(${q(finalTarget)});\n`;
+                            } else {
+                                const mobileTarget = translateToMobileLocator(finalTarget, finalValue);
+                                const loc = `driver.$(${q(mobileTarget)})`;
 
-                            // A0.8.7: support all standard action types on mobile (assertions, check, selectOption)
-                            // rather than silently dropping them.
-                            if (action.type === 'goto') code += `        await driver.url(${q(finalTarget)});\n`;
-                            else if (action.type === 'click') code += `        await ${loc}.click();\n`;
-                            else if (action.type === 'fill') code += `        await ${loc}.setValue(${q(finalValue)});\n`;
-                            else if (action.type === 'press') code += `        await driver.keys(${q(finalValue || 'Enter')});\n`;
-                            else if (action.type === 'selectOption') code += `        await ${loc}.selectByVisibleText(${q(finalValue)});\n`;
-                            else if (action.type === 'check') code += `        { const el = await ${loc}; if (!await el.isSelected()) await el.click(); }\n`;
-                            else if (action.type === 'uncheck') code += `        { const el = await ${loc}; if (await el.isSelected()) await el.click(); }\n`;
-                            else if (action.type === 'toBeVisible') code += `        { const el = await ${loc}; if (!await el.isDisplayed()) throw new Error("Element not visible: " + ${q(mobileTarget)}); }\n`;
-                            else if (action.type === 'toHaveText') code += `        { const text = await ${loc}.getText(); if (!text.includes(${q(finalValue)})) throw new Error("Text mismatch: expected " + ${q(finalValue)} + " but got " + text); }\n`;
-                            else throw new Error(`Unsupported mobile action type: "${action.type}"`);
+                                // A0.8.7: support all standard action types on mobile (assertions, check, selectOption)
+                                // rather than silently dropping them.
+                                if (action.type === 'click') code += `        await ${loc}.click();\n`;
+                                else if (action.type === 'fill') code += `        await ${loc}.setValue(${q(finalValue)});\n`;
+                                else if (action.type === 'press') code += `        await driver.keys(${q(finalValue || 'Enter')});\n`;
+                                else if (action.type === 'selectOption') code += `        await ${loc}.selectByVisibleText(${q(finalValue)});\n`;
+                                else if (action.type === 'check') code += `        { const el = await ${loc}; if (!await el.isSelected()) await el.click(); }\n`;
+                                else if (action.type === 'uncheck') code += `        { const el = await ${loc}; if (await el.isSelected()) await el.click(); }\n`;
+                                else if (action.type === 'toBeVisible') code += `        { const el = await ${loc}; if (!await el.isDisplayed()) throw new Error("Element not visible: " + ${q(mobileTarget)}); }\n`;
+                                else if (action.type === 'toHaveText') code += `        { const text = await ${loc}.getText(); if (!text.includes(${q(finalValue)})) throw new Error("Text mismatch: expected " + ${q(finalValue)} + " but got " + text); }\n`;
+                                else throw new Error(`Unsupported mobile action type: "${action.type}"`);
+                            }
                         } else {
                             const safeTarget = isSafeChain(finalTarget);
                             const loc = safeTarget ? `page.${safeTarget}` : `page.locator(${q(finalTarget)})`;

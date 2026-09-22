@@ -46,11 +46,17 @@ async function run() {
     else { fail++; log.push('  FAIL ' + name + (detail ? ' | ' + String(detail).substring(0,120) : '')); }
   }
 
-  let r;
+  const mappingsFile = path.join(__dirname, '..', 'core', 'mappings.json');
+  const mappingsBackup = fs.existsSync(mappingsFile) ? fs.readFileSync(mappingsFile, 'utf8') : null;
+  const dbFile = path.join(__dirname, '..', 'core', 'action_database.json');
+  const dbBackup = fs.existsSync(dbFile) ? fs.readFileSync(dbFile, 'utf8') : null;
 
-  // --- Core API ---
-  r = await req('GET', '/');
-  check('T01 GET / returns UI', r.status === 200 && r.body.includes('AUTOMATION STUDIO'));
+  try {
+    let r;
+
+    // --- Core API ---
+    r = await req('GET', '/');
+    check('T01 GET / returns UI', r.status === 200 && r.body.includes('AUTOMATION STUDIO'));
 
   r = await req('GET', '/run-status');
   check('T02 GET /run-status idle', r.status === 200 && JSON.parse(r.body).phase !== undefined);
@@ -169,13 +175,19 @@ async function run() {
   check('T31 POST /restart final', r.status === 200);
 
   // --- A0.6.1: path traversal in GET /codegen-result/:sessionId ---
-  const serverJsPath = path.join(__dirname, '..', 'studio', 'server.js');
-  const serverJsBefore = fs.readFileSync(serverJsPath, 'utf8');
-  r = await req('GET', '/codegen-result/' + encodeURIComponent('../../../studio/server'));
-  check('T32 path traversal sessionId rejected 400', r.status === 400);
-  check('T32b studio/server.js untouched on disk', fs.readFileSync(serverJsPath, 'utf8') === serverJsBefore);
-  r = await req('GET', '/codegen-result/' + encodeURIComponent('..\\..\\studio\\server'));
-  check('T32c backslash traversal sessionId rejected 400', r.status === 400);
+  // Run against a throwaway probe file rather than studio/server.js so a regression can never
+  // delete the repository's real source code during npm test.
+  const probeFile = path.join(__dirname, '_probe_target.js');
+  fs.writeFileSync(probeFile, '// probe target');
+  try {
+    r = await req('GET', '/codegen-result/' + encodeURIComponent('../../../tests/_probe_target'));
+    check('T32 path traversal sessionId rejected 400', r.status === 400);
+    check('T32b probe target file untouched on disk', fs.existsSync(probeFile));
+    r = await req('GET', '/codegen-result/' + encodeURIComponent('..\\..\\tests\\_probe_target'));
+    check('T32c backslash traversal sessionId rejected 400', r.status === 400);
+  } finally {
+    try { fs.unlinkSync(probeFile); } catch (e) {}
+  }
 
   // --- A0.5.3: setInputFiles must be rejected at save time, not silently dropped ---
   r = await req('POST', '/save-mapping', { label: 'Upload File', code: "await page.getByLabel('Upload').setInputFiles('/tmp/x.pdf');" });
@@ -253,6 +265,11 @@ async function run() {
   for (const variant of ['SetInputFiles', 'setinputfiles']) {
     r = await req('POST', '/action-db/action', { name: `Upload ${variant}`, code: `await page.getByLabel('Upload').${variant}('/tmp/x.pdf');` });
     check(`T39c Action Library rejects ${variant} (case bypass)`, r.status !== 200);
+  }
+
+  } finally {
+    if (mappingsBackup !== null) fs.writeFileSync(mappingsFile, mappingsBackup);
+    if (dbBackup !== null) fs.writeFileSync(dbFile, dbBackup);
   }
 
   console.log('\n=== AutoTest Studio API Test Suite v2 ===');

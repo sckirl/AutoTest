@@ -19,9 +19,12 @@ function ping(port) {
   });
 }
 
-async function waitForServer(port, { timeoutMs = 10000, intervalMs = 200 } = {}) {
+async function waitForServer(port, { timeoutMs = 10000, intervalMs = 200, serverProcess = null } = {}) {
   const start = Date.now();
   do {
+    if (serverProcess && (serverProcess.exitCode !== null || serverProcess.killed)) {
+      throw new Error('Server process exited unexpectedly. Use: npm test');
+    }
     if (await ping(port)) return;
     await new Promise(r => setTimeout(r, intervalMs));
   } while (Date.now() - start < timeoutMs);
@@ -29,6 +32,11 @@ async function waitForServer(port, { timeoutMs = 10000, intervalMs = 200 } = {})
 }
 
 async function main() {
+  // Fail immediately if port is preoccupied so the suite never runs against a stale process
+  if (await ping(PORT)) {
+    console.error(`Port ${PORT} is already occupied by another process. Stop it before running npm test.`);
+    process.exit(1);
+  }
   const server = spawn('node', ['studio/server.js'], {
     cwd: path.join(__dirname, '..'),
     env: { ...process.env, PORT: String(PORT) },
@@ -36,7 +44,7 @@ async function main() {
   });
   let failures = 0;
   try {
-    await waitForServer(PORT);
+    await waitForServer(PORT, { serverProcess: server });
     for (const file of OFFLINE_SUITE) {
       try {
         execFileSync('node', [path.join(__dirname, file)], { stdio: 'inherit' });

@@ -126,9 +126,9 @@ app.use('/results', express.static(RESULTS_DIR));
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, ROOT_DIR),
-    filename: (req, file, cb) => cb(null, 'scenario_uploaded.xlsx')
+    filename: (req, file, cb) => cb(null, 'scenario_upload_staging.xlsx')
 });
-const upload = multer({ 
+const upload = multer({
     storage: storage,
     limits: { fileSize: 5 * 1024 * 1024 } // DEF-MED-011 FIX: 5MB strict limit
 });
@@ -202,9 +202,9 @@ app.get('/results', (req, res) => {
     }
 });
 app.post('/upload', upload.single('excel'), (req, res) => {
-    if (fs.existsSync(RUNTIME_DATA_PATH)) fs.unlinkSync(RUNTIME_DATA_PATH);
-    if (req.body.keepMappings === 'false') {
-        fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
+    const stagedFile = path.join(ROOT_DIR, 'scenario_upload_staging.xlsx');
+    if (!fs.existsSync(stagedFile)) {
+        return res.status(400).json({ error: "No file uploaded." });
     }
     // Regenerate blueprint.json immediately on upload so we have the steps mapping structure
     // A0.6.2 FIX: this used to respond {message:"Uploaded."} unconditionally, even when parsing
@@ -213,9 +213,16 @@ app.post('/upload', upload.single('excel'), (req, res) => {
     const warningsPath = path.join(CORE_DIR, 'blueprint_warnings.json');
     try { fs.unlinkSync(warningsPath); } catch (e) {}
     try {
-        execSync(`node core/scenario_parser.js scenario_uploaded.xlsx`, { stdio: 'inherit', cwd: ROOT_DIR });
+        execSync(`node core/scenario_parser.js scenario_upload_staging.xlsx`, { stdio: 'inherit', cwd: ROOT_DIR });
         console.log("Blueprint generated successfully on upload");
+        // Atomically replace active workbook and reset project state only after validation succeeds
+        fs.renameSync(stagedFile, UPLOADED_EXCEL);
+        if (fs.existsSync(RUNTIME_DATA_PATH)) fs.unlinkSync(RUNTIME_DATA_PATH);
+        if (req.body.keepMappings === 'false') {
+            fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
+        }
     } catch (e) {
+        try { fs.unlinkSync(stagedFile); } catch (e2) {}
         let reason = e.message;
         try { reason = JSON.parse(fs.readFileSync(warningsPath, 'utf8')).error || reason; } catch (e2) {}
         return res.status(400).json({ error: "Failed to parse the uploaded Excel file: " + reason });
@@ -683,7 +690,9 @@ function parseRecordedCode(code) {
 
                     // RCE payload in test uses page.getByRole("button") ? global.constructor...
                     // So we must fall back to saving target exactly as-is so it gets picked up as target
-                    const method = node.callee.property.name;
+                    const method = (!node.callee.computed && node.callee.property.type === 'Identifier')
+                        ? node.callee.property.name
+                        : (node.callee.property.type === 'Literal' ? String(node.callee.property.value) : (node.callee.property.name || ''));
                     // A0.5.3 FIX: setInputFiles isn't wired through the compiler yet — reject the
                     // mapping and name the step, rather than silently dropping it (the recorded
                     // step used to vanish with no error, and the test then "passed" attaching nothing).
@@ -914,10 +923,10 @@ app.listen(port, () => {
     const swept = [CORE_DIR, ROOT_DIR].flatMap(sweepOrphans);
     console.log(`Startup cleanup: swept ${swept.length} orphaned script(s).`);
 
-    if (!fs.existsSync(UPLOADED_EXCEL)) {
+    if (!fs.existsSync(MAPPINGS_PATH)) {
         fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
-        console.log("Startup cleanup: scenario_uploaded.xlsx not found, cleared mappings.json");
-    } else {
+    }
+    if (fs.existsSync(UPLOADED_EXCEL)) {
         // Run scenario parser to rebuild blueprint.json
         try {
             execSync(`node core/scenario_parser.js scenario_uploaded.xlsx`, { stdio: 'inherit', cwd: ROOT_DIR });

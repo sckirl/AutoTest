@@ -30,8 +30,13 @@ function parseCodeToSteps(code) {
             CallExpression(node) {
                 if (node.callee && node.callee.type === 'MemberExpression') {
                     if (node.callee.object && node.callee.object.type === 'ConditionalExpression') return;
+                    const method = (!node.callee.computed && node.callee.property.type === 'Identifier')
+                        ? node.callee.property.name
+                        : (node.callee.property.type === 'Literal' ? String(node.callee.property.value) : '');
+                    if (method && method.toLowerCase() === 'setinputfiles') {
+                        throw new Error("File upload (setInputFiles) isn't supported yet. Use Manual entry for a non-upload step, or contact support.");
+                    }
                     let targetRaw = code.substring(node.callee.object.start, node.callee.object.end).replace(/^page\./, '');
-                    const method = node.callee.property.name;
                     if (['click', 'fill', 'press', 'goto', 'selectOption', 'check', 'uncheck', 'toBeVisible', 'toHaveText'].includes(method)) {
                         let target = null;
                         if (method === 'goto' && node.arguments.length > 0) {
@@ -57,6 +62,7 @@ function parseCodeToSteps(code) {
             }
         });
     } catch (e) {
+        if (e.message && e.message.includes('setInputFiles')) throw e;
         // Fallback for simple goto
         if (code.includes('page.goto(')) {
             const m = code.match(/page\.goto\(['"]([^'"]+)['"]\)/);

@@ -75,7 +75,7 @@ function generateBlueprintFromExcel(excelPath) {
             // A0.6.4: a merged-cell gap (blank label, real data) used to vanish with no
             // signal at all — a compiled test that "passes" having never run this step.
             if (testDataRaw) {
-                warnings.push(`Row ${r + 1} in scenario "${currentScenario.Scenario_ID}": blank/missing label but Test Data ("${testDataRaw}") is present — likely a merged Excel cell. Step skipped.`);
+                warnings.push(`Row ${r + 1} in scenario "${currentScenario.Scenario_ID}": blank/missing label but Test Data is present — likely a merged Excel cell. Step skipped.`);
             }
         } else if (currentScenario && scenarioNum.match(/^\d+$/) && labelOrTitle) {
             // Step within current scenario
