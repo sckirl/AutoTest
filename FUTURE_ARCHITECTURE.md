@@ -275,6 +275,46 @@ Also confirmed separately: only `getByRole`, `getByText`, `getByLabel` are trans
 
 **Gate for A0.7:** A0.7.1 and A0.7.2 together mean the mobile path is not "untested" (AGENTS.md's framing) — it is non-functional at the recording step and unable to report its own failures at the execution step. Fixing or explicitly disabling the Mobile option in the UI is a prerequisite for claiming any mobile support in Phase A; shipping the toggle as-is actively misleads a tester into believing they've mapped and verified a mobile flow.
 
+## A0.8. Code review notes — doubt-driven cycle 5 (max effort)
+
+Cycle 5 performed a whole-tree line-by-line, removed-behavior, cross-file, and AST-level code review across the A0–A0.7 changes. Nine verified findings surfaced:
+
+### A0.8.1 (Critical) `isSafeChain` ignores call arguments, permitting arbitrary RCE via nested expressions
+[core/helpers.js:22](core/helpers.js:22) — `isSafeChain` parses `page.<target>` as an AST expression and walks only the callee/member chain (`member.object`) to verify that calls root at `page` and use methods in `SAFE_LOCATOR_METHODS`. It never inspects `CallExpression.arguments`. Confirmed by execution: `locator(global.process.mainModule.require('child_process').execSync('id').toString())` and `getByRole('button', { name: eval('...') })` return as safe targets because their callee is `page.locator` or `page.getByRole`. When compiled into `executed.spec.ts`, arbitrary shell commands execute in the test runner process. Phase C explicitly relies on `isSafeChain` as the untrusted LLM code gate (§C6) — this must be closed before Phase C.
+**Fix:** recursively inspect all arguments of each `CallExpression` in the chain: ensure arguments are strictly `Literal`, `Identifier` (for allowed variables), or safe `ObjectExpression` with `Literal` values.
+
+### A0.8.2 Sheet length check on row 0 breaks dynamic header detection
+[core/scenario_parser.js:27](core/scenario_parser.js:27) — `if (!rows.length || rows[0].length < 3)` throws `Invalid Excel structure: expected scenario matrix with at least 3 columns.` immediately before the 10-row dynamic header search loop (lines 31-43) runs. If row 0 contains a title banner or metadata cell with < 3 columns, parsing aborts on row 0 even when valid headers exist on row 2. Because `/scan` in `server.js` now delegates to `generateBlueprintFromExcel`, any template with metadata headers fails `/scan` with a 400 error.
+**Fix:** remove `rows[0].length < 3` and let the dynamic header loop validate whether required columns exist within the first 10 rows.
+
+### A0.8.3 Hardcoded `process.cwd()` in `scenario_parser.js` causes ENOENT when server is started from another directory
+[core/scenario_parser.js:117,128](core/scenario_parser.js:117) — `scenario_parser.js` writes `blueprint.json` and `blueprint_warnings.json` to `path.join(process.cwd(), 'core', ...)`. When `server.js` is started from `studio/` (`cd studio && node server.js`) or packaged in Electron where `cwd` is not project root, calling `generateBlueprintFromExcel` in `GET /scan` attempts to write to `studio/core/blueprint.json` and crashes with `ENOENT`.
+**Fix:** resolve paths using `__dirname` (`path.join(__dirname, 'blueprint.json')`), consistent with `compiler.js` and `action_db.js`.
+
+### A0.8.4 Intentionally blank Data Matrix value falls back to Excel default
+[core/helpers.js:50](core/helpers.js:50) — `interpolate()` checks `if (iterData && iterData[key] !== undefined && iterData[key] !== null && iterData[key] !== "")`. If a tester sets an empty string `""` in the Data Matrix to test negative validation (e.g. empty password), the check evaluates to false and falls through to `fallbackObj[key]`. If Excel has a default password (`"admin123"`), `"admin123"` is used instead of the empty string.
+**Fix:** check `iterData[key] !== undefined && iterData[key] !== null` without excluding `""`, respecting explicit empty overrides.
+
+### A0.8.5 `POST /run` catch block hides `scenario_parser.js` error message
+[studio/server.js:550,635](studio/server.js:550) — When `scenario_parser.js` fails during `POST /run`, it writes its error to `core/blueprint_warnings.json`. However, the `/run` catch block only attempts to read `core/compile_error.json`. As a result, `/run` responds with a generic `Command failed: node core/scenario_parser.js` error instead of the underlying parse failure reason.
+**Fix:** check `blueprint_warnings.json` for `.error` in `/run`'s catch block if `compile_error.json` is absent.
+
+### A0.8.6 Mobile locator regex rejects locators with options objects (e.g. `exact: true`)
+[core/compiler.js:299-310](core/compiler.js:299) — `translateToMobileLocator` uses strict regexes that fail to match `getByRole('button', { name: 'Submit', exact: true })` or `getByText('Submit', { exact: true })`. Because `pwLocator` starts with `getBy*`, line 323 throws `Unsupported locator for mobile: ... — re-record this step using a role/text/label-based locator`, misinforming the user that their role/text locator is unsupported.
+**Fix:** parse the AST of the locator or loosen regexes to extract `name` regardless of adjacent options in the object literal.
+
+### A0.8.7 Mobile compiler silently skips assertions and check actions
+[core/compiler.js:132-140](core/compiler.js:132) — On mobile, `compiler.js` only emits code for `goto`, `click`, `fill`, and `press`. If a mapped step contains `toBeVisible`, `toHaveText`, `check`, `uncheck`, or `selectOption`, zero statements are emitted, and the test silently passes without verifying assertions.
+**Fix:** implement Appium equivalents for assertions (`expect(driver.$(...)).toBeDisplayed()`) or throw an explicit compile error when an unsupported action type is encountered on mobile.
+
+### A0.8.8 Excel upload warnings are discarded by `studio-ui.html`
+[studio/studio-ui.html:428](studio/studio-ui.html:428) — `handleFile` receives `{ message: "Uploaded.", warnings: [...] }` from `POST /upload`, but only displays `data.message`, ignoring `data.warnings`. Duplicate Scenario_ID renames and merged-cell step omissions are never displayed on screen.
+**Fix:** display `data.warnings` in `#status-box` (e.g. as a warning banner) when warnings are present.
+
+### A0.8.9 Leaked studio server process in `tests/ui_behavior_test.js`
+[tests/ui_behavior_test.js:33-35](tests/ui_behavior_test.js:33) — `server = spawn(...)` runs outside the `try` block that cleans it up in `finally`. If `await chromium.launch()` throws (e.g. missing browser binary), the test exits without killing the child server, leaking port 3958.
+**Fix:** wrap the spawn in `try/finally` or ensure `server.kill()` is registered on process exit / uncaught error.
+
 ## A1. Make the server relocatable
 
 AGENTS.md §5 assumes wrapping the server is free. It is not — two reasons found by reading the code.
@@ -531,6 +571,7 @@ A-42 is the one that would catch accidentally depending on a developer's system 
 | A0.5 — four confirmed defects | AST `isSafeChain`, trace redaction, `setInputFiles`, `interpolate` strictness |
 | A0.6 — seven confirmed defects | upload false-success, DB corruption wipe, merged-cell drop, duplicate-ID collisions, record/run race |
 | A0.7 — nine confirmed defects | mobile Record is a no-op, mobile failures always report "completed", drop zone has no handler, silent fetch failures, XPath injection |
+| A0.8 — code review notes (max) | RCE in `isSafeChain` args, Excel row-0 length check, `process.cwd()` paths, Data Matrix blank override fallback |
 | A1 — relocatable server | A-1…A-7 (esp. the **widened** A-3) |
 | A2 — fixture app + record goldens | A-10…A-19 |
 | A3 — analyst journeys | A-20…A-27 |
