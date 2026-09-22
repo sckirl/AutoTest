@@ -34,6 +34,25 @@ const SAFE_LOCATOR_METHODS = new Set([
     'filter', 'first', 'last', 'nth', 'and', 'or'
 ]);
 
+// A0.8.1: validate call arguments recursively so nested expressions (eval, require, process.exit)
+// cannot execute inside locator calls like locator(process.exit()) or getByRole('b', { name: eval(...) }).
+function isSafeArg(node) {
+    if (!node) return false;
+    if (node.type === 'Literal') return true;
+    if (node.type === 'UnaryExpression' && (node.operator === '-' || node.operator === '+') && node.argument.type === 'Literal') return true;
+    if (node.type === 'ObjectExpression') {
+        return node.properties.every(prop =>
+            prop.type === 'Property' && prop.kind === 'init' && !prop.computed &&
+            (prop.key.type === 'Identifier' || prop.key.type === 'Literal') &&
+            isSafeArg(prop.value)
+        );
+    }
+    if (node.type === 'ArrayExpression') {
+        return node.elements.every(el => el && isSafeArg(el));
+    }
+    return false;
+}
+
 /**
  * Validates that `target` is a single, well-formed Playwright locator-chain expression
  * rooted at `page`, using only SAFE_LOCATOR_METHODS — an AST structural check, not a
@@ -51,6 +70,9 @@ function isSafeChain(target) {
     if (ast.end !== src.length) return null; // trailing junk (e.g. "; more code") = injection
     let n = ast;
     while (n.type === 'CallExpression' || n.type === 'MemberExpression') {
+        if (n.type === 'CallExpression' && !n.arguments.every(isSafeArg)) {
+            return null;
+        }
         const member = n.type === 'CallExpression' ? n.callee : n;
         if (member.type !== 'MemberExpression' || member.computed ||
             member.property.type !== 'Identifier' || !SAFE_LOCATOR_METHODS.has(member.property.name)) {
@@ -70,7 +92,9 @@ function interpolate(templateStr, iterData, fallbackObj) {
     processedStr = processedStr.replace(/['"]\{([a-zA-Z0-9_]+)\}['"]/g, '{$1}');
     processedStr = processedStr.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => {
         let val = "";
-        if (iterData && iterData[key] !== undefined && iterData[key] !== null && iterData[key] !== "") {
+        // A0.8.4: do not treat intentional blank "" in iterData as absent — an empty string
+        // override in the Data Matrix must not fall through to non-empty Excel data.
+        if (iterData && iterData[key] !== undefined && iterData[key] !== null) {
             val = iterData[key];
         } else if (fallbackObj && fallbackObj[key] !== undefined && fallbackObj[key] !== null) {
             val = fallbackObj[key];

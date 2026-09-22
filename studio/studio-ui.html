@@ -50,9 +50,10 @@
         .btn-record { background: #FFF5F4; color: var(--danger); border: 1px solid var(--danger); }
         .btn-remap { background: #FFFFFF; color: var(--primary-action); border: 1px solid var(--primary-action); }
         
-        #status-box { margin-top: 20px; padding: 16px; border-radius: 4px; font-size: 13px; display: none; font-weight: 600; }
+        #status-box { margin-top: 20px; padding: 16px; border-radius: 4px; font-size: 13px; display: none; font-weight: 600; white-space: pre-wrap; }
         .status-info { background: #F0F8FF; color: var(--primary-action); border-left: 4px solid var(--primary-action); }
         .status-success { background: #F6FFED; color: var(--primary-action); border-left: 4px solid var(--primary-action); }
+        .status-warning { background: #FFFBEB; color: #B45309; border-left: 4px solid var(--warning); }
         .status-error { background: #FFF5F4; color: var(--danger); border-left: 4px solid var(--danger); }
         
         .step-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border: 1px solid #E5E7EB; border-radius: 6px; margin-bottom: 8px; background: var(--surface); }
@@ -430,7 +431,17 @@
             try {
                 const res = await fetch('/upload', { method: 'POST', body: formData });
                 const data = await res.json().catch(() => ({}));
-                if (res.ok) { showStatus(data.message || 'Uploaded.', 'success'); await scanSteps(); switchTab('mappings'); }
+                if (res.ok) {
+                    // A0.8.8: surface duplicate-scenario, merged-cell, or other parse warnings
+                    // in #status-box rather than dropping them.
+                    if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+                        showStatus(`${data.message || 'Uploaded with warnings:'}\n• ${data.warnings.join('\n• ')}`, 'warning');
+                    } else {
+                        showStatus(data.message || 'Uploaded.', 'success');
+                    }
+                    await scanSteps();
+                    switchTab('mappings');
+                }
                 else showStatus(data.error || 'Upload failed.', 'error');
             } catch (e) {
                 showStatus('Upload failed: ' + e.message, 'error');

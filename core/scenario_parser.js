@@ -24,8 +24,8 @@ function generateBlueprintFromExcel(excelPath) {
     const warnings = [];
     const seenIds = new Set();
     let currentScenario = null;
-    if (!rows.length || rows[0].length < 3) {
-        throw new Error('Invalid Excel structure: expected scenario matrix with at least 3 columns.');
+    if (!rows.length) {
+        throw new Error('Invalid Excel structure: empty worksheet.');
     }
 
     // Dynamic Header Detection across first 10 rows
@@ -114,7 +114,9 @@ function generateBlueprintFromExcel(excelPath) {
     if (blueprint.length === 0) {
         throw new Error('No scenarios parsed from the uploaded file.');
     }
-    const outputPath = path.join(process.cwd(), 'core', 'blueprint.json');
+    // A0.8.3: write relative to __dirname so starting server.js from studio/ or packaged
+    // locations does not attempt to write to studio/core/blueprint.json and throw ENOENT.
+    const outputPath = path.join(__dirname, 'blueprint.json');
     fs.writeFileSync(outputPath, JSON.stringify(blueprint, null, 2));
     console.log(`Blueprint generated successfully at ${outputPath}`);
     for (const w of warnings) console.warn(`Warning: ${w}`);
@@ -125,7 +127,7 @@ module.exports = { generateBlueprintFromExcel };
 
 if (require.main === module) {
     const filePath = process.argv[2] || 'scenario_uploaded.xlsx';
-    const warningsPath = path.join(process.cwd(), 'core', 'blueprint_warnings.json');
+    const warningsPath = path.join(__dirname, 'blueprint_warnings.json');
     try {
         const { warnings } = generateBlueprintFromExcel(filePath);
         // A0.6.4/A0.6.5: give /upload (studio/server.js) a channel back to the tester for

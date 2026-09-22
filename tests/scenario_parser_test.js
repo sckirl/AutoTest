@@ -74,6 +74,20 @@ try {
     assert.strictEqual(blueprint[0].Flow[1].Mapping_Key, 'Click Submit', 'FAIL: the label itself must not be renamed');
     assert.ok(warnings.some(w => /repeat/i.test(w) && w.includes('Click Submit')), 'FAIL: repeated label must be warned about, not silent');
   }
+
+  // A0.8.2: Excel sheet with a 1-cell title banner on row 1 and table headers on row 2
+  // must not fail with "expected scenario matrix with at least 3 columns".
+  {
+    const p = writeSheet('banner_row0.xlsx', [
+      ['UAT Test Suite Title Banner'], // 1 column on row 0
+      HEADER,                          // headers on row 1
+      ['A.1', 'Login Flow', ''],
+      ['1', 'Enter Username', 'username=alice'],
+    ]);
+    const { blueprint } = generateBlueprintFromExcel(p);
+    assert.strictEqual(blueprint.length, 1, 'FAIL: dynamic header detection should find headers on row 1');
+    assert.strictEqual(blueprint[0].Scenario_ID, 'A.1');
+  }
   console.log('PASS: scenario_parser throws on missing file, warns on dropped rows, dedupes IDs, flags repeated labels');
 } finally {
   fs.rmSync(TMP, { recursive: true, force: true });

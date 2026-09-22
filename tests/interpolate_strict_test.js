@@ -11,7 +11,8 @@ assert.throws(() => interpolate('{nope}', {}, undefined), /nope/, 'FAIL: missing
 // still resolves normally — only a key absent from BOTH is a hard error.
 assert.strictEqual(interpolate('{username}', null, { username: 'alice' }), 'alice');
 assert.strictEqual(interpolate('{password}', { password: 'S3cr3t' }, {}), 'S3cr3t');
-assert.strictEqual(interpolate('{note}', { note: '' }, { note: 'fallback' }), 'fallback', 'FAIL: blank iterData value should still fall through to fallbackObj, not throw');
+assert.strictEqual(interpolate('{note}', { note: '' }, { note: 'fallback' }), '', 'FAIL: intentional blank iterData value must NOT fall through to fallbackObj');
+assert.strictEqual(interpolate('{note}', {}, { note: 'fallback' }), 'fallback', 'FAIL: absent iterData value should fall through to fallbackObj');
 assert.strictEqual(interpolate('no placeholders here', null, {}), 'no placeholders here');
 assert.strictEqual(interpolate('', null, {}), '');
 

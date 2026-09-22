@@ -94,6 +94,26 @@ try {
   try { compile('mobile'); } catch (e) { threw = /Unsupported locator/.test(e.message) || /Unsupported locator/.test(String(e.stderr || '')); }
   check('Unsupported mobile locator type fails compile loudly, not silently', threw);
 
+  // A0.8.6 & A0.8.7: locators with options like { exact: true }, plus assertions and checks
+  fs.writeFileSync(blueprintPath, JSON.stringify([
+    {
+      Scenario_ID: 'MOBILE_ADVANCED', Role: 'Self-check', Flow: [
+        { Mapping_Key: 'Submit Step', Data: {} },
+        { Mapping_Key: 'Verify Step', Data: {} }
+      ]
+    }
+  ], null, 2));
+  fs.writeFileSync(mappingsPath, JSON.stringify({
+    'Submit Step': { steps: [{ type: 'click', target: "getByRole('button', { name: 'Submit', exact: true })" }] },
+    'Verify Step': { steps: [{ type: 'toBeVisible', target: "getByText('Welcome', { exact: true })" }] }
+  }, null, 2));
+  compile('mobile');
+  const advCode = fs.readFileSync(mobileOut, 'utf8');
+  check('getByRole with options compiles to XPath without throwing', advCode.includes('text=\\"Submit\\"'));
+  check('toBeVisible on mobile emits isDisplayed check', advCode.includes('.isDisplayed()'));
+  execFileSync(process.execPath, ['--check', mobileOut]);
+  check('Advanced mobile output is syntactically valid JS', true);
+
   // A0.7.2: a mobile step that throws must fail the process, not exit 0 and report
   // "completed" with no error. Stub webdriverio (no real Appium device in this environment)
   // so the generated script actually runs, with driver.$().click() throwing.

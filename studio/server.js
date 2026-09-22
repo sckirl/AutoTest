@@ -549,14 +549,15 @@ app.post('/run', async (req, res) => {
         activeRun = { phase: 'compiling' };
         const numWorkers = workers || 2;
         console.log("Generating blueprint...");
+        // A0.5.4 & A0.8.5: clear stale errors from prior runs before executing child scripts
+        const compileErrorPath = path.join(CORE_DIR, 'compile_error.json');
+        const warningsPath = path.join(CORE_DIR, 'blueprint_warnings.json');
+        try { fs.unlinkSync(compileErrorPath); } catch (e) {}
+        try { fs.unlinkSync(warningsPath); } catch (e) {}
         // DEF-CRIT-006 FIX: explicit cwd so paths resolve from project root, not studio/
         execSync(`node core/scenario_parser.js ${UPLOADED_EXCEL}`, { stdio: 'inherit', cwd: ROOT_DIR });
 
         console.log("Compiling scenarios into explicit code...");
-        // A0.5.4 follow-up: clear any stale error from a previous failed compile first, so a
-        // DIFFERENT failure below (or none) can't be misattributed to an old leftover message.
-        const compileErrorPath = path.join(CORE_DIR, 'compile_error.json');
-        try { fs.unlinkSync(compileErrorPath); } catch (e) {}
         execSync(`node core/compiler.js`, { stdio: 'inherit', cwd: ROOT_DIR });
 
         console.log(`Launching Playwright with ${numWorkers} workers...`);
@@ -633,10 +634,18 @@ app.post('/run', async (req, res) => {
     } catch (err) {
         console.error("Run Error:", err);
         activeRun = null;
-        // A0.5.4 follow-up: execSync's error only ever says "Command failed: ..." — read back
-        // the compiler's real reason (e.g. an unresolved {key}) when it wrote one.
+        // A0.5.4 & A0.8.5: execSync's error only ever says "Command failed: ..." — read back
+        // the compiler's or scenario_parser's real reason when either wrote one.
         let reason = err.message;
-        try { reason = JSON.parse(fs.readFileSync(path.join(CORE_DIR, 'compile_error.json'), 'utf8')).error || reason; } catch (e) {}
+        try {
+            const compileErr = path.join(CORE_DIR, 'compile_error.json');
+            const warningsErr = path.join(CORE_DIR, 'blueprint_warnings.json');
+            if (fs.existsSync(compileErr)) {
+                reason = JSON.parse(fs.readFileSync(compileErr, 'utf8')).error || reason;
+            } else if (fs.existsSync(warningsErr)) {
+                reason = JSON.parse(fs.readFileSync(warningsErr, 'utf8')).error || reason;
+            }
+        } catch (e) {}
         res.status(500).json({ error: reason });
     }
 });

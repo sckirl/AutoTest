@@ -31,8 +31,10 @@ function check(name, cond) {
 
 async function main() {
   const server = spawn('node', ['studio/server.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT) }, stdio: ['ignore', 'ignore', 'inherit'] });
-  const browser = await chromium.launch();
+  let browser = null;
   try {
+    // A0.8.9: browser launch inside try/finally so server is killed even if launch throws
+    browser = await chromium.launch();
     await waitForServer();
     const page = await browser.newPage();
     page.on('dialog', d => d.accept()); // handleFile's confirm()
@@ -116,7 +118,7 @@ async function main() {
     check('T-UI9 error banner renders markup as literal text, not an injected element', banner.hasImgTag === false && banner.text.includes('<img'));
 
   } finally {
-    await browser.close();
+    if (browser) await browser.close().catch(() => {});
     server.kill('SIGKILL');
   }
 

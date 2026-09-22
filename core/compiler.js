@@ -38,17 +38,15 @@ function compile() {
         if (!pwLocator) return "";
         if (pwLocator.startsWith('/') || pwLocator.startsWith('#') || pwLocator.startsWith('.')) return pwLocator;
 
-        // A0.7.6: the role/text/label regexes below use a backreference (\2 / \1) so the
-        // closing quote must match whichever quote character opened the name — otherwise an
-        // embedded quote of the OTHER type (e.g. Delete "All" Records) truncates the match
-        // before it even reaches xpathEscape, which is exactly the confirmed bypass.
-        const roleMatch = pwLocator.match(/getByRole\(['"](.*?)['"],\s*\{\s*name:\s*(['"])(.*?)\2\s*\}\)/);
-        if (roleMatch) return `//*[@text=${xpathEscape(roleMatch[3])} or @content-desc=${xpathEscape(roleMatch[3])}]`;
+        // A0.7.6 & A0.8.6: match accessible name and allow options objects like { exact: true }
+        // The backreference (\1) ensures the closing quote matches the opening quote character.
+        const roleMatch = pwLocator.match(/getByRole\(['"][^'"]*['"],\s*\{[^}]*\bname:\s*(['"])(.*?)\1[^}]*\}\)/);
+        if (roleMatch) return `//*[@text=${xpathEscape(roleMatch[2])} or @content-desc=${xpathEscape(roleMatch[2])}]`;
 
-        const textMatch = pwLocator.match(/getByText\((['"])(.*?)\1\)/);
+        const textMatch = pwLocator.match(/getByText\((['"])(.*?)\1(\s*,\s*\{[^}]*\})?\s*\)/);
         if (textMatch) return `//*[@text=${xpathEscape(textMatch[2])} or @content-desc=${xpathEscape(textMatch[2])}]`;
 
-        const labelMatch = pwLocator.match(/getByLabel\((['"])(.*?)\1\)/);
+        const labelMatch = pwLocator.match(/getByLabel\((['"])(.*?)\1(\s*,\s*\{[^}]*\})?\s*\)/);
         if (labelMatch) return `//*[@text=${xpathEscape(labelMatch[2])} or @content-desc=${xpathEscape(labelMatch[2])}]`;
 
         // Only a genuinely bare/non-getBy* target falls back to using the typed value as the
@@ -128,11 +126,19 @@ function compile() {
                         if (isMobile) {
                             const mobileTarget = translateToMobileLocator(finalTarget, finalValue);
                             const loc = `driver.$(${q(mobileTarget)})`;
-                            
+
+                            // A0.8.7: support all standard action types on mobile (assertions, check, selectOption)
+                            // rather than silently dropping them.
                             if (action.type === 'goto') code += `        await driver.url(${q(finalTarget)});\n`;
                             else if (action.type === 'click') code += `        await ${loc}.click();\n`;
                             else if (action.type === 'fill') code += `        await ${loc}.setValue(${q(finalValue)});\n`;
                             else if (action.type === 'press') code += `        await driver.keys(${q(finalValue || 'Enter')});\n`;
+                            else if (action.type === 'selectOption') code += `        await ${loc}.selectByVisibleText(${q(finalValue)});\n`;
+                            else if (action.type === 'check') code += `        { const el = await ${loc}; if (!await el.isSelected()) await el.click(); }\n`;
+                            else if (action.type === 'uncheck') code += `        { const el = await ${loc}; if (await el.isSelected()) await el.click(); }\n`;
+                            else if (action.type === 'toBeVisible') code += `        { const el = await ${loc}; if (!await el.isDisplayed()) throw new Error("Element not visible: " + ${q(mobileTarget)}); }\n`;
+                            else if (action.type === 'toHaveText') code += `        { const text = await ${loc}.getText(); if (!text.includes(${q(finalValue)})) throw new Error("Text mismatch: expected " + ${q(finalValue)} + " but got " + text); }\n`;
+                            else throw new Error(`Unsupported mobile action type: "${action.type}"`);
                         } else {
                             const safeTarget = isSafeChain(finalTarget);
                             const loc = safeTarget ? `page.${safeTarget}` : `page.locator(${q(finalTarget)})`;
