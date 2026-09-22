@@ -230,6 +230,13 @@ async function run() {
   check('T37 /record with platform:mobile is rejected, not a silent Web codegen', r.status !== 200);
   check('T37b rejection names mobile as unsupported', JSON.parse(r.body).error && /mobile/i.test(JSON.parse(r.body).error));
 
+  // --- A0.7.1 follow-up (blackbox pass): case/whitespace variants must not bypass the guard ---
+  for (const variant of ['Mobile', 'MOBILE', 'mobile ', ' Mobile']) {
+    r = await req('POST', '/record', { label: 'Tap Button', scenarioId: 'A.1', url: 'http://x', platform: variant });
+    check(`T38 /record rejects platform:${JSON.stringify(variant)} (case/whitespace bypass)`, r.status !== 200);
+    await req('POST', '/record-cancel'); // a bypass would have spawned a real codegen session
+  }
+
   console.log('\n=== AutoTest Studio API Test Suite v2 ===');
   log.forEach(l => console.log(l));
   console.log(`\n--- Score: ${pass}/${pass + fail} PASSED ---`);

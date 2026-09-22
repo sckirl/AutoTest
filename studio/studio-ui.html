@@ -226,6 +226,11 @@
                 <button class="tab tab-execution" onclick="switchTab('execution')" id="tab-execution">Execution</button>
             </div>
 
+            <!-- A0.7.4/A0.7.5 follow-up (blackbox pass): this lived inside #view-execution, so
+                 .view-pane's display:none hid it on every other tab — an upload failure on
+                 Studio or a save failure on Data Matrix rendered invisibly. Shared across tabs. -->
+            <div id="status-box"></div>
+
             <div id="view-studio" class="view-pane active">
                 <div id="drop-zone" class="drop-zone" title="Drag and drop your Scenario Excel here to begin parsing">Click or Drop Scenario Excel (.xlsx)</div>
                 <input type="file" id="file-input" style="display:none" accept=".xlsx" />
@@ -300,8 +305,7 @@
                     </label>
                     <span style="font-size:11px; color:var(--muted-text);">Uncheck = headed (browser visible for monitoring)</span>
                 </div>
-                
-                <div id="status-box"></div>
+
                 <div id="results-dashboard" style="margin-top:20px; display:none;">
                     <h3>Execution Results</h3>
                     <div id="results-list"></div>

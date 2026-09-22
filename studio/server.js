@@ -19,7 +19,7 @@ const XLSX = require('xlsx');
 const multer = require('multer');
 
 // ponytail: shared helpers module
-const { isSafeChain, interpolate, q, tokenizeLiterals, sweepOrphans, safeSessionId } = require('../core/helpers');
+const { isSafeChain, interpolate, q, tokenizeLiterals, sweepOrphans, safeSessionId, normalizePlatform } = require('../core/helpers');
 const ActionDB = require('../core/action_db');
 const { generateBlueprintFromExcel } = require('../core/scenario_parser');
 
@@ -324,7 +324,7 @@ app.post('/record', (req, res) => {
     // of the platform toggle — selecting Mobile silently recorded a Web mapping. No Appium
     // recording flow exists in this codebase; reject clearly instead of building one, until
     // that's actually implemented.
-    if (req.body.platform === 'mobile') {
+    if (normalizePlatform(req.body.platform) === 'mobile') {
         return res.status(400).json({ error: 'Mobile recording isn\'t supported yet. Use Manual entry for mobile steps, or switch to Web to record.' });
     }
     activeCodegen = { killed: false, exitCode: null }; // sentinel: blocks any concurrent request before spawn returns
@@ -522,7 +522,11 @@ app.post('/save-mapping', (req, res) => {
 // ... existing code ...
 
 app.post('/run', async (req, res) => {
-    const { workers, headless, platform } = req.body;
+    const { workers, headless } = req.body;
+    // A0.7.1 follow-up: 'Mobile'/'MOBILE'/'mobile ' bypassed a strict === 'mobile' check here
+    // too — normalize once, at the top, so every use below (env, activePlatform, the mobile
+    // dependency check) sees the same canonical value.
+    const platform = req.body.platform ? normalizePlatform(req.body.platform) : req.body.platform;
 
     if (platform === 'mobile') {
         try { require.resolve('webdriverio'); } catch (e) {

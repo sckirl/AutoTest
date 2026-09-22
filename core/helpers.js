@@ -113,6 +113,15 @@ function safeSessionId(id) {
 }
 
 /**
+ * A0.7.1 follow-up (blackbox pass): 'Mobile'/'MOBILE'/'mobile ' all bypassed a strict
+ * `platform === 'mobile'` check in both /record and /run, each fixed inline and each with
+ * the same gap. Normalize once, use everywhere platform is compared.
+ */
+function normalizePlatform(p) {
+    return String(p || '').trim().toLowerCase();
+}
+
+/**
  * A0.5.2: true if any key in `obj` looks like a credential. Confirmed by running it that
  * Playwright's tracing.start() has no way to redact a specific fill()/selectOption() value —
  * even {screenshots:false, snapshots:false, sources:false} and tracing.stopChunk({mode:'discard'})
@@ -130,5 +139,6 @@ module.exports = {
     sweepOrphans,
     safeSessionId,
     hasSensitiveKey,
+    normalizePlatform,
     q
 };

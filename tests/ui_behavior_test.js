@@ -61,9 +61,13 @@ async function main() {
     await page.waitForFunction(() => document.getElementById('status-box').style.display === 'block');
     const uploadStatus = await page.evaluate(() => ({
       text: document.getElementById('status-box').innerText,
-      cls: document.getElementById('status-box').className
+      cls: document.getElementById('status-box').className,
+      // style.display === 'block' only checks the element's OWN inline style — a parent tab
+      // pane with display:none (the actual A0.7.4/5 follow-up bug) still hides it on screen.
+      actuallyVisible: document.getElementById('status-box').offsetParent !== null
     }));
     check('T-UI4 failed upload renders an error status, not silence', uploadStatus.cls === 'status-error' && /disk full/.test(uploadStatus.text));
+    check('T-UI4b the status is actually on-screen, not hidden by a parent tab pane', uploadStatus.actuallyVisible === true);
     await page.unroute('**/upload');
 
     // --- A0.7.5: Execute must not proceed on a Data Matrix save that failed ---
@@ -75,8 +79,12 @@ async function main() {
     await page.evaluate(() => document.getElementById('run-btn').onclick());
     await page.waitForFunction(() => document.getElementById('run-btn').disabled === false);
     check('T-UI5 a failed Data Matrix save blocks Execute (never calls /run)', runWasCalled === false);
-    const saveFailStatus = await page.evaluate(() => document.getElementById('status-box').className);
-    check('T-UI6 the blocked run surfaces an error status', saveFailStatus === 'status-error');
+    const saveFailStatus = await page.evaluate(() => ({
+      cls: document.getElementById('status-box').className,
+      actuallyVisible: document.getElementById('status-box').offsetParent !== null
+    }));
+    check('T-UI6 the blocked run surfaces an error status', saveFailStatus.cls === 'status-error');
+    check('T-UI6b that status is actually on-screen regardless of which tab is active', saveFailStatus.actuallyVisible === true);
     await page.unroute('**/data-matrix');
     await page.unroute('**/run');
 
