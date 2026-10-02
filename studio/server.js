@@ -1,6 +1,19 @@
 // High-Security Banking Compliance: Strict DRIVERS/ Resolution
 const fs = require('fs');
 const path = require('path');
+// Phase C: load local .env once at boot (real secrets stay local, never committed).
+// userData under Electron (writable), project root otherwise. Never throws.
+for (const p of [path.join(process.env.AUTOTEST_STATE_DIR || '', '.env'), path.join(__dirname, '../.env')]) {
+    try {
+        if (!p.startsWith('/') && !/^[A-Za-z]:\\/.test(p)) continue;
+        const raw = fs.readFileSync(p, 'utf8');
+        for (const line of raw.split('\n')) {
+            const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line);
+            if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^['"]|['"]$/g, '');
+        }
+        break;
+    } catch (e) { /* missing .env: LLM stays disabled */ }
+}
 // A1.3: resourcesPath-aware so this still resolves once Electron packages DRIVERS/ unpacked.
 const { resolveDriversRoot } = require('../core/helpers');
 const DRIVERS_ROOT = resolveDriversRoot(__dirname);
