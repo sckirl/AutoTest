@@ -1,0 +1,26 @@
+# A6 — runs the offline suite on every push/PR. Everything it needs is in-repo: the fixture
+# app replaces any live site (A4.1), so this needs no secrets, no network, and no demo server.
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      # Application packages come from the repository root node_modules; Playwright browser
+      # binaries are downloaded separately into the ignored DRIVERS/ms-playwright folder.
+      - run: npx playwright install --with-deps chromium
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/DRIVERS/ms-playwright
+      # Electron + headed codegen need a display; the rest of the suite is headless.
+      - run: xvfb-run -a npm test
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/DRIVERS/ms-playwright

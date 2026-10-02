@@ -116,7 +116,11 @@ function generateBlueprintFromExcel(excelPath) {
     }
     // A0.8.3: write relative to __dirname so starting server.js from studio/ or packaged
     // locations does not attempt to write to studio/core/blueprint.json and throw ENOENT.
-    const outputPath = path.join(__dirname, 'blueprint.json');
+    // A1.1: this file always runs as a separate `node core/scenario_parser.js` process
+    // (server.js's execSync), so __dirname is always inside the app dir — AUTOTEST_STATE_DIR
+    // is the only way a packaged (read-only) app can redirect this write.
+    const STATE_DIR = process.env.AUTOTEST_STATE_DIR || __dirname;
+    const outputPath = path.join(STATE_DIR, 'blueprint.json');
     fs.writeFileSync(outputPath, JSON.stringify(blueprint, null, 2));
     console.log(`Blueprint generated successfully at ${outputPath}`);
     for (const w of warnings) console.warn(`Warning: ${w}`);
@@ -127,7 +131,7 @@ module.exports = { generateBlueprintFromExcel };
 
 if (require.main === module) {
     const filePath = process.argv[2] || 'scenario_uploaded.xlsx';
-    const warningsPath = path.join(__dirname, 'blueprint_warnings.json');
+    const warningsPath = path.join(process.env.AUTOTEST_STATE_DIR || __dirname, 'blueprint_warnings.json');
     try {
         const { warnings } = generateBlueprintFromExcel(filePath);
         // A0.6.4/A0.6.5: give /upload (studio/server.js) a channel back to the tester for

@@ -530,12 +530,22 @@ A-13 is deliberate: today's parser whitelist (`server.js:665`) has no `setInputF
 | A-23 | Data Matrix: 3 iterations → 3 result folders, correct naming |
 | A-24 | Wizard: multi-page flow keeps session state |
 | A-25 | Slow page: no blank screenshots (AGENTS.md rule 4) |
-| A-26 | Step with empty Test Data is skipped, not run blank (rule 14) — **see warning below** |
+| A-26 | ~~Step with empty Test Data is skipped~~ — **withdrawn, see below** |
 | A-27 | Mid-flow re-map: replay to step N, pause, resume |
 
-> **A-26 is not a regression test — it is unbuilt scope.** AGENTS.md §4 rule 14 asserts "steps with empty test data are skipped rather than executed with blank values." Verified: `grep -c skip core/compiler.js` → **0**. There is no per-step skip logic anywhere in the compile path. `interpolate()` (`helpers.js:24`) returns `""` and never signals "skip"; the only existing default is the *iteration*-level fallback at `compiler.js:69-71`, which is a different rule entirely.
+> **A-26 is withdrawn: the rule it tested was self-contradictory.** AGENTS.md rule 14 asserted "steps with empty test data are skipped rather than executed with blank values." Verified: `grep -c skip core/compiler.js` → **0**. No per-step skip logic has ever existed.
 >
-> So AGENTS.md rule 14 is **already violated today**. Writing A-26 honestly means it fails on day one and the compiler change becomes real Phase A work (tracked here, and coupled to A0.5.4 — both concern what `interpolate()` does with absent data). Writing A-26 to match current behavior would silently launder a documented rule violation into a green test, which is the exact failure this review exists to catch.
+> But building it would have been wrong, not just late. Rule 14 conflicts head-on with **A0.8.4**, which establishes that an explicit `""` in the Data Matrix is an *intentional negative-validation override* (testing an empty-password rejection, say) and must be passed through verbatim rather than falling back to the Excel default. A step whose data is "empty" and a step whose data is *deliberately blank* are the same input; a skip rule cannot distinguish them. Implementing A-26 as written would silently delete the negative-path test case A0.8.4 exists to protect, and would fail `tests/interpolate_strict_test.js` today.
+>
+> Confirmed by probing `interpolate()` directly — only three states exist, and each is already correct and already covered:
+>
+> | Input | Behavior | Covered by |
+> |---|---|---|
+> | key present with a value | value used | `tokenize_literal_test.js` |
+> | key present, explicitly `""` | blank used verbatim (A0.8.4) | `interpolate_strict_test.js` |
+> | key absent everywhere | **throws**, compile fails loudly (A0.5.4) | `interpolate_strict_test.js` |
+>
+> Resolution: AGENTS.md rule 14 was rewritten to describe these three states, and its superseded "skipped" wording is preserved inline there so a future reader doesn't reintroduce the conflict. A-26 is struck from this matrix. No compiler change — the laziest correct outcome was deleting a requirement, not implementing one.
 
 **Electron (`tests/electron_test.js`)** — via `playwright._electron`
 
@@ -573,31 +583,34 @@ A-42 is the one that would catch accidentally depending on a developer's system 
 | A0.5 — four confirmed defects | ✅ Done | AST `isSafeChain`, trace redaction, `setInputFiles`, `interpolate` strictness |
 | A0.6 — seven confirmed defects | ✅ Done | upload false-success, DB corruption wipe, merged-cell drop, duplicate-ID collisions, record/run race |
 | A0.7 — nine confirmed defects | ✅ Done | mobile Record is a no-op, mobile failures always report "completed", drop zone has no handler, silent fetch failures, XPath injection |
+| A0.10 — blackbox relocatability cycle | ✅ Done | Independent pass over A-1…A-7 + A-30/A-31: **A-1, A-2, A-4, A-5, A-6, A-7, A-30 green** with real evidence (A-2 verified `git status` byte-identical and zero recently-modified repo files; A-6 verified with `cwd` deliberately distinct from all three env dirs; A-7 exercised both the `RESOURCES_PATH` and `__dirname` branches, including a deliberately-empty fake resources dir to prove the env var is actually read). **A-3 FAILED and is now fixed** — see below. **A-31 caveat:** clean quits (SIGTERM/SIGINT) kill the forked server correctly, but `SIGKILL` to Electron main orphans it reparented to PID 1, still holding its port. `before-quit` cannot fire on SIGKILL, so this is Electron behavior, not a logic bug — but A-31's contract says "no orphaned node process" unqualified. Left as-is (clean-quit-only); a child-side parent-liveness check is the fix if that contract is meant literally. |
+| A-3 — read-only install (was the one real FAIL) | ✅ Fixed | `playwright.config.ts` set `testDir` from `AUTOTEST_STATE_DIR` but never set `outputDir`, so Playwright resolved its scratch dir to `<app dir>/test-results` and `rmdir`'d it at startup → `EACCES: permission denied, rmdir '/…/test-results'`, **zero evidence produced, before a single step ran**. Every other write site in A1.1's table had been relocated; this one was missing *from the table*, which is why A-3 was the test that caught it. `outputDir` now follows `AUTOTEST_RESULTS_DIR`. Re-verified end-to-end on a genuinely read-only copy (`chmod -R a-w` on the app root, `core/`, and `results/`, all three write-probed): full upload → map → run → `{phase:'completed', expected:1, unexpected:0}`, screenshots + `trace.zip` in the relocated dir, **zero writes to the app directory**. Guarded by `testOutputDirFollowsResultsDir()` in `tests/state_dir_test.js`, which asserts on Playwright's own resolved config (no `chmod` needed) and was confirmed to fail when the bug is reintroduced. |
+| A0.9 — blackbox validation cycle | ✅ Done | Independent black-box pass over A0.5/A0.6/A0.7/A0.8 against the live app: **8/8 assigned defects genuinely fixed**, verified by real HTTP and real compiles (11 RCE payload variants beyond those documented, both compile paths, race probes). Three follow-ups it surfaced are now fixed and regression-tested: **(1)** an unsafe target that *looks* like a locator chain was silently downgraded to `page.locator("<raw string>")` — a selector that can never match, so the step ran, screenshotted and proved nothing; it now fails compile loudly (`core/compiler.js`). **(2)** `/record` and `/run` platform checks were a denylist, so `platform:'appium'` was accepted and ran the Web path — now an allowlist (T40/T40b). **(3)** `isSafeChain` over-blocked `filter({ has: page.getByRole(...) })`, which codegen emits verbatim, and combined with (1) produced a silently-never-matching step — nested `page.`-rooted locators now validate through the same structural walk (`tests/safe_chain_test.js`). |
 | A0.8 — code review notes (max) | ✅ Done | RCE in `isSafeChain` args, Excel row-0 length check, `process.cwd()` paths, Data Matrix blank override fallback (incl. PR #9 rounds 1+2 review fixes) |
-| A1 — relocatable server | 🟡 Partial | A-5 (dynamic port + clean `EADDRINUSE`) and A-7 (`DRIVERS_ROOT` via `resolveDriversRoot()`, `process.resourcesPath`-aware) done — `tests/state_dir_test.js`. A-1/A-2/A-3/A-4/A-6 (full `STATE_DIR`/`DATA_DIR`/`RESULTS_DIR` relocation across server.js, compiler.js, scenario_parser.js) deferred: no consumer exists yet — add when A2's Electron shell lands and actually needs a writable-outside-asar path. |
+| A1 — relocatable server | ✅ Done | A-5/A-7 (dynamic port, `resolveDriversRoot()`) done earlier. A-1/A-2/A-6 now also done: `AUTOTEST_STATE_DIR`/`AUTOTEST_DATA_DIR`/`AUTOTEST_RESULTS_DIR` actually relocate every write site in server.js, compiler.js, scenario_parser.js (not just resolve a path) — `tests/state_dir_test.js`. The A1.3 known-gap (subprocess `process.resourcesPath`) is closed via a `RESOURCES_PATH` env bridge, now that A2's `electron/main.js` exists to set it. A-3 (read-only-install journey) and A-4 (two-instance coexistence) are now both verified — A-3 against a real `chmod -R a-w` copy, which is what surfaced the `outputDir` miss above; A-4 with two concurrent `PORT=0` instances on distinct ports, state-isolated. A-32 (read-only *packaged* install) still needs an `electron-builder` build. |
 | A2 — fixture app + record goldens | 🟡 Partial | A4.1 offline fixture app done (`tests/fixtures/app/*.html`, `tests/fixtures_smoke_test.js`) — 8 pages, served via `npm run fixtures:serve`. A4.2 golden codegen recording is a **human-only step** (doc's own rule: "real codegen output, recorded by a human — never fabricated") — cannot be looped by an agent. A-10…A-19 blocked on those goldens existing. |
-| A3 — analyst journeys | ⬜ Not started | A-20…A-27 |
-| A4 — Electron shell | ⬜ Not started | A-30…A-35 |
-| A5 — air-gap hardening | ⬜ Not started | A-40…A-44 |
-| A6 — CI | ⬜ Not started | GitHub Actions running `npm test` (15 lines once A0 lands; impossible before) |
+| A3 — analyst journeys | ✅ Done | `tests/journey_test.js`, 22 assertions, in `npm test`. A-20 (login success: 5 steps, per-step screenshots, FINAL.png), A-21 (negative path, error banner), A-22 (shared Mapping_Key across two scenarios honors each one's own Data — asserted on the **compiled spec**, since `/preview-scenario` deliberately renders the raw `{token}`), A-23 (3 Data Matrix iterations → 3 correctly-named folders), A-24 (wizard multi-page state), A-25 (no blank screenshots), plus A-2 and A-6 re-asserted end-to-end. **A-26 withdrawn** (see §A4.4). **A-27 (mid-flow re-map, replay→pause→resume) not covered** — it needs a live headed Inspector session, the same human-only constraint as A4.2. ponytail: mappings are POSTed to `/save-mapping` rather than sourced from A4.2's goldens, so the compile→execute→evidence path is tested now instead of waiting indefinitely on a human recording step; swap the mapping source when the goldens exist and every other assertion stands. |
+| A4 — Electron shell | 🟡 Partial | `electron/main.js` written and working: forks `studio/server.js` with A1.1's dirs pointed at `userData` + A1.2's `PORT=0`, parses `STUDIO_PORT=`, loads the window. A-30 (boots, renders Mappings tab) and A-31 (child dies with the app, no orphan) pass via `tests/electron_test.js` (`playwright._electron`, dev/unpackaged). A-32 (read-only packaged install), A-33 (bundled Chromium inside the package), A-34 (two packaged instances), A-35 (uploads land in `userData` not the bundle) all need an actual `electron-builder` package — not yet built, see chat for what that needs from you. |
+| A5 — air-gap hardening | ⬜ Not started | A-40…A-44, all need a packaged installer on a real target machine |
+| A6 — CI | ✅ Done | `.github/workflows/test.yml` runs `npm test` on push/PR. `DRIVERS/node_modules` is committed but `DRIVERS/ms-playwright` is gitignored, so CI installs Chromium with `PLAYWRIGHT_BROWSERS_PATH` pointed **into `DRIVERS/ms-playwright`** — the only place `getBundledBrowserPath()` and `playwright.config.ts` look. Runs under `xvfb-run` for the Electron and headed-codegen tests. Not yet observed green on GitHub's runners (no push made from here). |
 
 **Phase A ships here.** Phase B begins only after A5 is green.
 
 ---
 
-# PHASE B — CDP-Attach Recording: Reuse the Tester's Logged-In Chrome
+# PHASE B — CDP-Attach Recording: AutoTest's Isolated Stable-Chrome Profile
 
-Today, every `/record` call spawns a brand-new, throwaway Playwright-managed Chromium window — for both the plain codegen path and the mid-flow "replay preceding steps then pause" path. Every session starts logged out; login is only restored by re-*executing* previously mapped login steps, which breaks down for MFA, SSO redirects, "remember this device" cookies, or CAPTCHAs — none of which a scripted replay can get through.
+Today, every `/record` call uses the Chrome DevTools Protocol (CDP) instead of spawning a throwaway Playwright-managed Chromium window. Recording runs in a dedicated stable-Chrome profile named `autotest`, stored under the relocated writable state directory, so the tester's normal Chrome profile is never touched.
 
-The fix: attach to the tester's **real, already-running Chrome** via the Chrome DevTools Protocol (CDP) instead of launching a fresh browser. The tester logs in once, manually; every recording session after that attaches to that same live, authenticated tab.
-
-**Confirmed decisions, not up for re-litigation:**
-- Both the plain codegen path and the replay-before-record path switch to CDP-attach. Neither spawns a fresh browser anymore.
-- AutoTest Studio's own server launches the tester's Chrome (detecting/prompting if their normal Chrome needs closing first) — not a manual shortcut the tester runs themselves.
-- It's their **real daily-driver Chrome profile** — real bookmarks, history, other logins, other tabs — not an isolated AutoTest-only profile. A deliberate tradeoff (§B8), not an oversight.
+**Confirmed decisions:**
+- Both the plain codegen path and the replay-before-record path use CDP-attach. Neither spawns a fresh browser anymore.
+- AutoTest launches stable Google Chrome with `--user-data-dir=<stateDir>/autotest`; the tester's normal Chrome may remain open.
+- The default direct-server and Electron paths use the isolated `autotest` profile. `AUTOTEST_CDP_PROFILE=real` is a controlled developer-only opt-out, not a packaged-product mode.
+- `AUTOTEST_CHROME_PATH` may override stable Chrome's executable location through `.env` or the process environment. Beta, Canary, Edge, and other channels are out of scope.
+- The app has no profile reset/delete capability; the fixed profile persists across sessions.
 
 **Verified against the actual installed `playwright-core` in this repo** — by running code against `node_modules/playwright-core/lib/coreBundle.js`, not reading docs:
-- `chromium.connectOverCDP(endpointURL)` exists and works with any Chromium exposing CDP, including a real logged-in Chrome — Microsoft's own bundled type docs name this exact "attach to a user's daily-driver browser" scenario as supported.
+- `chromium.connectOverCDP(endpointURL)` exists and works with any Chromium exposing CDP; AutoTest launches its own isolated stable-Chrome profile, so this connection does not expose the tester's normal browser.
 - The `codegen` CLI has **no** CDP-attach flag. Attaching and getting the recorder UI requires the library API directly: `context._enableRecorder({...})`, the same internal (underscore-prefixed, unstable-by-convention) call the CLI itself uses:
   ```js
   await context._enableRecorder({
@@ -636,7 +649,7 @@ Reuses `getBundledBrowserPath()`'s candidate-list pattern (`server.js:76-93`), p
 
 Lock detection deliberately does **not** parse Chrome's internal `SingletonLock` mechanism (undocumented, version-fragile). Two-step, matching this app's existing "poll for async readiness" pattern (`/codegen-result` polling):
 1. Proactive: `tasklist`/`pgrep` check for a running Chrome process before attempting anything.
-2. Reactive fallback: launch with `--remote-debugging-port --user-data-dir=<real profile>`, then poll `http://127.0.0.1:9333/json/version` for ~8s. If it never responds and the spawned process already exited, that's Chrome forwarding the launch to an already-running instance — the real-world signature of a profile lock. Surface the same "please close Chrome" error either way.
+2. Reactive fallback: launch with `--remote-debugging-port --user-data-dir=<stateDir>/autotest`, then poll `http://127.0.0.1:9333/json/version` for ~8s. Because the profile is isolated, a normal Chrome instance cannot lock it; a failure means the configured stable Chrome path or debug port is unavailable, and the typed error is surfaced.
 
 ## B3. Route changes in `studio/server.js`
 
@@ -670,7 +683,7 @@ No stack traces, no terminal — matches this document's contract everywhere els
 | Failure | Message |
 |---|---|
 | Chrome not installed at any known path | "Chrome wasn't found on this computer. Ask IT to install Google Chrome, then try again." |
-| Tester's normal Chrome already open (profile lock) | "Please close all Chrome windows, then click Record again." + a Retry button |
+| Chrome already open | Recording uses the separate `autotest` profile; normal Chrome may remain open. |
 | Debug port in use by something else | "Port 9333 is in use by another program. Restart your computer and try again." |
 | `_enableRecorder` throws | "Recording couldn't start. Contact support with error code ENABLE_RECORDER_FAILED." (full stack logged server-side only) |
 | Tester closes the debug Chrome mid-session | `browser.on('disconnected')` clears cached state; next `/record` transparently re-launches/re-attaches |
@@ -678,9 +691,9 @@ No stack traces, no terminal — matches this document's contract everywhere els
 
 All as typed `err.code` values from `cdp_session.js`, mapped to messages using the exact `res.status(...).json({error:...})` shape already used elsewhere (e.g. the `409` guard at `:339-341`) — no new response envelope.
 
-## B7. No fallback/opt-out
+## B7. Isolated-profile contract
 
-Hard replacement of the old spawn-based codegen, no toggle to keep both. The old path exists specifically to solve a problem ("I don't want my real Chrome touched") the confirmed decisions already ruled out by choosing the real daily-driver profile. `ponytail: no isolated-profile fallback; add a launch.json-style flag if a tester genuinely needs an untouched Chrome, add when someone asks for it.`
+The default server and Electron recording paths use the fixed stable-Chrome profile `<stateDir>/autotest`. There is no UI reset/delete operation. `AUTOTEST_CHROME_PATH` is the only supported executable-location override; stable Google Chrome is the only supported channel. `AUTOTEST_CDP_PROFILE=real` exists only for controlled developer diagnostics and is not a packaged-product setting.
 
 ## B8. Air-gap/security call-out
 
@@ -688,18 +701,38 @@ This gives AutoTest Studio's automation live control of the tester's actual logg
 
 ## B9. Verification — manual, cannot be exercised by `tests/*.js`
 
-This fundamentally requires a real system Chrome and a real profile, which CI/sandboxed environments don't have. `tests/record_replay_sit.js` gets a runtime skip-guard (clear message when `resolveSystemChromePath()` returns null) rather than silently passing or failing wrong — it currently expects a spawned browser to appear, which no longer applies.
+This fundamentally requires a real system stable Chrome installation, which CI/sandboxed environments may not have. `tests/record_replay_sit.js` gets a runtime skip-guard (clear message when `resolveSystemChromePath()` returns null) rather than silently passing or failing wrong — it currently expects a spawned browser to appear, which no longer applies.
 
 **Manual sequence** (repeat on a real Windows target before sign-off):
-1. Start `node studio/server.js` with no Chrome running. Click Record on a step with no preceding mapped steps. Confirm: Chrome launches on the real profile (real bookmarks visible), attaches via CDP, recording populates the textarea via the existing `/codegen-result` poll — unchanged on that end.
+1. Start `node studio/server.js` with normal Chrome open or closed. Click Record on a step with no preceding mapped steps. Confirm: AutoTest launches stable Chrome with `--user-data-dir=<stateDir>/autotest`, attaches via CDP, and recording populates the textarea via the existing `/codegen-result` poll.
 2. With that Chrome still open, Record a second, different step. Confirm it reuses the same tab (no second window), any prior navigation/login state is still present.
 3. Manually log into a real test login page in that tab. Map the login step, then Record a step *after* login (replay path). Confirm preceding steps execute live against the already-authenticated tab and `page.pause()` opens the Inspector on it — the specific assumption flagged in §B3.
 4. Trigger `/record-cancel` mid-recording — confirm the tester's Chrome stays open and usable.
 5. Manually close the debug Chrome entirely, then Record again — confirm clean re-launch, no hang/crash.
-6. With the tester's normal (non-debug) Chrome already open, click Record — confirm the "please close Chrome" message, not a stack trace; close it, retry, confirm success.
+6. With the tester's normal Chrome already open, click Record — confirm recording still uses the separate `autotest` profile and does not show a normal-profile lock error.
 7. Stop the server (Ctrl+C) while debug Chrome is open — confirm the tester's Chrome is still running afterward.
 
 Per `AGENTS.md` §3.4, once implemented these become new `TEST_SCENARIOS.md` rows for the Black-Box Scenario Tester to run on every future change to `studio/server.js` or `core/cdp_session.js`.
+
+## B10. Implementation status
+
+| Item | Status |
+|---|---|
+| `core/cdp_session.js` (§B1) | ✅ Built. Chrome discovery (Windows-first, mac/linux fallback), detect-or-launch with the §B2 two-step lock check, the §B4 single-tracked-page model, `_enableRecorder`/`_disableRecorder` wiring, and a live `runStepsThenPause`. |
+| Codegen path → CDP (§B3) | ✅ Done. `/record` attaches instead of spawning. `GET /codegen-result/:sessionId` untouched, as specced — `_enableRecorder({outputFile})` writes the same live file the CLI wrote. |
+| Replay path → CDP (§B3) | ✅ Done, **net code reduction**: the `replayCode` string-builder, the temp `replay_<sid>.spec.ts`, and the `spawn(playwright test)` block are all deleted. Preceding steps now execute live against the authenticated tab. |
+| Typed errors → tester copy (§B6) | ✅ Done. `CHROME_NOT_FOUND`/`CHROME_PROFILE_LOCKED`/`NO_BROWSER_CONTEXT`/`ENABLE_RECORDER_FAILED` map to the specced messages via the existing `res.status().json({error})` shape. `UNSAFE_LOCATOR`/`REPLAY_ASSERT_FAILED` pass through verbatim — they name a specific mapped step, so they are useful to the tester. |
+| Cancel semantics (§B5) | ✅ Done. `/record-cancel` calls `_disableRecorder()` and releases the guard; it does **not** kill the tester's Chrome. `cleanupAll()` and the signal handlers needed no changes — the debug-Chrome process is never tracked and is `.unref()`'d. |
+| Escape hatch (developer-only) | ✅ `AUTOTEST_CDP_PROFILE=real` selects the normal profile only for controlled diagnostics. Product default is the isolated `autotest` profile. |
+| `tests/record_replay_sit.js` (§B9) | ✅ Skip-guarded when no system Chrome is present. SIT-24…SIT-28 asserted on the deleted temp replay spec and are **skipped, not silently passed** — what replaced them is only observable by a human watching their own browser. |
+
+**Verified by live execution on this machine** (isolated profile, fixture app), not by reading docs:
+- `connectOverCDP` + `_enableRecorder` against a real launched Chrome → the recorder wrote genuine codegen (`getByRole('textbox', {name:'Username'}).fill('tester')`, a real `.click()`) from real interactions.
+- `POST /record` → 200; a concurrent `/record` → 409; `/run` during recording → 409 (both guards still hold with the CDP sentinel).
+- `POST /record-cancel` → 200, **and the CDP port still answers afterwards** — the tester's Chrome survives cancel, which is §B5's whole point.
+- Replay path: `/record` on step 3 of a 3-step scenario → `isReplay: true`, **no `replay_*.spec.ts` on disk**, and the live tab was confirmed sitting on the right page with step 2's value already filled.
+
+**Still manual, cannot be automated here (§B9):** the 7-step sequence on a real Windows target with the tester's *real* profile — in particular step 3 (`page.pause()` opening the Inspector on a CDP-*attached* page, the one assumption §B3 flagged as needing manual confirmation) and step 6 (the profile-lock message against a genuinely already-open Chrome). Everything above was verified against an *isolated* profile on macOS, which exercises the same code path but is not the same environment.
 
 **Phase B ships here.** Phase C begins only after §B9's manual verification sequence passes.
 

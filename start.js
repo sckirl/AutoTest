@@ -3,38 +3,15 @@ const fs = require('fs');
 const path = require('path');
 
 const MS_PLAYWRIGHT_PATH = path.resolve(__dirname, 'DRIVERS/ms-playwright');
-const DRIVERS_NODE_MODULES = path.resolve(__dirname, 'DRIVERS/node_modules');
 const ROOT_NODE_MODULES = path.resolve(__dirname, 'node_modules');
 
 console.log("AutoTest Fallback & Dependency Checker");
 
-// DEF-MED-005 FIX: Ensure node_modules -> DRIVERS/node_modules symlink exists on all OS.
-// Windows uses 'junction' (no admin needed). Mac/Linux use 'dir'.
-try {
-    let needsLink = true;
-    if (fs.existsSync(ROOT_NODE_MODULES)) {
-        const stat = fs.lstatSync(ROOT_NODE_MODULES);
-        if (stat.isSymbolicLink()) {
-            const target = fs.readlinkSync(ROOT_NODE_MODULES);
-            needsLink = path.resolve(__dirname, target) !== DRIVERS_NODE_MODULES;
-            if (needsLink) fs.unlinkSync(ROOT_NODE_MODULES); // stale symlink
-        } else {
-            needsLink = false; // real directory exists (online install), leave it alone
-        }
-    }
-    if (needsLink && fs.existsSync(DRIVERS_NODE_MODULES)) {
-        const linkType = process.platform === 'win32' ? 'junction' : 'dir';
-        fs.symlinkSync(DRIVERS_NODE_MODULES, ROOT_NODE_MODULES, linkType);
-        console.log(`node_modules symlink created → DRIVERS/node_modules`);
-    }
-} catch (e) {
-    console.warn(`Could not create node_modules symlink: ${e.message}`);
-}
-
-// Check if DRIVERS/node_modules exists and is populated
+// ponytail: DRIVERS/node_modules was deleted (root node_modules is the single source, shipped
+// in the asar) — no symlink dance, just install when the root itself is missing or empty.
 let needsNpmInstall = false;
-if (!fs.existsSync(DRIVERS_NODE_MODULES) || fs.readdirSync(DRIVERS_NODE_MODULES).length < 5) {
-    console.log("Missing or incomplete Node packages in DRIVERS/node_modules.");
+if (!fs.existsSync(ROOT_NODE_MODULES) || fs.readdirSync(ROOT_NODE_MODULES).length < 5) {
+    console.log("Missing or incomplete Node packages in node_modules.");
     needsNpmInstall = true;
 }
 

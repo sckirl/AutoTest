@@ -2,18 +2,9 @@
 const fs = require('fs');
 const path = require('path');
 // Phase C: load local .env once at boot (real secrets stay local, never committed).
-// userData under Electron (writable), project root otherwise. Never throws.
-for (const p of [path.join(process.env.AUTOTEST_STATE_DIR || '', '.env'), path.join(__dirname, '../.env')]) {
-    try {
-        if (!p.startsWith('/') && !/^[A-Za-z]:\\/.test(p)) continue;
-        const raw = fs.readFileSync(p, 'utf8');
-        for (const line of raw.split('\n')) {
-            const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line);
-            if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^['"]|['"]$/g, '');
-        }
-        break;
-    } catch (e) { /* missing .env: LLM stays disabled */ }
-}
+// Process env wins; runtime_env also checks packaged userData and the direct-server cwd.
+const { loadRuntimeEnv } = require('../core/runtime_env');
+loadRuntimeEnv();
 // A1.3: resourcesPath-aware so this still resolves once Electron packages DRIVERS/ unpacked.
 const { resolveDriversRoot } = require('../core/helpers');
 const DRIVERS_ROOT = resolveDriversRoot(__dirname);
@@ -30,32 +21,42 @@ const acorn = require('acorn');
 const walk = require('acorn-walk');
 const express = require('express');
 const cors = require('cors');
-const { exec, execSync, spawn } = require('child_process');
+const { exec, execSync, execFileSync, spawn } = require('child_process');
 const XLSX = require('xlsx');
 const multer = require('multer');
 
 // ponytail: shared helpers module (resolveDriversRoot already pulled in above, before DRIVERS bootstrap)
-const { isSafeChain, interpolate, q, tokenizeLiterals, sweepOrphans, safeSessionId, normalizePlatform } = require('../core/helpers');
+const { isSafeChain, interpolate, q, tokenizeLiterals, sweepOrphans, safeSessionId, normalizePlatform, buildCodegenArgs, buildCodegenEnv } = require('../core/helpers');
+const { resolveProvider, complete } = require('../core/llm');
 const ActionDB = require('../core/action_db');
 const { generateBlueprintFromExcel } = require('../core/scenario_parser');
 
-const CORE_DIR = path.join(__dirname, '../core');
-const RESULTS_DIR = path.join(__dirname, '../results');
+// A1.1: STATE_DIR/DATA_DIR/RESULTS_DIR are overridable so a packaged (read-only app dir)
+// Electron build can redirect all writes outside app.asar — electron/main.js sets these via
+// env when forking this process. ROOT_DIR stays __dirname-relative always: it locates this
+// app's own scripts/node_modules for execSync/spawn cwd, never a write target.
+const CORE_DIR = process.env.AUTOTEST_STATE_DIR || path.join(__dirname, '../core');
 const ROOT_DIR = path.join(__dirname, '../');
+const DATA_DIR = process.env.AUTOTEST_DATA_DIR || ROOT_DIR; // uploads
+const RESULTS_DIR = process.env.AUTOTEST_RESULTS_DIR || path.join(DATA_DIR, 'results');
 const MAPPINGS_PATH = path.join(CORE_DIR, 'mappings.json');
-const UPLOADED_EXCEL = path.join(ROOT_DIR, 'scenario_uploaded.xlsx');
+const UPLOADED_EXCEL = path.join(DATA_DIR, 'scenario_uploaded.xlsx');
 const RUNTIME_DATA_PATH = path.join(CORE_DIR, 'runtime_data.json');
 const PLATFORM_STATE_PATH = path.join(CORE_DIR, 'platform_state.json');
 
 // ponytail: resolve CLI consistently with Node's ancestor module resolution to prevent singleton mismatch
+// doubt-review #5: require.resolve first — inside app.asar only the module system knows the
+// real packed layout; hardcoded ROOT_DIR/DRIVERS guesses are dev paths that don't exist packaged.
 let PLAYWRIGHT_CLI;
-if (fs.existsSync(path.join(ROOT_DIR, 'node_modules/@playwright/test/cli.js'))) {
-    PLAYWRIGHT_CLI = path.join(ROOT_DIR, 'node_modules/@playwright/test/cli.js');
-} else if (fs.existsSync(path.join(DRIVERS_PATH, '@playwright/test/cli.js'))) {
-    PLAYWRIGHT_CLI = path.join(DRIVERS_PATH, '@playwright/test/cli.js');
-} else {
+try {
     const pwPkgPath = require.resolve('@playwright/test/package.json');
     PLAYWRIGHT_CLI = path.join(path.dirname(pwPkgPath), 'cli.js');
+} catch (e) {
+    if (fs.existsSync(path.join(ROOT_DIR, 'node_modules/@playwright/test/cli.js'))) {
+        PLAYWRIGHT_CLI = path.join(ROOT_DIR, 'node_modules/@playwright/test/cli.js');
+    } else {
+        PLAYWRIGHT_CLI = path.join(DRIVERS_PATH, '@playwright/test/cli.js');
+    }
 }
 
 let activeRun = null;
@@ -63,6 +64,7 @@ let globalBrowser = null;
 const trackedProcesses = new Set(); // ponytail: still used for cleanupAll on exit
 let activeCodegen = null;  // DEF-CRIT-001 FIX: single codegen guard
 let activeRunner = null;   // DEF-HIGH-004 FIX: separate runner ref
+let activeSuggestion = null; // Phase C: one live suggestion session at a time
 
 // ponytail: restore persisted platform state on startup
 let activePlatform = 'web';
@@ -89,9 +91,54 @@ function cleanupAll() {
 process.on('SIGINT', cleanupAll);
 process.on('SIGTERM', cleanupAll);
 
+// A2/packaged: every node-script child below must run without a 'node' on PATH (target
+// machines have none) and without chdir'ing into app.asar (a file → ENOTDIR, the user's
+// exact .dmg failure: `spawnSync node ENOTDIR` on upload, then `spawnSync … Helper ENOTDIR`
+// after the first fix attempt). Packaged detection keys off __dirname — the server script
+// itself lives at …/app.asar/studio/server.js — NEVER process.execPath: the fork()'d server
+// inherits the Electron *Helper* binary as execPath, so an execPath-based check takes the
+// "dev: real node" branch and spawns the Helper as if it were node (round-2 proven).
+// realism-proven (round 2): no node binary ships in the package (resources/node absent), so
+// packaged children run on the main Electron binary with ELECTRON_RUN_AS_NODE=1, which makes
+// it behave as vanilla node — asar require/fs still work, only the GUI bootstrap is skipped.
+// ponytail: one helper, two branches; dev is byte-identical to the old execFileSync calls.
+// doubt-reconciled: reviewer findings #1 (no-node-on-PATH), #2 (asar cwd), #4 (ROOT_DIR
+// dual-job), #12 — all close here; #3 (execPath-is-Electron) closes via the RUN_AS_NODE env.
+function isPackaged() { return __dirname.includes('app.asar'); }
+function runNodeScript(relScript, args) {
+    if (!isPackaged()) {
+        execFileSync(process.execPath, [path.join(ROOT_DIR, relScript), ...args], { stdio: 'inherit', cwd: ROOT_DIR });
+        return;
+    }
+    const res = process.resourcesPath; // …/AutoTest Studio.app/Contents/Resources
+    const mainBin = path.join(path.dirname(res), 'MacOS', path.basename(process.execPath).replace(/ Helper$/, ''));
+    const nodeBin = [path.join(res, process.platform === 'win32' ? 'node.exe' : 'node'), mainBin]
+        .find(c => { try { return fs.existsSync(c); } catch (e) { return false; } }) || process.execPath;
+    execFileSync(nodeBin, [path.join(res, 'app.asar', relScript), ...args], {
+        stdio: 'inherit', cwd: DATA_DIR, // writable userData — never the asar, never repo root
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+    });
+}
+
 // Helper to detect bundled/portable browser
+// A2/packaged: OS-first, not first-existing. The old fixed order checked mac-arm before
+// win — on a Windows machine that ALSO had a stray mac .app folder (copied whole
+// DRIVERS/), existsSync would return a mac binary path that can never execute on win32.
+// Check process.platform/process.arch first, fall through to the rest only as fallback.
 function getBundledBrowserPath() {
-    const paths = [
+    const byPlatform =
+        process.platform === 'win32' ? [
+            path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-win/chrome.exe'),
+            path.resolve(__dirname, '../bin/chrome-win/chrome.exe'),
+            path.resolve(__dirname, '../bin/chrome-win/Chrome.exe'),
+        ] : process.platform === 'darwin' ? [
+            process.arch === 'arm64'
+                ? path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing')
+                : path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'),
+        ] : [
+            path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-linux/chrome'),
+        ];
+    const fallback = [
         path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'),
         path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'),
         path.join(MS_PLAYWRIGHT_PATH, 'chromium-1223/chrome-win/chrome.exe'),
@@ -99,7 +146,7 @@ function getBundledBrowserPath() {
         path.resolve(__dirname, '../bin/chrome-win/chrome.exe'),
         path.resolve(__dirname, '../bin/chrome-win/Chrome.exe')
     ];
-    for (const p of paths) {
+    for (const p of [...byPlatform, ...fallback]) {
         if (fs.existsSync(p)) {
             console.log(`FOUND bundled Chromium: ${p}`);
             return p;
@@ -127,6 +174,55 @@ function getBrowserEnv(extraEnv = {}) {
     return env;
 }
 
+function launchVisibleCodegen({ targetUrl, outputPath }) {
+    const args = buildCodegenArgs({
+        cli: PLAYWRIGHT_CLI,
+        targetUrl,
+        outputPath,
+        profileDir: path.join(CORE_DIR, 'autotest')
+    });
+    const env = buildCodegenEnv({
+        baseEnv: process.env,
+        browserPath: BUNDLED_BROWSER,
+        browsersPath: MS_PLAYWRIGHT_PATH,
+        nodePath: isPackaged() ? path.join(process.resourcesPath, 'app.asar', 'node_modules') : path.join(ROOT_DIR, 'node_modules'),
+        packaged: isPackaged()
+    });
+    const child = spawn(process.execPath, args, { env, shell: false, windowsHide: false, detached: false });
+    trackedProcesses.add(child);
+    activeCodegen = child;
+    child.on('error', e => console.error('[CODEGEN SPAWN ERROR]', e.message));
+    child.on('close', code => {
+        trackedProcesses.delete(child);
+        if (activeCodegen === child) activeCodegen = null;
+        console.log(`[CODEGEN] process closed with code ${code}, output: ${outputPath}`);
+    });
+    return child;
+}
+
+function launchVisibleReplay({ specPath }) {
+    const env = buildCodegenEnv({
+        baseEnv: process.env,
+        browserPath: BUNDLED_BROWSER,
+        browsersPath: MS_PLAYWRIGHT_PATH,
+        nodePath: isPackaged() ? path.join(process.resourcesPath, 'app.asar', 'node_modules') : path.join(ROOT_DIR, 'node_modules'),
+        packaged: isPackaged()
+    });
+    const child = spawn(process.execPath, [PLAYWRIGHT_CLI, 'test', specPath, '--headed'], {
+        env, shell: false, windowsHide: false, detached: false
+    });
+    trackedProcesses.add(child);
+    activeCodegen = child;
+    child.on('error', e => console.error('[REPLAY SPAWN ERROR]', e.message));
+    child.on('close', code => {
+        trackedProcesses.delete(child);
+        if (activeCodegen === child) activeCodegen = null;
+        try { fs.unlinkSync(specPath); } catch (e) {}
+        console.log(`[REPLAY] process closed with code ${code}`);
+    });
+    return child;
+}
+
 // Process Cleanup Hook
 process.on('exit', () => {
     if (globalBrowser) {
@@ -141,7 +237,7 @@ app.use(express.static(path.join(__dirname)));
 app.use('/results', express.static(RESULTS_DIR));
 
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, ROOT_DIR),
+    destination: (req, file, cb) => cb(null, DATA_DIR),
     // A0.8.10 FIX: a shared staging filename let two overlapping /upload requests clobber
     // each other's workbook mid-parse. crypto.randomUUID() gives each request its own file.
     filename: (req, file, cb) => cb(null, `scenario_upload_staging_${require('crypto').randomUUID()}.xlsx`)
@@ -234,7 +330,14 @@ app.post('/upload', upload.single('excel'), (req, res) => {
     const warningsPath = path.join(CORE_DIR, 'blueprint_warnings.json');
     try { fs.unlinkSync(warningsPath); } catch (e) {}
     try {
-        execSync(`node core/scenario_parser.js ${path.basename(stagedFile)}`, { stdio: 'inherit', cwd: ROOT_DIR });
+        // A1.1: stagedFile is an absolute path (DATA_DIR may now differ from ROOT_DIR, the
+        // execSync cwd needed to resolve `core/scenario_parser.js` itself) — pass it whole,
+        // not basename-relative-to-ROOT_DIR, which broke the moment the two dirs diverged.
+        // doubt-review-found: string-interpolated into a shell command, this path breaks the
+        // moment it contains a space — Electron's userData default (AUTOTEST_DATA_DIR) is
+        // "~/Library/Application Support/<App Name>" on mac, guaranteed to have one.
+        // execFileSync passes argv directly, no shell involved, no quoting to get wrong.
+        runNodeScript('core/scenario_parser.js', [stagedFile]);
         console.log("Blueprint generated successfully on upload");
         // Atomically replace active workbook and reset project state only after validation succeeds
         fs.renameSync(stagedFile, UPLOADED_EXCEL);
@@ -337,7 +440,29 @@ app.get('/scan', (req, res) => {
     }
 });
 
-app.post('/record', (req, res) => {
+// §B6: typed cdp_session errors -> tester-facing copy. No stack traces: there is no terminal
+// to read them in. The full error is logged server-side.
+const CDP_MESSAGES = {
+    CHROME_NOT_FOUND: "Chrome wasn't found on this computer. Ask IT to install stable Google Chrome, then try again.",
+    CHROME_PATH_INVALID: 'AUTOTEST_CHROME_PATH is configured but does not point to a Chrome executable. Check your .env path.',
+    CHROME_PROFILE_LOCKED: 'Chrome is already running on the selected profile. AutoTest normally uses its separate autotest profile; check the CDP port or try again.',
+    NO_BROWSER_CONTEXT: 'Connected to Chrome but found no usable window. Close Chrome completely and try again.',
+    ENABLE_RECORDER_FAILED: "Recording couldn't start. Contact support with error code ENABLE_RECORDER_FAILED.",
+};
+function cdpErrorMessage(e) {
+    console.error('[CDP]', e.code || 'UNKNOWN', e.message);
+    // UNSAFE_LOCATOR / REPLAY_ASSERT_FAILED name a specific mapped step, so they are useful
+    // verbatim — unlike the infrastructure failures above, which must not leak internals.
+    if (e.code === 'UNSAFE_LOCATOR' || e.code === 'REPLAY_ASSERT_FAILED') return e.message;
+    return CDP_MESSAGES[e.code] || 'Recording could not start. Contact support.';
+}
+function cdpErrorStatus(e) {
+    if (e.code === 'CHROME_PROFILE_LOCKED') return 409;
+    if (e.code === 'CHROME_NOT_FOUND') return 503;
+    return 500;
+}
+
+app.post('/record', async (req, res) => {
     // DEF-CRIT-001 FIX: Guard FIRST, before any computation. Sentinel is set synchronously.
     if (activeCodegen && !activeCodegen.killed && activeCodegen.exitCode === null) {
         return res.status(409).json({ error: 'A recording session is already active. Close the browser or click Cancel first.' });
@@ -351,8 +476,17 @@ app.post('/record', (req, res) => {
     // of the platform toggle — selecting Mobile silently recorded a Web mapping. No Appium
     // recording flow exists in this codebase; reject clearly instead of building one, until
     // that's actually implemented.
-    if (normalizePlatform(req.body.platform) === 'mobile') {
+    // A0.7.1 follow-up (blackbox obs-2): this was a denylist — only the literal 'mobile' was
+    // rejected, so platform:'appium' (or any other string) fell through and spawned a real Web
+    // codegen session, which is the exact silent wrong-platform mapping A0.7.1 was filed against.
+    // Allowlist instead: anything not 'web' is refused. /set-platform already does this.
+    const recPlatform = req.body.platform === undefined || req.body.platform === null
+        ? 'web' : normalizePlatform(req.body.platform);
+    if (recPlatform === 'mobile') {
         return res.status(400).json({ error: 'Mobile recording isn\'t supported yet. Use Manual entry for mobile steps, or switch to Web to record.' });
+    }
+    if (recPlatform !== 'web') {
+        return res.status(400).json({ error: `Unknown platform "${req.body.platform}". Use "web" (recording) or "mobile" (not yet supported).` });
     }
     activeCodegen = { killed: false, exitCode: null }; // sentinel: blocks any concurrent request before spawn returns
 
@@ -392,20 +526,19 @@ app.post('/record', (req, res) => {
         }
     }
 
+    // Re-Map: replay mapped predecessors in a visible headed Playwright window, then pause so
+    // the analyst can inspect the page and use the Codegen recorder there. This deliberately
+    // restores the supported CLI flow; the CDP _enableRecorder path was unreliable in packaged
+    // Electron and returned ENABLE_RECORDER_FAILED without producing code.
     if (precedingMappedSteps.length > 0) {
-        // We have preceding mapped steps, so we do a replay
         let runtimeData = {};
         if (fs.existsSync(RUNTIME_DATA_PATH)) {
             try { runtimeData = JSON.parse(fs.readFileSync(RUNTIME_DATA_PATH, 'utf8')); } catch (e) {}
         }
         const iterations = runtimeData[scenarioId];
         const iterData = (iterations && iterations.length > 0) ? iterations[0] : null;
-
-        let replayCode = `import { test, expect } from '@playwright/test';\n\n`;
-        replayCode += `test('Replay Scenario up to ${label.replace(/'/g, "\\'")}', async ({ page }) => {\n`;
-        replayCode += `  // ponytail: disable test timeout so tester can interact indefinitely with Playwright Inspector\n`;
-        replayCode += `  test.setTimeout(0);\n\n`;
-
+        const replaySpecPath = path.join(CORE_DIR, `replay_${sessionId}.spec.ts`);
+        let replayCode = `import { test, expect } from '@playwright/test';\n\ntest('Replay before recording ${q(label)}', async ({ page }) => {\n  test.setTimeout(0);\n`;
         for (const step of precedingMappedSteps) {
             replayCode += `  // Step: ${step.Mapping_Key}\n`;
             for (const action of step.resolvedSteps) {
@@ -413,7 +546,6 @@ app.post('/record', (req, res) => {
                 const finalValue = interpolate(action.value, iterData, step.Data);
                 const safeTarget = isSafeChain(finalTarget);
                 const loc = safeTarget ? `page.${safeTarget}` : `page.locator(${q(finalTarget)})`;
-                
                 if (action.type === 'goto') replayCode += `  await page.goto(${q(finalTarget)});\n`;
                 else if (action.type === 'click') replayCode += `  await ${loc}.click();\n`;
                 else if (action.type === 'fill') replayCode += `  await ${loc}.fill(${q(finalValue)});\n`;
@@ -424,71 +556,35 @@ app.post('/record', (req, res) => {
                 else if (action.type === 'toBeVisible') replayCode += `  await expect(${loc}).toBeVisible();\n`;
                 else if (action.type === 'toHaveText') replayCode += `  await expect(${loc}).toHaveText(${q(finalValue)});\n`;
             }
-            // ponytail: ensure page stabilizes between preceding steps before pausing at target
-            replayCode += `  await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});\n`;
+            replayCode += `  await page.waitForTimeout(1000);\n`;
         }
-
-        replayCode += `  \n  // Pause to record next step:\n  await page.pause();\n`;
-        replayCode += `});\n`;
-
-        const replaySpecPath = path.join(CORE_DIR, `replay_${sessionId}.spec.ts`);
-        fs.writeFileSync(replaySpecPath, replayCode);
-
-        const child = spawn(process.execPath, [PLAYWRIGHT_CLI, 'test', replaySpecPath, '--headed'], {
-            env: getBrowserEnv({ PW_HEADLESS: '0' }),
-            shell: false,
-            windowsHide: false,
-            detached: false
-        });
-
-        activeCodegen = child;
-        trackedProcesses.add(child);
-        child.stdout.on('data', d => console.log(`[REPLAY] ${d}`));
-        child.stderr.on('data', d => {
-            const msg = d.toString();
-            if (!msg.includes('DevTools listening') && !msg.includes('GPU process')) {
-                console.error(`[REPLAY ERR] ${msg}`);
-            }
-        });
-        child.on('close', code => {
-            trackedProcesses.delete(child);
-            if (activeCodegen === child) activeCodegen = null;
-            console.log(`[REPLAY] process closed (code ${code})`);
-            try { fs.unlinkSync(replaySpecPath); } catch (e) {}
-        });
-        child.on('error', err => console.error('[REPLAY SPAWN ERROR]', err.message));
-
-        return res.json({ sessionId, isReplay: true, message: 'Replay launched, preceding steps executing. Perform and copy new steps from Playwright Inspector.' });
+        replayCode += `  await page.pause();\n});\n`;
+        try {
+            fs.writeFileSync(replaySpecPath, replayCode);
+            launchVisibleReplay({ specPath: replaySpecPath });
+            return res.json({
+                sessionId, isReplay: true,
+                message: 'Playwright replay opened. Review the preceding steps in the visible window, perform the new action, then close it to transfer code here.'
+            });
+        } catch (e) {
+            try { fs.unlinkSync(replaySpecPath); } catch (e2) {}
+            activeCodegen = null;
+            return res.status(500).json({ error: `Playwright replay could not start: ${e.message}` });
+        }
     }
 
-    // Otherwise, normal codegen:
+    // Plain visible Codegen: the analyst gets the actual Playwright recorder window and can
+    // inspect/edit generated actions there. Closing Codegen flushes codegen_<sessionId>.js;
+    // the existing UI poll imports it into the AutoTest modal for final review/save.
     const outputPath = path.join(CORE_DIR, `codegen_${sessionId}.js`);
     const targetUrl = (url && url.startsWith('http')) ? url : 'about:blank';
-
-    const child = spawn(process.execPath, [PLAYWRIGHT_CLI, 'codegen', targetUrl, '--output', outputPath], {
-        env: getBrowserEnv(),
-        shell: false,
-        windowsHide: false,
-        detached: false
-    });
-
-    activeCodegen = child;
-    trackedProcesses.add(child);
-    child.stdout.on('data', d => console.log(`[CODEGEN] ${d}`));
-    child.stderr.on('data', d => {
-        const msg = d.toString();
-        if (!msg.includes('DevTools listening') && !msg.includes('GPU process')) {
-            console.error(`[CODEGEN ERR] ${msg}`);
-        }
-    });
-    child.on('close', code => {
-        trackedProcesses.delete(child);
-        if (activeCodegen === child) activeCodegen = null;
-        console.log(`[CODEGEN] process closed (code ${code}), output: ${outputPath}`);
-    });
-    child.on('error', err => console.error('[CODEGEN SPAWN ERROR]', err.message));
-
-    res.json({ sessionId, isReplay: false, message: 'Codegen launched, record in the browser, then close it.' });
+    try {
+        launchVisibleCodegen({ targetUrl, outputPath });
+    } catch (e) {
+        activeCodegen = null;
+        return res.status(500).json({ error: `Playwright Codegen could not start: ${e.message}` });
+    }
+    res.json({ sessionId, isReplay: false, message: 'Playwright Codegen opened. Perform the action there, review/edit the generated code, then close Codegen to transfer it here.' });
 });
 
 // GET /codegen-result/:sessionId: returns recorded code once codegen writes the file
@@ -555,6 +651,12 @@ app.post('/run', async (req, res) => {
     // dependency check) sees the same canonical value.
     const platform = req.body.platform ? normalizePlatform(req.body.platform) : req.body.platform;
 
+    // blackbox obs-2: same denylist hole as /record — platform:'appium' was accepted and ran
+    // the Web path. Only the two platforms this app actually implements are valid here.
+    if (platform !== undefined && platform !== null && platform !== 'web' && platform !== 'mobile') {
+        return res.status(400).json({ error: `Unknown platform "${req.body.platform}". Use "web" or "mobile".` });
+    }
+
     if (platform === 'mobile') {
         try { require.resolve('webdriverio'); } catch (e) {
             return res.status(400).json({ error: "Missing Dependency: 'webdriverio' is not installed." });
@@ -583,10 +685,12 @@ app.post('/run', async (req, res) => {
         try { fs.unlinkSync(compileErrorPath); } catch (e) {}
         try { fs.unlinkSync(warningsPath); } catch (e) {}
         // DEF-CRIT-006 FIX: explicit cwd so paths resolve from project root, not studio/
-        execSync(`node core/scenario_parser.js ${UPLOADED_EXCEL}`, { stdio: 'inherit', cwd: ROOT_DIR });
+        // doubt-review-found: same shell-quoting hazard as /upload above — DATA_DIR (and so
+        // UPLOADED_EXCEL) can contain spaces under Electron's default userData path.
+        runNodeScript('core/scenario_parser.js', [UPLOADED_EXCEL]);
 
         console.log("Compiling scenarios into explicit code...");
-        execSync(`node core/compiler.js`, { stdio: 'inherit', cwd: ROOT_DIR });
+        runNodeScript('core/compiler.js', []);
 
         console.log(`Launching Playwright with ${numWorkers} workers...`);
         
@@ -596,21 +700,62 @@ app.post('/run', async (req, res) => {
         // script for it (core/executed.mobile.js), so run it directly with `node` instead of
         // the Playwright Test CLI (which doesn't recognize that file's syntax).
         const isMobileRun = process.env.AUTOTEST_PLATFORM === 'mobile';
+        // doubt-review-found: 'core/executed.spec.ts' with no --config only worked because dev
+        // mode happens to run with cwd === ROOT_DIR. Under Electron (forked with cwd: userData)
+        // Playwright can't even find playwright.config.ts, let alone the relocated spec file.
+        // --config pins the config regardless of cwd; its testDir now tracks AUTOTEST_STATE_DIR
+        // (playwright.config.ts), so the bare filename resolves correctly in both cases.
+        // realism round 3: packaged, the config inside app.asar require()s @playwright/test
+        // from the asar while the STATE_DIR spec resolves it from userData's NODE_PATH — two
+        // copies load, Playwright aborts ("Requiring @playwright/test second time"). Packaged,
+        // point --config at a STATE_DIR-side copy written next to the spec, so config and spec
+        // resolve the SAME copy. Test files must live beside the config, so the spec is
+        // addressable under the same testDir too. Dev keeps the repo config (byte-identical).
+        let pwConfigPath = path.join(ROOT_DIR, 'playwright.config.ts');
+        let pwTestArg = 'executed.spec.ts';
+        if (isPackaged()) {
+            pwConfigPath = path.join(CORE_DIR, 'playwright.config.ts');
+            try {
+                let cfg = fs.readFileSync(path.join(ROOT_DIR, 'playwright.config.ts'), 'utf8');
+                cfg = cfg.replace(/testDir: process\.env\.AUTOTEST_STATE_DIR \|\| '\.\/core'/, `testDir: ${JSON.stringify(CORE_DIR)}`);
+                fs.writeFileSync(pwConfigPath, cfg);
+                fs.copyFileSync(path.join(CORE_DIR, 'executed.spec.ts'), path.join(CORE_DIR, 'run.spec.ts'));
+                pwTestArg = 'run.spec.ts';
+            } catch (e) { pwConfigPath = path.join(ROOT_DIR, 'playwright.config.ts'); pwTestArg = 'executed.spec.ts'; }
+        }
         const pwArgs = isMobileRun
             ? [path.join(CORE_DIR, 'executed.mobile.js')]
-            : [PLAYWRIGHT_CLI, 'test', 'core/executed.spec.ts', '--workers', String(numWorkers), '--reporter=json'];
+            : [PLAYWRIGHT_CLI, 'test', '--config', pwConfigPath, pwTestArg, '--workers', String(numWorkers), '--reporter=json'];
         if (!isMobileRun && !headless) pwArgs.push('--headed');
         // ponytail: clear stale report.json so a run with no reporter (mobile) never inherits
         // a prior run's results, and a leftover timer below can't null out a newer run's state
         try { fs.unlinkSync(path.join(RESULTS_DIR, 'report.json')); } catch (e) {}
         const thisRun = activeRun;
-        const pw = spawn(process.execPath, pwArgs, {
-            env: getBrowserEnv({ 
-                PW_HEADLESS: isHeadless, 
-                PLAYWRIGHT_JSON_OUTPUT_NAME: path.join(RESULTS_DIR, 'report.json')
-            }),
-            shell: false
+        // realism round 4: packaged, the Playwright CLI ran on process.execPath (the Helper
+        // binary) with no RUN_AS_NODE — spec discovery died ("No tests found" + "did not
+        // expect test") even though the STATE_DIR config copy fixed dual-copy loading. Same
+        // treatment runNodeScript got: packaged children run with ELECTRON_RUN_AS_NODE=1.
+        const pwEnv = getBrowserEnv({
+            PW_HEADLESS: isHeadless,
+            PLAYWRIGHT_JSON_OUTPUT_NAME: path.join(RESULTS_DIR, 'report.json'),
+            // A1.1/A-6: pass the resolved value explicitly — a raw env var only propagates
+            // when AUTOTEST_RESULTS_DIR was actually set; the *default* (DATA_DIR/results)
+            // wouldn't otherwise reach the generated spec's process.env.
+            AUTOTEST_RESULTS_DIR: RESULTS_DIR,
+            // doubt-review-found (verified by direct reproduction): once AUTOTEST_STATE_DIR
+            // relocates executed.spec.ts outside ROOT_DIR, Node's module resolution can no
+            // longer find `@playwright/test` by walking up from the spec's own location —
+            // "Cannot find module '@playwright/test'". NODE_PATH restores it.
+            // realism round 5: packaged, this MUST be the asar copy, not dev ROOT_DIR —
+            // the CLI itself runs from app.asar (PLAYWRIGHT_CLI via require.resolve), and a
+            // second copy from ROOT_DIR kills the run ("did not expect test.describe()…
+            // two different versions"). Dev keeps ROOT_DIR (byte-identical behavior).
+            NODE_PATH: isPackaged()
+                ? path.join(process.resourcesPath, 'app.asar', 'node_modules')
+                : path.join(ROOT_DIR, 'node_modules')
         });
+        if (isPackaged()) pwEnv.ELECTRON_RUN_AS_NODE = '1';
+        const pw = spawn(process.execPath, pwArgs, { env: pwEnv, shell: false });
 
         activeRunner = pw;  // DEF-HIGH-004 FIX: separate runner ref
         trackedProcesses.add(pw);
@@ -723,7 +868,8 @@ function parseRecordedCode(code) {
                     if (method.toLowerCase() === 'setinputfiles') {
                         throw new Error("File upload (setInputFiles) isn't supported yet. Use Manual entry for a non-upload step, or contact support.");
                     }
-                    if (['click', 'fill', 'press', 'goto', 'selectOption', 'check', 'uncheck', 'toBeVisible', 'toHaveText'].includes(method)) {
+                    const actionType = method === 'isVisible' ? 'toBeVisible' : method;
+                    if (['click', 'fill', 'press', 'goto', 'selectOption', 'check', 'uncheck', 'toBeVisible', 'toHaveText'].includes(actionType)) {
                         let target = null;
 
                         if (method === 'goto' && node.arguments.length > 0) {
@@ -741,8 +887,8 @@ function parseRecordedCode(code) {
                         }
 
                         if (target) {
-                            const step = { type: method, target };
-                            if (['fill', 'press', 'selectOption', 'toHaveText'].includes(method) && node.arguments.length > 0) {
+                            const step = { type: actionType, target };
+                            if (['fill', 'press', 'selectOption', 'toHaveText'].includes(actionType) && node.arguments.length > 0) {
                                 step.value = node.arguments[0].value;
                             }
                             steps.push(step);
@@ -757,6 +903,188 @@ function parseRecordedCode(code) {
     }
     return steps;
 }
+
+function readSuggestionContext(scenarioId, label) {
+    const blueprint = JSON.parse(fs.readFileSync(path.join(CORE_DIR, 'blueprint.json'), 'utf8'));
+    const scenario = blueprint.find(s => s.Scenario_ID === scenarioId)
+        || blueprint.find(s => Array.isArray(s.Flow) && s.Flow.some(step => step.Mapping_Key === label));
+    if (!scenario) {
+        const error = new Error(`Scenario not found: ${scenarioId}`);
+        error.statusCode = 400;
+        throw error;
+    }
+    const index = scenario.Flow.findIndex(step => step.Mapping_Key === label);
+    if (index < 0) {
+        const error = new Error(`Step not found: ${label}`);
+        error.statusCode = 400;
+        throw error;
+    }
+    const mappings = fs.existsSync(MAPPINGS_PATH) ? JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8')) : {};
+    const resolved = step => (mappings[step.Mapping_Key] && mappings[step.Mapping_Key].steps) || ActionDB.resolveSteps(step.Mapping_Key);
+    const firstMissing = scenario.Flow.find(step => {
+        const steps = resolved(step);
+        return !Array.isArray(steps) || steps.length === 0;
+    });
+    const preceding = scenario.Flow.slice(0, index)
+        .map(step => ({ ...step, resolvedSteps: resolved(step) }))
+        .filter(step => Array.isArray(step.resolvedSteps) && step.resolvedSteps.length > 0);
+    if (!firstMissing) {
+        const error = new Error(`Scenario "${scenario.Scenario_ID}" has no unmapped steps.`);
+        error.statusCode = 400;
+        throw error;
+    }
+    let runtimeData = {};
+    if (fs.existsSync(RUNTIME_DATA_PATH)) {
+        try { runtimeData = JSON.parse(fs.readFileSync(RUNTIME_DATA_PATH, 'utf8')); } catch (e) {}
+    }
+    const iterations = runtimeData[scenario.Scenario_ID];
+    return {
+        scenarioId: scenario.Scenario_ID,
+        row: scenario.Flow[index],
+        firstMissing: firstMissing && firstMissing.Mapping_Key,
+        preceding,
+        iterData: iterations && iterations.length > 0 ? iterations[0] : null
+    };
+}
+
+function parseSuggestion(code, label) {
+    if (String(code).trim() === 'CANNOT_MAP') return { cannotMap: true, steps: [] };
+    const steps = parseRecordedCode(code);
+    if (steps.length === 0) throw new Error('The suggestion contained no Playwright actions.');
+    for (const step of steps) {
+        if (step.type !== 'goto' && !isSafeChain(step.target)) {
+            throw new Error(`The suggestion used an unsafe locator for "${label}".`);
+        }
+    }
+    return { cannotMap: false, steps };
+}
+
+function persistMapping(label, code, scenarioId) {
+    const steps = parseRecordedCode(code);
+    if (scenarioId) {
+        try {
+            const blueprint = JSON.parse(fs.readFileSync(path.join(CORE_DIR, 'blueprint.json'), 'utf8'));
+            const scenario = blueprint.find(s => s.Scenario_ID === scenarioId);
+            const row = scenario && Array.isArray(scenario.Flow) && scenario.Flow.find(s => s.Mapping_Key === label.trim());
+            if (row && row.Data) tokenizeLiterals(steps, row.Data);
+        } catch (e) { /* no blueprint yet, or scenario/row not found: save the literal as-is */ }
+    }
+    const mappings = JSON.parse(fs.readFileSync(MAPPINGS_PATH, 'utf8'));
+    mappings[label.trim()] = { steps };
+    fs.writeFileSync(MAPPINGS_PATH, JSON.stringify(mappings, null, 2));
+    return steps;
+}
+
+async function generateSuggestion(session) {
+    const provider = resolveProvider(process.env);
+    const ariaSnapshot = await session.page.locator('body').ariaSnapshot();
+    const proposal = await complete(provider, buildPrompt({
+        ariaSnapshot,
+        label: session.label,
+        data: session.row.Data || {},
+        rejected: session.rejected
+    }));
+    session.proposal = proposal;
+    let parsed;
+    try {
+        parsed = parseSuggestion(proposal, session.label);
+    } catch (e) {
+        session.steps = null;
+        return { status: 'rejected', proposal, error: e.message };
+    }
+    session.steps = parsed.steps;
+    if (parsed.cannotMap) return { status: 'cannot_map', proposal };
+    try {
+        await cdpSession.executeSteps(session.page, [{ Mapping_Key: session.label, Data: session.row.Data || {}, resolvedSteps: parsed.steps }], session.iterData);
+        return { status: 'ready', proposal };
+    } catch (e) {
+        session.steps = null;
+        throw e;
+    }
+}
+
+// Phase C: provider status is deliberately small; no key means only Suggest is disabled.
+app.get('/suggest/status', (req, res) => {
+    const provider = resolveProvider(process.env);
+    res.json({ enabled: provider.enabled, active: !!activeSuggestion });
+});
+
+app.post('/suggest', async (req, res) => {
+    if (!resolveProvider(process.env).enabled) return res.status(503).json({ error: 'LLM suggestions are disabled. Configure LLM_BASE_URL, LLM_API_KEY, and LLM_MODEL in .env.' });
+    if (activeSuggestion || (activeCodegen && !activeCodegen.killed && activeCodegen.exitCode === null)) {
+        return res.status(409).json({ error: 'A recording or suggestion session is already active.' });
+    }
+    if (activeRun && (activeRun.phase === 'compiling' || activeRun.phase === 'running')) {
+        return res.status(409).json({ error: 'A test run is in progress. Wait for it to finish before suggesting.' });
+    }
+    const { label, scenarioId } = req.body || {};
+    if (typeof label !== 'string' || !label.trim() || typeof scenarioId !== 'string' || !scenarioId.trim()) {
+        return res.status(400).json({ error: 'label and scenarioId are required.' });
+    }
+    activeSuggestion = { label: label.trim(), scenarioId, rejected: [], proposal: null, steps: null };
+    activeCodegen = { killed: false, exitCode: null, isSuggestion: true };
+    try {
+        Object.assign(activeSuggestion, readSuggestionContext(scenarioId, label));
+        if (activeSuggestion.firstMissing && activeSuggestion.firstMissing !== activeSuggestion.label) {
+            const requestedLabel = activeSuggestion.label;
+            const nextLabel = activeSuggestion.firstMissing;
+            activeSuggestion = null;
+            activeCodegen = null;
+            return res.status(409).json({ error: `Map "${nextLabel}" before suggesting "${requestedLabel}".` });
+        }
+        activeSuggestion.page = await cdpSession.getPage();
+        await cdpSession.executeSteps(activeSuggestion.page, activeSuggestion.preceding, activeSuggestion.iterData);
+        const result = await generateSuggestion(activeSuggestion);
+        if (result.status === 'cannot_map') {
+            activeSuggestion = null;
+            activeCodegen = null;
+        }
+        res.json(result);
+    } catch (e) {
+        activeSuggestion = null;
+        activeCodegen = null;
+        console.error('[SUGGEST]', e);
+        res.status(e.statusCode || 500).json({ error: e.message });
+    }
+});
+
+app.post('/suggest/reject', async (req, res) => {
+    if (!activeSuggestion) return res.status(409).json({ error: 'No active suggestion.' });
+    if (activeSuggestion.proposal) activeSuggestion.rejected.push(activeSuggestion.proposal);
+    try {
+        await cdpSession.rewind(activeSuggestion.page, activeSuggestion.preceding, activeSuggestion.iterData);
+        const result = await generateSuggestion(activeSuggestion);
+        if (result.status === 'cannot_map') {
+            activeSuggestion = null;
+            activeCodegen = null;
+        }
+        res.json(result);
+    } catch (e) {
+        activeSuggestion = null;
+        activeCodegen = null;
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/suggest/accept', (req, res) => {
+    if (!activeSuggestion || !activeSuggestion.proposal || !activeSuggestion.steps) {
+        return res.status(409).json({ error: 'No executable suggestion to accept.' });
+    }
+    try {
+        persistMapping(activeSuggestion.label, activeSuggestion.proposal, activeSuggestion.scenarioId);
+        activeSuggestion = null;
+        activeCodegen = null;
+        res.json({ message: 'Suggestion accepted.' });
+    } catch (e) {
+        res.status(400).json({ error: 'Suggestion could not be saved: ' + e.message });
+    }
+});
+
+app.post('/suggest/cancel', (req, res) => {
+    activeSuggestion = null;
+    if (activeCodegen && activeCodegen.isSuggestion) activeCodegen = null;
+    res.json({ message: 'Suggestion cancelled.' });
+});
 
 // ── Action Database & Library Routes ───────────────────────────────────
 app.get('/action-db', (req, res) => {
@@ -911,8 +1239,20 @@ app.get('/run-status', (req, res) => {
     res.json(activeRun);
 });
 
-app.post('/record-cancel', (req, res) => {
-    console.log('Record cancellation requested. Closing codegen...');
+app.post('/record-cancel', async (req, res) => {
+    console.log('Record cancellation requested. Stopping recorder...');
+    // §B5: a CDP session is NOT a process to kill — that would be the tester's own Chrome.
+    // "Cancel" means stop recording and release the guard; their browser stays open and usable.
+    if (activeCodegen && activeCodegen.isSuggestion) {
+        activeSuggestion = null;
+        activeCodegen = null;
+        return res.json({ message: 'Suggestion cancelled.' });
+    }
+    if (activeCodegen && activeCodegen.isCdp) {
+        await cdpSession.stopCodegenRecording();
+        activeCodegen = null;
+        return res.json({ message: 'Recording stopped. Your Chrome window is still open.' });
+    }
     // DEF-HIGH-004 FIX: Only kill the codegen process, NOT the test runner
     if (activeCodegen && !activeCodegen.killed) {
         try { activeCodegen.kill('SIGKILL'); } catch (e) {}
@@ -961,7 +1301,8 @@ server.on('listening', () => {
     console.log(`STUDIO_PORT=${port}`); // A2's Electron main.js parses this to know where to load
 
     // ponytail: one predicate covers replay_ and codegen_ orphans, both write dirs
-    const swept = [CORE_DIR, ROOT_DIR].flatMap(sweepOrphans);
+    // A1.1: DATA_DIR (not ROOT_DIR) is where multer stages uploads now.
+    const swept = [CORE_DIR, DATA_DIR].flatMap(sweepOrphans);
     console.log(`Startup cleanup: swept ${swept.length} orphaned script(s).`);
 
     if (!fs.existsSync(MAPPINGS_PATH)) {
@@ -970,7 +1311,10 @@ server.on('listening', () => {
     if (fs.existsSync(UPLOADED_EXCEL)) {
         // Run scenario parser to rebuild blueprint.json
         try {
-            execSync(`node core/scenario_parser.js scenario_uploaded.xlsx`, { stdio: 'inherit', cwd: ROOT_DIR });
+            // A1.1: absolute UPLOADED_EXCEL, not the 'scenario_uploaded.xlsx' literal — that
+            // literal is only correct when DATA_DIR === ROOT_DIR (the execSync cwd).
+            // doubt-review-found: same shell-quoting hazard — execFileSync avoids the shell.
+            runNodeScript('core/scenario_parser.js', [UPLOADED_EXCEL]);
             console.log("Blueprint generated successfully on startup");
         } catch (e) {
             console.error("Error generating blueprint on startup:", e);
