@@ -39,8 +39,9 @@ studio_audit.log
 # Allow bundled binaries and drivers
 !bin/
 !bin/**/
-!DRIVERS/
-!DRIVERS/**/
+# ponytail: DRIVERS/node_modules was deleted (root node_modules is the single source) —
+# the old !DRIVERS/ exception would re-surface it as untracked. ms-playwright stays ignored
+# below (binaries are per-machine downloads, never committed).
 
 
 # Temporary files
@@ -56,3 +57,7 @@ studio_audit.log
 !.env.example
 DRIVERS/ms-playwright/
 .playwright-mcp/
+
+# PHASE B: AUTOTEST_CDP_PROFILE=isolated puts a whole Chrome profile under the state dir.
+# Path-scoped to core/ per AGENTS.md rule 15 (a bare pattern would exclude unrelated files).
+core/autotest/

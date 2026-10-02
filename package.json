@@ -2,10 +2,51 @@
   "name": "app",
   "version": "1.0.0",
   "description": "",
-  "main": "start.js",
+  "main": "electron/main.js",
   "scripts": {
     "start": "node start.js",
-    "test": "node tests/run_all.js"
+    "electron": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "test": "node tests/run_all.js",
+    "fixtures:serve": "node tests/fixtures/serve.js"
+  },
+  "build": {
+    "appId": "com.autotest.studio",
+    "productName": "AutoTest Studio",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "studio/**/*",
+      "core/**/*",
+      "package.json",
+      "playwright.config.ts",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "DRIVERS/ms-playwright",
+        "to": "DRIVERS/ms-playwright"
+      }
+    ],
+    "asar": true,
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.utilities"
+    },
+    "dmg": {
+      "sign": false
+    }
   },
   "repository": {
     "type": "git",
@@ -28,5 +69,9 @@
     "multer": "^2.1.1",
     "webdriverio": "^8.14.6",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^44.4.3",
+    "electron-builder": "^26.15.3"
   }
 }

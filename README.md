@@ -28,33 +28,182 @@ This framework was engineered with a strict "Air-Gapped" ideology.
 
 ## Quick Start Guide
 
-Because AutoTest Studio is entirely self-contained, no installation is required assuming you have Node.js installed.
+AutoTest has two run modes:
 
-### 1. Start the Studio & Handle Binaries
-Because GitHub prevents uploading files larger than 100MB, the Playwright Chromium binary (~217MB) is not tracked in version control. 
+- **Web mode:** Node.js runs the Express server and you open the Studio UI in Chrome.
+- **Electron mode:** the packaged app contains the server, Node runtime, application dependencies, and Playwright browser files. The target tester does not need Node.js, npm, or internet access.
 
-If you are deploying this in an Air-Gapped Banking Environment where `npx` is blocked:
-1. Obtain the `ms-playwright` folder via your internal artifact repository (e.g., Nexus, Artifactory) or an approved USB transfer.
-2. Place the folder directly into `DRIVERS/ms-playwright/`.
+For either mode, stable Google Chrome is used for recording. Recording uses the separate persistent profile named `autotest`; the user's normal Chrome profile is not used. If stable Chrome is installed somewhere non-standard, configure its absolute executable path with `AUTOTEST_CHROME_PATH` in `.env`.
 
-Once the binaries are placed in the `DRIVERS` folder, simply start the server:
+### Web mode: run from the repository
+
+#### 1. Install dependencies and provide Playwright browsers
+
+On a connected development/build machine:
+
 ```bash
-# From the project root directory
-npm start
+npm ci
 ```
-*If binaries are missing and internet is available, it will automatically attempt to fallback and install them for you.*
 
-### 2. Access the Application
-Open your browser and navigate to: **`http://localhost:3000`**
+The Playwright browser bundle is intentionally not stored in Git. Obtain the approved `DRIVERS/ms-playwright/` folder from your internal artifact repository or an approved transfer. For a connected machine that already has the repository dependencies, you can download Chromium into that folder with:
 
-### 3. The 4-Step E2E Workflow
-1. **Upload Matrix**: Drag and drop your UAT Excel file (e.g., `DPR TEMPLATE.xlsx` format) into the UI dropzone.
-2. **Map Actions**: The system detects all unique steps. Click **Record** to open the Playwright Inspector, perform the action, and paste the generated code (e.g., `await page.getByRole('button').click();`) into the Manual mapping field.
-3. **Parameterize (DDT)**: Replace literal values in your pasted code with `{variable_name}` to dynamically inject payloads from your Excel sheets (e.g., `fill('{username}')`).
-4. **Execute**: Click **Execute Test Scenarios**. The engine will run a Headless browser in the background and sequentially execute your entire matrix.
+```bash
+PLAYWRIGHT_BROWSERS_PATH=DRIVERS/ms-playwright ./node_modules/.bin/playwright install chromium
+```
 
-### 4. Auditing Results
-Once execution completes, navigate to the `results/` folder in the project root. The system automatically provisions isolated directories for every scenario (e.g., `HRM_A_1/`). Inside, you will find:
-- Red-marked `STEP_X.png` screenshots for every action.
-- A `FINAL.png` state snapshot.
-- A `trace.zip` file containing the full Playwright DOM interaction history.
+Do not recreate or ship `DRIVERS/node_modules`; application packages come from the repository root `node_modules` and are bundled by the Electron build.
+
+#### 2. Start the server
+
+For a predictable browser URL, bind port **3000** explicitly:
+
+```bash
+PORT=3000 node studio/server.js
+```
+
+Then open:
+
+```text
+http://127.0.0.1:3000
+```
+
+`npm start` also starts the web server, but without a `PORT` override the server chooses an OS-assigned free port. Read the terminal line `STUDIO_PORT=<number>` and open `http://127.0.0.1:<number>`.
+
+On Windows PowerShell, the equivalent fixed-port command is:
+
+```powershell
+$env:PORT = "3000"; node studio/server.js
+```
+
+The server's default behavior is dynamic-port mode (`PORT=0` internally), so multiple instances can run without colliding. The automated test harness intentionally uses fixed port 3000 and is not the production startup command.
+
+#### 3. Optional `.env` configuration
+
+Copy `.env.example` to `.env` and set an absolute path if stable Chrome is not installed in its standard location:
+
+```env
+AUTOTEST_CHROME_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe
+```
+
+On macOS, for example:
+
+```env
+AUTOTEST_CHROME_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+```
+
+An explicitly exported environment variable takes precedence over `.env`. Stable Chrome is supported; Chrome Beta, Canary, Edge, and other channels are outside this configuration contract.
+
+#### 4. Use the Studio workflow
+
+1. Upload your UAT Excel matrix.
+2. In **Mappings**, click **Record** or **Re-Map**.
+3. A visible Playwright Codegen window opens using the isolated `autotest` profile. Perform the action there and inspect or modify the generated code while recording.
+4. Close the Playwright Codegen window. The generated code is transferred into the AutoTest mapping modal.
+5. Review the code, parameterize values with `{variable_name}` where needed, and click **Sync & Save Action**.
+6. Open **Execution** and run the scenarios.
+
+Evidence is written under the configured results directory. In web mode without relocation, that is the repository's `results/` directory. In Electron mode, it is stored under the app's writable user-data directory.
+
+### Windows Electron mode: build the `.exe`
+
+Build the Windows installer on a **Windows build machine**. Do not build the NSIS installer on the target locked-down machine, and do not rely on cross-compiling the `.exe` from macOS.
+
+#### 1. Prepare the Windows build machine
+
+Install a supported Node.js version, clone or copy the repository, and open PowerShell in the repository root. Then install the locked dependency tree:
+
+```powershell
+npm ci
+```
+
+The first build machine needs internet access for npm packages and Electron Builder's Windows packaging tools. The eventual tester machine does not.
+
+#### 2. Add the Windows Playwright browser bundle
+
+The current checkout may contain only a browser bundle for the machine that downloaded it. For a Windows artifact, obtain or download the Windows Chromium bundle on the Windows build machine:
+
+```powershell
+$env:PLAYWRIGHT_BROWSERS_PATH = "DRIVERS\ms-playwright"
+.\node_modules\.bin\playwright.cmd install chromium
+```
+
+Verify that this creates a Windows executable similar to:
+
+```text
+DRIVERS\ms-playwright\chromium-<version>\chrome-win\chrome.exe
+```
+
+Copy the complete `DRIVERS\ms-playwright` directory into the build input if it came from an internal artifact repository. Do not remove the Windows browser files before packaging.
+
+#### 3. Optional stable Chrome location override
+
+If stable Chrome is installed in a non-standard location on the eventual target machine, put an absolute path in the target user's `.env`, or provide `AUTOTEST_CHROME_PATH` through the deployment environment. For example:
+
+```env
+AUTOTEST_CHROME_PATH=C:\\CompanyTools\\Chrome\\Application\\chrome.exe
+```
+
+The path must point to an existing file. An invalid configured path produces a clear configuration error instead of silently selecting another browser channel.
+
+#### 4. Build and test the unpacked Electron app
+
+Create an unpacked Windows application first:
+
+```powershell
+npm run pack
+```
+
+Electron Builder places the unpacked application under `dist\win-unpacked\`. Launch the executable directly for a smoke test:
+
+```powershell
+.\dist\win-unpacked\AutoTest Studio.exe
+```
+
+Verify that the app opens, uploads an Excel file, opens a visible Playwright Codegen window from **Record**, transfers generated code back into the mapping modal, and executes a small scenario before building the installer.
+
+#### 5. Build the distributable installer
+
+```powershell
+npm run dist
+```
+
+The Windows NSIS installer is written under `dist\`, normally with a name similar to:
+
+```text
+dist\AutoTest Studio Setup 1.0.0.exe
+```
+
+The exact filename includes the version from `package.json`. The current NSIS configuration is per-user (`perMachine: false`), does not require administrator installation by default, and allows the tester to choose the installation directory.
+
+#### 6. Deliver to the locked-down tester machine
+
+Copy only the generated installer `.exe` to the target machine using your approved internal transfer process. The target tester installs and launches the app; they do **not** need to install Node.js, npm, Playwright, Chromium, or run `npx`. The app carries its Electron runtime, root application dependencies, and `DRIVERS/ms-playwright` resources.
+
+The installer is currently unsigned. Windows SmartScreen or corporate application-control policy may warn or block it until your organization signs and approves the binary. Code-signing certificates, notarization, and IT allow-listing are deployment prerequisites, not npm settings.
+
+### macOS Electron mode
+
+On macOS, the equivalent unpacked build is:
+
+```bash
+npm run pack
+```
+
+The app is placed under `dist/mac-arm64/` or the architecture-specific directory Electron Builder reports. Launch the `.app` directly for smoke testing. Build the final macOS distributable with:
+
+```bash
+npm run dist
+```
+
+The current macOS build is also unsigned unless a valid Developer ID identity is configured.
+
+### Port behavior summary
+
+- **Web server with `PORT=3000`:** `http://127.0.0.1:3000`.
+- **Web server with no explicit port:** read `STUDIO_PORT=<number>` from the terminal and open that port.
+- **Electron app:** the embedded server uses a dynamically assigned localhost port. The Electron shell reads `STUDIO_PORT` automatically; the tester does not need to enter a port.
+- **Test harness:** `npm test` uses port 3000 internally and checks that it is free first.
+
+### Results and evidence
+
+Once execution completes, scenario evidence is stored in the configured results directory. Each scenario receives its own folder containing step screenshots, `FINAL.png`, and (when not withheld for sensitive data) a Playwright trace.

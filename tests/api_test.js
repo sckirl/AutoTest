@@ -156,6 +156,16 @@ async function run() {
   r = await req('POST', '/save-mapping', { label: '<script>xss</script>', code: 'await page.locator("#x").click();' });
   check('T27 XSS in label no crash', r.status === 200 || r.status === 400);
 
+  // blackbox obs-2: /record and /run used a DENYLIST (only the literal 'mobile' rejected), so
+  // platform:'appium' fell through and spawned/ran the Web path — the same silent wrong-platform
+  // mapping A0.7.1 was filed against. Anything not web/mobile must be refused.
+  for (const bogus of ['appium', 'ios', 'android', 'desktop']) {
+    r = await req('POST', '/record', { label: 'P', url: 'http://x/', scenarioId: 'IT.1', platform: bogus });
+    check(`T40 /record rejects unknown platform "${bogus}"`, r.status === 400, r.status + ' ' + r.body.slice(0, 100));
+    r = await req('POST', '/run', { platform: bogus, headless: true, workers: 1 });
+    check(`T40b /run rejects unknown platform "${bogus}"`, r.status === 400, r.status + ' ' + r.body.slice(0, 100));
+  }
+
   r = await req('POST', '/save-mapping', { label: 'safe', code: 'require("child_process").exec("whoami")' });
   check('T28 require in code saved (isSafeChain blocks compile)', r.status === 200);
 

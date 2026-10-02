@@ -49,7 +49,8 @@
         .btn-danger { background: #FFFFFF; color: var(--danger); border: 1px solid var(--danger); }
         .btn-record { background: #FFF5F4; color: var(--danger); border: 1px solid var(--danger); }
         .btn-remap { background: #FFFFFF; color: var(--primary-action); border: 1px solid var(--primary-action); }
-        
+        .btn-suggest { background: #F5F3FF; color: #6D28D9; border: 1px solid #8B5CF6; }
+
         #status-box { margin-top: 20px; padding: 16px; border-radius: 4px; font-size: 13px; display: none; font-weight: 600; white-space: pre-wrap; }
         .status-info { background: #F0F8FF; color: var(--primary-action); border-left: 4px solid var(--primary-action); }
         .status-success { background: #F6FFED; color: var(--primary-action); border-left: 4px solid var(--primary-action); }
@@ -112,7 +113,11 @@
             <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px;">
                 <button class="btn btn-secondary" onclick="pasteFromClipboard()">Paste Clipboard</button>
                 <button class="btn btn-danger" onclick="closeModal()">Cancel & Close Replay</button>
-                <button class="btn btn-primary" style="width: auto;" onclick="saveMapping()">Sync & Save Action</button>
+                <div id="suggest-actions" style="display:none; gap:10px;">
+                    <button class="btn btn-secondary" onclick="rejectSuggestion()">Reject & Retry</button>
+                    <button class="btn btn-suggest" onclick="acceptSuggestion()">Accept Suggestion</button>
+                </div>
+                <button id="save-mapping-btn" class="btn btn-primary" style="width: auto;" onclick="saveMapping()">Sync & Save Action</button>
             </div>
         </div>
     </div>
@@ -336,6 +341,87 @@
         let currentLabel = "";
         let currentScenarioId = "";
         let isUserInteracting = false;
+        let llmEnabled = false;
+        let suggestionActive = false;
+
+        async function loadSuggestStatus() {
+            try {
+                const res = await fetch('/suggest/status');
+                llmEnabled = res.ok && (await res.json()).enabled === true;
+            } catch (e) { llmEnabled = false; }
+        }
+
+        async function suggestStep(label, scenarioId) {
+            currentLabel = label;
+            currentScenarioId = scenarioId;
+            suggestionActive = true;
+            modal.style.display = 'flex';
+            codeArea.value = '';
+            codeArea.placeholder = 'Asking the configured office LLM...';
+            document.getElementById('modal-title').textContent = `AI Suggestion: "${label}"`;
+            document.getElementById('record-guide-banner').textContent = 'Replaying preceding steps and asking the configured office LLM.';
+            document.getElementById('suggest-actions').style.display = 'flex';
+            document.getElementById('save-mapping-btn').textContent = 'Edit manually';
+            document.getElementById('save-mapping-btn').onclick = editSuggestion;
+            try {
+                const res = await fetch('/suggest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label, scenarioId })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Suggestion failed.');
+                if (data.status === 'cannot_map') {
+                    suggestionActive = false;
+                    modal.style.display = 'none';
+                    showStatus('The AI could not map this step. Use Record or Manual instead.', 'warning');
+                    return;
+                }
+                codeArea.value = data.proposal || '';
+                codeArea.placeholder = 'Review the suggestion, edit it if needed, or reject it and retry.';
+                document.getElementById('record-guide-banner').textContent = 'Review the suggestion. Accept it, reject it and retry, or edit manually.';
+                if (data.status === 'rejected') showStatus(data.error || 'The suggestion could not execute.', 'warning');
+            } catch (e) {
+                suggestionActive = false;
+                modal.style.display = 'none';
+                showStatus('Suggestion unavailable: ' + e.message, 'error');
+            }
+        }
+
+        async function rejectSuggestion() {
+            try {
+                const res = await fetch('/suggest/reject', { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Retry failed.');
+                if (data.status === 'cannot_map') {
+                    showStatus('The AI could not map this step. Use Record or Manual instead.', 'warning');
+                    return;
+                }
+                codeArea.value = data.proposal || '';
+                showStatus('New suggestion ready for review.', 'success');
+            } catch (e) { showStatus('Suggestion retry failed: ' + e.message, 'error'); }
+        }
+
+        async function acceptSuggestion() {
+            try {
+                const res = await fetch('/suggest/accept', { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Could not accept suggestion.');
+                suggestionActive = false;
+                modal.style.display = 'none';
+                showStatus(data.message || 'Suggestion accepted.', 'success');
+                await scanSteps();
+            } catch (e) { showStatus('Suggestion save failed: ' + e.message, 'error'); }
+        }
+
+        async function editSuggestion() {
+            try { await fetch('/suggest/cancel', { method: 'POST' }); } catch (e) {}
+            suggestionActive = false;
+            document.getElementById('suggest-actions').style.display = 'none';
+            document.getElementById('save-mapping-btn').textContent = 'Sync & Save Action';
+            document.getElementById('save-mapping-btn').onclick = saveMapping;
+            document.getElementById('record-guide-banner').textContent = 'Edit the Playwright code, then save the mapping.';
+        }
 
         // Phase 3-C: Platform Context Logic
         function safeStorageGet(key) {
@@ -402,7 +488,7 @@
             document.getElementById(`tab-${tabId}`).classList.remove('tab-inactive');
             document.getElementById(`tab-${tabId}`).classList.add('tab-active');
             if (tabId === 'data-matrix') initDataMatrix();
-            if (tabId === 'mappings') scanSteps().then(renderSidebar);
+            if (tabId === 'mappings') loadSuggestStatus().then(() => scanSteps()).then(renderSidebar);
             if (tabId === 'library') loadActionLibrary();
             if (tabId === 'execution') pollRunStatus(); // DEF-MED-017 FIX: Resume polling when returning to tab
             document.getElementById('library-sidebar').classList.toggle('visible', tabId === 'mappings');
@@ -565,6 +651,20 @@
                     recBtn.textContent = s.status === 'missing' ? 'Record' : 'Re-Map';
                     recBtn.title = s.status === 'missing' ? 'Open the browser to record this action' : 'Re-record this action to update the mapping';
                     recBtn.addEventListener('click', () => openRecordModal(s.label, s.scenarioId));
+
+                    if (s.status === 'missing') {
+                        const canSuggest = llmEnabled && !data.steps.slice(0, data.steps.indexOf(s)).some(previous =>
+                            previous.scenarioId === s.scenarioId && previous.status === 'missing');
+                        const suggestBtn = document.createElement('button');
+                        suggestBtn.className = 'btn btn-suggest';
+                        suggestBtn.textContent = 'Suggest';
+                        suggestBtn.disabled = !canSuggest;
+                        suggestBtn.title = !llmEnabled
+                            ? 'Suggestions are disabled until LLM_BASE_URL, LLM_API_KEY, and LLM_MODEL are configured.'
+                            : canSuggest ? 'Ask the configured office LLM to suggest this mapping' : 'Map the preceding missing step first.';
+                        if (canSuggest) suggestBtn.addEventListener('click', () => suggestStep(s.label, s.scenarioId));
+                        btnGroup.appendChild(suggestBtn);
+                    }
 
                     const manBtn = document.createElement('button');
                     manBtn.className = 'btn btn-secondary';
@@ -1097,12 +1197,12 @@
 
                 if (data.isReplay) {
                     showStatus('Replay session active, preceding steps are running in the browser.', 'info');
-                    codeArea.placeholder = 'REPLAY ACTIVE\n\n1. Preceding steps are running in the browser.\n2. When execution pauses, Playwright Inspector opens.\n3. Perform your new actions in the browser.\n4. Copy the generated code lines from Playwright Inspector.\n5. Click "Paste Clipboard" or paste here, then click "Sync & Save Action".';
-                    guideBanner.innerHTML = '<strong>Replay Mode:</strong> Preceding steps are executing in the browser. When the Playwright Inspector opens, perform the new action, copy the code from Inspector, paste below, and click <strong>"Sync & Save Action"</strong>.';
+                    codeArea.placeholder = 'REPLAY ACTIVE\n\n1. A visible Playwright window is open and replaying mapped steps.\n2. When replay pauses, perform the new action in that window.\n3. Inspect or modify the generated code in Playwright Codegen.\n4. Close the Playwright window to transfer code here, then click "Sync & Save Action".';
+                    guideBanner.innerHTML = '<strong>Replay Mode:</strong> A visible Playwright Codegen window is replaying the mapped steps. Perform the new action there, inspect or modify the generated code, then close that window to transfer it into this modal. Click <strong>"Sync & Save Action"</strong> when ready.';
                 } else {
-                    showStatus('Live Codegen active, record in the browser, then close Chromium.', 'warning');
-                    codeArea.placeholder = 'CODEGEN ACTIVE\n\n1. Chromium window is open with the Playwright Codegen recorder.\n2. Interact with the browser.\n3. Close Chromium when finished, your code will auto-fill here.\n4. Review the code and click "Sync & Save Action".';
-                    guideBanner.innerHTML = '<strong>Live Codegen:</strong> Chromium is open with the recorder. Interact with the page, then <strong>close the browser</strong> to automatically transfer code here.';
+                    showStatus('Playwright Codegen active. Perform the action in the visible window, then close it to transfer code here.', 'warning');
+                    codeArea.placeholder = 'CODEGEN ACTIVE\n\n1. A visible Playwright Codegen window is open with the isolated autotest profile.\n2. Interact with the page there.\n3. Inspect or modify the generated code there.\n4. Close the Playwright window to transfer code here.\n5. Review it and click "Sync & Save Action".';
+                    guideBanner.innerHTML = '<strong>Visible Playwright Codegen:</strong> Perform the action in the separate window, inspect or modify the generated code there, then close it to transfer the code into this modal. Your normal Chrome profile is not used.';
                     if (data.sessionId) startCodegenPoll(data.sessionId);
                 }
             } catch (e) {
@@ -1138,6 +1238,13 @@
 
         async function closeModal() {
             clearInterval(codegenPollTimer);
+            if (suggestionActive) {
+                try { await fetch('/suggest/cancel', { method: 'POST' }); } catch (e) {}
+                suggestionActive = false;
+            }
+            document.getElementById('suggest-actions').style.display = 'none';
+            document.getElementById('save-mapping-btn').textContent = 'Sync & Save Action';
+            document.getElementById('save-mapping-btn').onclick = saveMapping;
             modal.style.display = 'none';
             try { await fetch('/record-cancel', { method: 'POST' }); } catch(e) {}
         }

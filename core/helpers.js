@@ -10,6 +10,19 @@ function getAcorn() {
     return _acorn;
 }
 
+// A1.3: under Electron, DRIVERS/ ships unpacked in extraResources (process.resourcesPath),
+// not __dirname-relative — inside app.asar, '../DRIVERS' only escapes to the asar root.
+// process.resourcesPath is undefined outside Electron, so dev/test resolution is unchanged.
+function resolveDriversRoot(baseDirname) {
+    // A1.3 known-gap fix: core/scenario_parser.js and core/compiler.js run as separate `node
+    // ...` processes (server.js's execSync), so they never see Electron's own
+    // process.resourcesPath — electron/main.js bridges it via RESOURCES_PATH env instead.
+    const resourcesPath = process.resourcesPath || process.env.RESOURCES_PATH;
+    return resourcesPath
+        ? path.join(resourcesPath, 'DRIVERS')
+        : path.resolve(baseDirname, '../DRIVERS');
+}
+
 /**
  * Banking Block Compliance: Strict DRIVERS/ Resolution. This bundled-dependency bootstrap was
  * copy-pasted verbatim in core/compiler.js and core/scenario_parser.js (and a larger variant
@@ -17,7 +30,7 @@ function getAcorn() {
  * per-file, not shared.
  */
 function ensureDriversPath(callerModule, callerDirname) {
-    const DRIVERS_PATH = path.join(callerDirname, '../DRIVERS/node_modules');
+    const DRIVERS_PATH = path.join(resolveDriversRoot(callerDirname), 'node_modules');
     if (fs.existsSync(DRIVERS_PATH)) {
         callerModule.paths.unshift(DRIVERS_PATH);
         process.env.NODE_PATH = DRIVERS_PATH;
@@ -50,7 +63,34 @@ function isSafeArg(node) {
     if (node.type === 'ArrayExpression') {
         return node.elements.every(el => el && isSafeArg(el));
     }
+    // Playwright codegen emits filter({ has: page.getByRole('button') }) verbatim. A nested
+    // page-rooted locator is exactly as safe as a top-level one — it is validated by the same
+    // rules — so run it through the same structural walk rather than rejecting it. Rejecting
+    // was not a safe default: the compiler downgrades a rejected target to
+    // page.locator("<raw string>"), which can never match, so the step silently tests nothing.
+    if (node.type === 'CallExpression' || node.type === 'MemberExpression') {
+        return isSafeChainNode(node);
+    }
     return false;
+}
+
+/**
+ * Structural walk shared by isSafeChain (top-level `page.<target>`) and isSafeArg (a nested
+ * `page.…` locator inside an argument). Returns true only for a call/member chain rooted at
+ * the `page` identifier using SAFE_LOCATOR_METHODS, with every argument itself safe.
+ */
+function isSafeChainNode(node) {
+    let n = node;
+    while (n.type === 'CallExpression' || n.type === 'MemberExpression') {
+        if (n.type === 'CallExpression' && !n.arguments.every(isSafeArg)) return false;
+        const member = n.type === 'CallExpression' ? n.callee : n;
+        if (member.type !== 'MemberExpression' || member.computed ||
+            member.property.type !== 'Identifier' || !SAFE_LOCATOR_METHODS.has(member.property.name)) {
+            return false;
+        }
+        n = member.object;
+    }
+    return n.type === 'Identifier' && n.name === 'page';
 }
 
 /**
@@ -68,19 +108,7 @@ function isSafeChain(target) {
     try { ast = getAcorn().parseExpressionAt(src, 0, { ecmaVersion: 2020 }); }
     catch (e) { return null; }
     if (ast.end !== src.length) return null; // trailing junk (e.g. "; more code") = injection
-    let n = ast;
-    while (n.type === 'CallExpression' || n.type === 'MemberExpression') {
-        if (n.type === 'CallExpression' && !n.arguments.every(isSafeArg)) {
-            return null;
-        }
-        const member = n.type === 'CallExpression' ? n.callee : n;
-        if (member.type !== 'MemberExpression' || member.computed ||
-            member.property.type !== 'Identifier' || !SAFE_LOCATOR_METHODS.has(member.property.name)) {
-            return null;
-        }
-        n = member.object;
-    }
-    return (n.type === 'Identifier' && n.name === 'page') ? target : null;
+    return isSafeChainNode(ast) ? target : null;
 }
 
 /**
@@ -179,6 +207,26 @@ function hasSensitiveKey(obj) {
     return !!obj && Object.keys(obj).some(k => /password|secret|token|pin/i.test(k));
 }
 
+function buildCodegenArgs({ cli, targetUrl, outputPath, profileDir }) {
+    return [cli, 'codegen', targetUrl, '--output', outputPath, '--user-data-dir', profileDir];
+}
+
+function buildCodegenEnv({ baseEnv, browserPath, browsersPath, nodePath, packaged }) {
+    const env = { ...baseEnv, PW_HEADLESS: '0', AUTOTEST_CDP_PROFILE: 'isolated' };
+    if (browserPath) {
+        env.BROWSER_PATH = browserPath;
+        env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = browserPath;
+        env.PLAYWRIGHT_LAUNCH_OPTIONS_EXECUTABLE_PATH = browserPath;
+    }
+    if (browsersPath) {
+        env.PLAYWRIGHT_BROWSERS_PATH = browsersPath;
+        env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '1';
+    }
+    if (nodePath) env.NODE_PATH = nodePath;
+    if (packaged) env.ELECTRON_RUN_AS_NODE = '1';
+    return env;
+}
+
 module.exports = {
     isSafeChain,
     interpolate,
@@ -188,5 +236,8 @@ module.exports = {
     hasSensitiveKey,
     normalizePlatform,
     ensureDriversPath,
+    resolveDriversRoot,
+    buildCodegenArgs,
+    buildCodegenEnv,
     q
 };

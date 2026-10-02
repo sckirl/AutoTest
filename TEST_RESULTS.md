@@ -491,3 +491,81 @@ Server log confirms all 5 setInputFiles rejections (`1a`, `1b`, `2a`, `2b`, `3a`
 
 ### Verdict
 **PASS — fix confirmed complete.** `SetInputFiles` (capital S) and `setinputfiles` (all-lowercase) are both rejected with a non-200 error mentioning `setInputFiles` on both `POST /save-mapping` and `POST /action-db/action`. Neither variant is persisted. Exact-case `setInputFiles` continues to be correctly rejected (no regression). This closes the gap previously reported as a FAIL in the Black-Box Pass dated 2026-09-22 above.
+
+## Black-Box Pass — 2026-09-22 — scope: `resolveDriversRoot()` shared helper (core/helpers.js, studio/server.js) + dynamic port binding (studio/server.js, A1.2/A1.3)
+
+Scope per the dev note: no route logic changed, only (1) how `DRIVERS_PATH`/`MS_PLAYWRIGHT_PATH` are
+computed (now via a shared `resolveDriversRoot()`, byte-identical in dev/test since
+`process.resourcesPath` is undefined) and (2) the server now binds `process.env.PORT || 0` instead of
+hardcoded `3000`, logging `STUDIO_PORT=<port>`. `PORT` env var still forces the exact port. Full offline
+suite (`node tests/run_all.js`, 14 files incl. new `tests/state_dir_test.js`) run first, then live
+manual checks against a real `node studio/server.js` process, plus one level beyond what was asked
+(concurrent instances, an explicit-PORT collision).
+
+| # | Scenario | Result | Evidence |
+|---|---|---|---|
+| 1 | `resolveDriversRoot()` dev/test resolution unchanged | PASS | Direct call comparison: old inline `path.resolve(__dirname, '../DRIVERS/node_modules')` vs new `resolveDriversRoot(__dirname)` + `path.join(..., 'node_modules')` both produced `/Users/alvin/CodeProjects/AutoTest/DRIVERS/node_modules`; `process.resourcesPath` confirmed `undefined` in this environment. |
+| 2 | `node tests/run_all.js` (full offline suite, 14 files, real spawned server on port 3000) | PASS | Exit code 0. Every sub-suite reported full score: sweep/dead-server/safe-chain/trace-redaction (line-by-line PASS), scenario_parser (PASS), action_db_corruption (PASS), mutual_exclusion 4/4, tokenize_literal, mobile_compile 22/22, ui_behavior 11/11, api_test 55/55, and the new `state_dir_test.js` — `PASS: state_dir_test — DRIVERS_ROOT + dynamic port` (covers A-5/A-7 from FUTURE_ARCHITECTURE.md directly: packaged `resourcesPath`-based resolution, dev fallback resolution, and dynamic-port announcement). Full log captured at `/tmp/run_all.log`. |
+| 3 | `PORT=3000 node studio/server.js` boots and serves normally | PASS | stdout: `FOUND bundled Chromium: .../DRIVERS/ms-playwright/chromium-1223/...` (proves `MS_PLAYWRIGHT_PATH` via `resolveDriversRoot` still resolves the bundled browser), `Studio Live on 3000`, `STUDIO_PORT=3000`, `Startup cleanup: swept 0 orphaned script(s).` — no errors. `GET /env` → `200 {"platform":"web"}`. `GET /` → real UI HTML (`<title>Automation Studio</title>`). |
+| 4 | No `PORT` set at all — server still boots and serves on an OS-assigned port | PASS | stdout: `Studio Live on 50305`, `STUDIO_PORT=50305`, bundled Chromium found, no errors. Parsed `STUDIO_PORT=` from stdout per the dev's own instruction. `GET /env` on port 50305 → `200 {"platform":"web"}`. `GET /scan` → `200 {"steps":[]}`. `POST /save-mapping` with empty label → `400 {"error":"Invalid label: must be a non-empty string."}` (route logic unaffected). Confirmed port 3000 was *not* touched by this instance (`curl` to :3000 timed out/refused). |
+| 5 (beyond) | Two instances, both `PORT` unset, running concurrently | PASS | Two server processes both booted cleanly with distinct OS-assigned ports (`50319`, `50318`), both served `GET /env` → `200` simultaneously. No collision, matches FUTURE_ARCHITECTURE.md matrix item A-4. |
+| 6 (beyond) | Two instances, both forced to the same explicit `PORT=3000` (collision) | **FAIL** (new defect, see below) | Second instance crashes with an unrelated `TypeError`, not a clear "port in use" message. Reproduced 2/2 times. |
+
+### Defects found
+
+**New defect — misleading crash on explicit `PORT` collision, introduced by this diff.**
+- Exact repro: start `PORT=3000 node studio/server.js`, wait for it to be listening, then start a second `PORT=3000 node studio/server.js` in the same environment.
+- Exact response/output (second process's stdout, full):
+  ```
+  /Users/alvin/CodeProjects/AutoTest/studio/server.js:929
+      const port = server.address().port;
+                                   ^
+
+  TypeError: Cannot read properties of null (reading 'port')
+      at Server.<anonymous> (/Users/alvin/CodeProjects/AutoTest/studio/server.js:929:34)
+      at Server.f (/Users/alvin/CodeProjects/AutoTest/DRIVERS/node_modules/once/once.js:25:25)
+      at Object.onceWrapper (node:events:631:12)
+      at Server.emit (node:events:509:20)
+      at emitErrorNT (node:net:2044:8)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+  ```
+  No `Error: listen EADDRINUSE` message appears anywhere in the log — the real cause is fully masked.
+- Root cause confirmed independent of this app's other code: isolated repro with bare `express()` + `.listen(3000, cb)` twice in one process shows the same race — on port collision, the `listening` callback can still fire with `server.address()` returning `null` (confirmed via a minimal Node script, `ERR2 EADDRINUSE` fires on `server.on('error', ...)` in the same tick as the callback executing with a null address).
+- What TEST_SCENARIOS.md/AGENTS.md says should happen: not a scenario-catalog row (no existing row covers "explicit PORT already occupied at startup"), but this repo's own test suite explicitly values this class of behavior — `tests/run_all.js`'s suite includes `PASS: dead server produces a readable message, not a raw ECONNREFUSED stack`, i.e. clear/readable error messages on connection-related failures are a house standard this diff's own touched code path now violates.
+- Before this diff: `const port = process.env.PORT || 3000; app.listen(port, callback)` never called `.address()`, so a collision on an explicit `PORT` crashed with Node's own unhandled `Error: listen EADDRINUSE: address already in use :::3000` — a correct, clear, standard message.
+- After this diff: the crash still happens (second instance still fails to start — no functional regression in "does it refuse to double-bind"), but the message is now a confusing internal `TypeError` pointing at `server.js:929`, which reads like a bug in this new code rather than "the port is taken." A developer hitting this (e.g. forgetting a previous instance is still running on `PORT=3000`, which the dev's own instructions here suggested doing repeatedly) will be misdirected.
+- Confidence: **confirmed** — reproduced live 2/2 times against the real unmodified `studio/server.js`, plus isolated in a minimal standalone repro outside this app to rule out coincidence.
+- Severity: low/edge — does not affect any cataloged TEST_SCENARIOS.md row (no row exists for this), does not affect the no-`PORT`/dynamic-port default path at all (only explicit same-`PORT` double-start), and the end-user-visible outcome (second instance fails to start) is unchanged. Flagging because the dev's own diff introduced the `.address()` call and the dev's own test instructions here involve repeatedly restarting on `PORT=3000`.
+
+### Verdict
+PASS — safe to proceed. All in-scope behavior (DRIVERS resolution, `PORT` honored exactly as before, dynamic-port default, full 216-assertion offline suite, live route smoke checks) is confirmed working with no regressions. One new low-severity, edge-case defect found one level beyond the ask (misleading error message — not a functional break — when two instances are forced onto the same explicit `PORT`); does not block this change, but worth a one-line `server.on('error', ...)` guard before this ships to anyone who scripts repeated `PORT=3000` restarts.
+
+**Update (same PR, before merge):** the `server.on('error', ...)`/`'listening'` split suggested above was applied. Re-verified live: a second `PORT=3987` instance now fails with `Failed to start server: listen EADDRINUSE: address already in use ...` — no `TypeError`, exit code 1. Regression-locked in `tests/state_dir_test.js`'s `testPortCollision`. A doubt-driven adversarial review of the same diff separately caught a non-numeric `PORT` (e.g. `PORT=abc`) silently being treated as a Unix-socket path by Node's `listen()`; also fixed (rejected with `Invalid PORT "..." — must be numeric.`, exit 1) and covered by `testInvalidPort`.
+
+## Black-Box Pass — 2026-09-22 — scope: A4.1 offline fixture app (`tests/fixtures/app/*.html` + `tests/fixtures/serve.js`), new static app, no TEST_SCENARIOS.md rows exist
+
+No existing TEST_SCENARIOS.md rows cover this (brand-new fixture app, not part of AutoTest Studio). Ran each of the 8 pages end-to-end against the real server (`npm run fixtures:serve`, port 3999) via a real Chrome instance driven over CDP (browser-use), never DOM-simulated.
+
+| ID | Status | Evidence | Notes |
+|---|---|---|---|
+| FX-login | PASS | Wrong creds (`wronguser`/`wrongpass`) → `#banner` unhidden, text "Invalid username or password.", `#success` stayed hidden. Correct creds (`tester`/`Test123!`) → `#banner` hidden, `#success` unhidden, text "Login successful. Welcome, tester!" | |
+| FX-search | PASS | Query `"ap"` → 1 result (Apple). Category `veg` → 2 results (Carrot, Daikon), names correct. Combined `q="ap"` + `category=veg` → 0 results (correct AND filter). Cleared both → 5/5 results, count text updates live on every `input`/`change`. | Also probed whitespace-only query (`"   "`) → trimmed, treated as empty → 5 results (correct, source calls `.trim()`). Unicode emoji query (`🍎`) → 0 results, no crash. |
+| FX-form | PASS (7/8 fields); date sub-field BLOCKED (tool limitation, not app defect) | Text, select, checkbox, both radios, textarea all set and read back correctly (`fullname="Ada Lovelace"`, `plan="pro"`, `subscribe=true`, `contact-phone=true`, `notes="Some notes here."`). Submit → `#confirmation` unhidden, text "Form submitted." Also checked: fully empty form still submits (no `required` attrs in the fixture, so no validation is expected — not a defect). | `#start-date` (native `<input type=date>`) could not be populated via CDP synthetic key events (`press_key`) or `fill_input`/`type_text` in this environment — reproduced the identical failure on a blank `data:text/html,<input type=date>` page with zero app JS, proving it's a browser-use/CDP tooling limitation with Chrome's native date-picker shadow DOM, not a fixture bug. Recommend manual verification of this one field if it matters, or drive it via a real OS-level keyboard in a non-headless-CDP harness. |
+| FX-table | PASS | Page 1: records 1–5, Prev disabled, Next enabled. Next → page 2 (6–10). Next → page 3 (11–12), Next now disabled. Prev → back to page 2. Delete on record 2: `<dialog id="confirm-modal">` opens (`.open===true`), shows "Delete Record 2?". Cancel → dialog closes, row untouched (still 1,2,3,4,5). Delete again on record 2, click Yes → dialog closes, `#status` = "Deleted record 2", record 2 gone, page reset to 1, list renumbers correctly (5 records shown, 11 total left). | Adversarial: rapid double-click on Delete then double-click on Yes → no double-delete, no crash, row count consistent (single deletion only). |
+| FX-wizard | **FAIL** (defect found) | Step 1 → fill name "Ada Byron" → Next → step 2 visible. Fill email "ada@example.com" → Back → step 1, name retained ("Ada Byron") → Next → step 2, email retained. Next → step 3 (review) becomes visible, but `#review-name` and `#review-email` are **empty strings**, not "Ada Byron" / "ada@example.com". Submit still works (`#wizard-done` shows "Wizard complete."). Reproduced twice, deterministic. | See defect writeup below. |
+| FX-upload | PASS | `upload_file("#attachment", "/tmp/upload_test.txt")` → `#filename` unhidden, text "Selected: upload_test.txt". Submit → text updates to "Uploaded: upload_test.txt". | |
+| FX-iframe | PASS | `#legacy-frame` (`iframe_inner.html`, same-origin) reachable via `contentDocument`. Typed "This is a test comment." into `#comment` inside the frame (value confirmed set). Clicked the inner submit button (coordinates translated through the iframe's own bounding rect) → `#posted` inside the frame unhidden, text "Comment posted." | |
+| FX-slow | PASS | `#spinner` visible and `#content` hidden immediately after load (t≈0.01s). Still spinner-only at t≈1.02s. By t≈2.33s, spinner hidden, `#content` visible — matches the `setTimeout(..., 2000)` in source; not immediate, not never. | |
+
+### Defects found
+
+**wizard.html — review step never populates the entered values (strict-equality type bug).**
+- Exact repro: load `http://localhost:3999/wizard.html`. Click into `#wizard-name`, type any value (e.g. "Ada Byron"). Click the Step 1 `.next-btn` (advances to step 2). Click into `#wizard-email`, type any value (e.g. "ada@example.com"). Click the Step 2 `.next-btn` (`data-next="3"`, advances to step 3 review).
+- Exact response observed: Step 3 (`#step-3`) becomes visible as expected, but `document.getElementById('review-name').textContent` and `document.getElementById('review-email').textContent` are both `""` — empty, even though `#wizard-name` and `#wizard-email` still hold the correct entered values at that point. Reproduced deterministically 2/2 runs.
+- What the task spec says should happen instead: "confirm the review step shows what was actually entered" — it does not.
+- Root cause visible in the fixture's own inline script (read only to explain the observed live behavior, not to predict it — the failure was reproduced live first): `showStep(n)` is invoked as `showStep(b.dataset.next)`, and `dataset.next` is always a **string** (`"3"`), but `showStep` guards the review-population block with `if (n === 3)` — a strict `===` comparison against the **number** `3`. `"3" === 3` is `false` in JS, so that branch never runs on any real button click; it would only run if `showStep(3)` were called directly with a number, which nothing in the file does.
+- Confidence: **confirmed** — live, reproduced twice, root cause independently verified by checking `typeof b.dataset.next` (`"string"`) in the live page via `js(...)`.
+- Severity: this breaks the entire purpose of the review step for a fixture explicitly built to stand in for "journey tests" (per FUTURE_ARCHITECTURE.md A4.1) — any future recording/journey test asserting the review step reflects prior input will fail against this fixture, which defeats the fixture's own purpose.
+
+### Verdict
+FAIL — 1 defect blocks full sign-off: wizard.html's review step (`showStep`'s `n === 3` check) never shows the values a user actually entered, due to a string/number strict-equality mismatch on `data-next`/`data-back`. The other 7 pages (login, search, form, table, upload, iframe, slow) all passed their scenarios including adversarial extras (whitespace/unicode input, rapid double-click, native `<dialog>` confirm/cancel). One sub-check (native date-input field in form.html) is BLOCKED by a browser-automation tooling limitation unrelated to the fixture code, confirmed by reproducing the identical failure on a blank test page with no app JS — this should not block the change, just be retested manually or with a different harness if precise date-field behavior needs sign-off.

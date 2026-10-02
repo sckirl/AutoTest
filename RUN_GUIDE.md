@@ -26,12 +26,12 @@ This engine requires **NO** internet access and **NO** `npx` execution. Everythi
 - Drag and drop your Excel file into the **"Upload Matrix"** dropzone in the UI. 
 - The system will automatically scan the file, generate a unified `blueprint.json`, and navigate you to the **Mappings** tab.
 
-### 2. Mapping Steps (Playwright Codegen)
+### 2. Mapping Steps (AutoTest Chrome Recorder)
 For every unique step found in your Excel file, you must map it to Playwright actions:
-- Click the **"Record"** button next to an unmapped step. This launches an isolated Playwright Inspector.
-- Perform the action in the browser. 
-- Copy the generated locator code (e.g., `await page.getByRole('button', { name: 'Login' }).click();`).
-- Click the **"Manual"** button on the step in the UI and paste the code into the text area. 
+- Click the **"Record"** button next to an unmapped step. AutoTest opens the separate stable-Chrome profile named `autotest`; your normal Chrome profile is not used.
+- Perform the action in the AutoTest Chrome window. You do not need to close your normal Chrome.
+- Recorded code transfers automatically into the AutoTest mapping modal. Review or edit it, then click **"Sync & Save Action"**.
+- If stable Chrome is installed outside the standard location, put its absolute executable path in `.env` as `AUTOTEST_CHROME_PATH=/absolute/path/to/chrome`.
 - **Parameterization (DDT)**: If the step requires dynamic variables from the Excel's "Test Data" column, replace literal values with `{variable_name}` syntax (e.g., `fill('{username}')`).
 - Click **"Sync & Save Action"**. The step will turn blue. The system's AST engine securely extracts and validates your target commands automatically.
 

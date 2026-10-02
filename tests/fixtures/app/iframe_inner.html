@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Inner Form</title></head>
+<body>
+<form id="inner-form">
+  <label for="comment">Comment</label>
+  <input id="comment" name="comment" type="text">
+  <button type="submit">Post Comment</button>
+</form>
+<p id="posted" hidden>Comment posted.</p>
+<script>
+document.getElementById('inner-form').addEventListener('submit', e => {
+  e.preventDefault();
+  document.getElementById('posted').hidden = false;
+});
+</script>
+</body>
+</html>

@@ -4,12 +4,15 @@ const path = require('path');
 require('./helpers').ensureDriversPath(module, __dirname);
 
 function compile() {
-    const blueprintPath = path.join(__dirname, 'blueprint.json');
-    const mappingsPath = path.join(__dirname, 'mappings.json');
-    const runtimeDataPath = path.join(__dirname, 'runtime_data.json');
+    // A1.1: runs as a separate `node core/compiler.js` process — __dirname is always inside
+    // the app dir, so AUTOTEST_STATE_DIR is the only way a packaged (read-only) app relocates this.
+    const STATE_DIR = process.env.AUTOTEST_STATE_DIR || __dirname;
+    const blueprintPath = path.join(STATE_DIR, 'blueprint.json');
+    const mappingsPath = path.join(STATE_DIR, 'mappings.json');
+    const runtimeDataPath = path.join(STATE_DIR, 'runtime_data.json');
     const isMobile = process.env.AUTOTEST_PLATFORM === 'mobile';
     // ponytail: mobile output is plain CommonJS (no test framework bundled in DRIVERS/), web stays Playwright Test
-    const outputPath = path.join(__dirname, isMobile ? 'executed.mobile.js' : 'executed.spec.ts');
+    const outputPath = path.join(STATE_DIR, isMobile ? 'executed.mobile.js' : 'executed.spec.ts');
 
     if (!fs.existsSync(blueprintPath) || !fs.existsSync(mappingsPath)) return;
 
@@ -107,7 +110,10 @@ function compile() {
                 code += `  test('Scenario ${scenario.Scenario_ID}${testSuffix}: ${safeTitle}', async ({ page }) => {\n`;
             }
             
-            code += `    const resultsDir = path.join(process.cwd(), 'results', '${scenarioIdClean}');\n`;
+            // A1.1/A-6: prefer AUTOTEST_RESULTS_DIR (set explicitly by whatever spawns this
+            // spec) over process.cwd() — cwd under Electron's fork() is wherever main.js put
+            // it, not a folder the compiled spec should be guessing 'results' onto.
+            code += `    const resultsDir = path.join(process.env.AUTOTEST_RESULTS_DIR || path.join(process.cwd(), 'results'), '${scenarioIdClean}');\n`;
             code += `    if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });\n\n`;
             // DEF-NEW-004 FIX: Start per-scenario Playwright tracing for UAT evidence
             if (!isMobile && !isSensitive) {
@@ -149,6 +155,16 @@ function compile() {
                             }
                         } else {
                             const safeTarget = isSafeChain(finalTarget);
+                            // blackbox obs-1: a raw CSS/XPath target ("#submit") legitimately
+                            // becomes page.locator("#submit"). But a target that LOOKS like a
+                            // locator chain and still failed isSafeChain was silently wrapped the
+                            // same way, producing page.locator("getByRole('x').click(); ...") — a
+                            // selector that can never match. The step then ran, screenshotted, and
+                            // proved nothing: the exact failure A0.5.4 was fixed to eliminate.
+                            // Fail loudly, like every other unrepresentable step in this compiler.
+                            if (!safeTarget && /^(getBy|locator\(|frameLocator\()/.test(String(finalTarget).trim())) {
+                                throw new Error(`Unsafe or malformed locator for step "${step.Mapping_Key}": ${finalTarget}\n  This looks like a Playwright locator chain but failed validation, so it cannot be compiled. Re-record this step, or enter it manually using a supported locator (getByRole/getByText/getByLabel/locator/frameLocator).`);
+                            }
                             const loc = safeTarget ? `page.${safeTarget}` : `page.locator(${q(finalTarget)})`;
                             if (action.type === 'goto') code += `        await page.goto(${q(finalTarget)});\n`;
                             else if (action.type === 'click') {
@@ -204,12 +220,15 @@ function compile() {
 }
 
 try {
-    compile();
+    // A2/ENOTDIR follow-up: require.main guard — this file is BOTH a require()d module
+    // (tests, server.js helpers) and an execFileSync-spawned CLI (runNodeScript). Running
+    // compile() at require time fires it on every import. CLI only.
+    if (require.main === module) compile();
 } catch (e) {
     // A0.5.4 follow-up: server.js's /run spawns this via execSync, which only sees a
     // generic "Command failed" — the real reason (e.g. an unresolved {key}) never reached
     // the tester. Write it where /run can read it back regardless of the child's stdio.
-    try { fs.writeFileSync(path.join(__dirname, 'compile_error.json'), JSON.stringify({ error: e.message })); } catch (e2) {}
+    try { fs.writeFileSync(path.join(process.env.AUTOTEST_STATE_DIR || __dirname, 'compile_error.json'), JSON.stringify({ error: e.message })); } catch (e2) {}
     console.error(e.message);
     process.exitCode = 1;
 }

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Form — Fixture App</title></head>
+<body>
+<h1>Data Entry</h1>
+<form id="data-form">
+  <label for="fullname">Full Name</label>
+  <input id="fullname" name="fullname" type="text">
+
+  <label for="plan">Plan</label>
+  <select id="plan" name="plan">
+    <option value="basic">Basic</option>
+    <option value="pro">Pro</option>
+    <option value="enterprise">Enterprise</option>
+  </select>
+
+  <label><input type="checkbox" id="subscribe" name="subscribe"> Subscribe to newsletter</label>
+
+  <fieldset>
+    <legend>Contact preference</legend>
+    <label><input type="radio" name="contact" value="email" id="contact-email"> Email</label>
+    <label><input type="radio" name="contact" value="phone" id="contact-phone"> Phone</label>
+  </fieldset>
+
+  <label for="start-date">Start Date</label>
+  <input id="start-date" name="start-date" type="date">
+
+  <label for="notes">Notes</label>
+  <textarea id="notes" name="notes"></textarea>
+
+  <button type="submit">Submit</button>
+</form>
+<div id="confirmation" hidden>Form submitted.</div>
+<script>
+document.getElementById('data-form').addEventListener('submit', e => {
+  e.preventDefault();
+  document.getElementById('confirmation').hidden = false;
+});
+</script>
+</body>
+</html>
