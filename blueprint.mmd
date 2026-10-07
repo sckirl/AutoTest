@@ -1,0 +1,117 @@
+%% AutoTest Studio — Connected system blueprint
+%% Source of truth: blueprint.html. Status labels in the HTML distinguish verified, backend-only, broken, planned, and out-of-scope behavior.
+flowchart LR
+  Analyst["Test analyst / manual tester"]
+  Electron["Electron shell\nelectron/main.js"]
+  UI["Studio UI\nstudio/studio-ui.html"]
+  Server["Express server\nstudio/server.js"]
+  State["Writable state root\nAUTOTEST_STATE_DIR"]
+  Data["Writable data root\nAUTOTEST_DATA_DIR"]
+  Results["Writable results root\nAUTOTEST_RESULTS_DIR"]
+  Excel[("scenario_uploaded.xlsx")]
+  Blueprint[("blueprint.json\nblueprint_warnings.json")]
+  Mapping[("mappings.json")]
+  ActionDB[("action_database.json\nactions / groups / synonyms")]
+  Runtime[("runtime_data.json")]
+  Platform[("platform_state.json")]
+  Compiler["Compiler\ncore/compiler.js"]
+  Runner["Playwright / mobile runner"]
+  Evidence[("screenshots / trace.zip / report.json")]
+  Directory["Results index\n/results"]
+  Chrome["Isolated stable Chrome\nautotest profile"]
+  Codegen["Visible Playwright Codegen"]
+  LLM["Optional office-network LLM"]
+
+  Analyst --> Electron --> UI --> Server
+  UI -->|upload| Server --> Excel
+  Server --> Blueprint
+  UI -->|record / manual map| Server --> Mapping
+  UI -->|create edit delete link| Server --> ActionDB
+  UI -->|data matrix| Server --> Runtime
+  UI -->|platform| Server --> Platform
+  UI -->|execute| Server --> Compiler --> Runner --> Evidence
+  Evidence --> Results --> Directory
+  Server -->|record| Codegen --> Chrome
+  Server -->|replay / CDP path| Chrome
+  Server -. optional suggest .-> LLM
+  Blueprint --> Compiler
+  Mapping --> Compiler
+  ActionDB -->|resolve reusable steps| Server
+  ActionDB -->|resolve reusable steps| Compiler
+  Runtime --> Compiler
+  State -. all writable JSON state must live here in Electron .-> Blueprint
+  State -.-> Mapping
+  State -.-> ActionDB
+  State -.-> Runtime
+  State -.-> Platform
+  Results -.-> Evidence
+
+  classDef blocker fill:#ffe1e1,stroke:#a11515,color:#4b1010;
+  classDef verified fill:#dff7ea,stroke:#147a46,color:#103b25;
+  classDef planned fill:#fff0c8,stroke:#896709,color:#4a3700;
+  classDef store fill:#e8f1ff,stroke:#0d5cab,color:#12345c;
+  class ActionDB,Results,Directory blocker;
+  class Compiler,Runner,Blueprint,Mapping,Runtime,Platform,Excel verified;
+  class LLM planned;
+  class State,Evidence store;
+
+sequenceDiagram
+  participant A as Analyst
+  participant U as UI
+  participant S as Express
+  participant D as action_database.json
+  participant M as mappings.json
+  participant C as Compiler
+  participant R as Runner
+  A->>U: Open Action Library
+  U->>S: GET /action-db
+  S->>D: read canonical library
+  D-->>S: actions/groups
+  S-->>U: JSON library
+  A->>U: Create/Edit/Delete/Link
+  U->>S: POST/DELETE /action-db/* or POST /link-synonym
+  S->>D: validate and write
+  S->>M: sync linked steps
+  S-->>U: JSON success/error
+  U->>S: GET /action-db and GET /scan
+  S-->>U: refreshed state
+  A->>U: Execute Test Scenarios
+  U->>S: POST /run
+  S->>C: compile blueprint + mappings + runtime data
+  C->>R: execute generated spec
+  R-->>S: report.json + evidence
+  S-->>U: GET /run-status
+  U-->>A: results dashboard and links
+
+stateDiagram-v2
+  [*] --> Uploaded
+  Uploaded --> Scanned: POST /upload then GET /scan
+  Scanned --> Missing: step has no mapping/library resolution
+  Scanned --> Mapped: mappings.json or ActionDB.resolveSteps()
+  Missing --> Recording: POST /record
+  Recording --> Mapped: codegen output + POST /save-mapping
+  Missing --> Linked: POST /link-synonym
+  Linked --> Mapped: ActionDB + mappings sync
+  Mapped --> Compiling: POST /run
+  Compiling --> Running: compiler succeeds
+  Compiling --> Failed: parser/compiler error
+  Running --> Completed: report.json code 0
+  Running --> Failed: runner non-zero
+  Completed --> Evidence: results directory
+  Failed --> [*]
+  Evidence --> [*]
+
+flowchart TD
+  Package["Packaged Electron app"] --> Asar["app.asar (read-only code)"]
+  Package --> UserData["Electron userData (writable)"]
+  Asar --> ServerCode["server.js / core modules"]
+  UserData --> StateRoot["AUTOTEST_STATE_DIR\nblueprint/mappings/action DB/runtime/platform"]
+  UserData --> DataRoot["AUTOTEST_DATA_DIR\nuploads"]
+  UserData --> ResultsRoot["AUTOTEST_RESULTS_DIR\nevidence/report"]
+  ServerCode -. current defect .-> FixedDB["core/action_db.js currently derives DB_PATH from __dirname"]
+  FixedDB -. points inside asar in packaged mode .-> ENOENT["write failure / ENOENT or read-only path"]
+  StateRoot --> TargetDB["target: state-root/action_database.json"]
+  Asar --> BrowserBundle["DRIVERS/ms-playwright extraResources"]
+  UserData --> Profile["autotest Chrome profile"]
+  classDef blocker fill:#ffe1e1,stroke:#a11515;
+  class ENOENT,FixedDB blocker;

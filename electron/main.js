@@ -12,6 +12,10 @@ let child = null;
 
 function startServerAndWindow() {
     const userData = app.getPath('userData');
+    // Create the window before forking: a fast server can announce STUDIO_PORT before the
+    // child-process listeners receive their first stdout chunk. Keeping win non-null makes
+    // startup deterministic instead of leaving the app on about:blank.
+    win = new BrowserWindow({ width: 1280, height: 900 });
     // A2/ENOTDIR: app.asar is a FILE, never a cwd. fork() inherits this process's cwd by
     // default, but Electron launches with cwd=/ (or wherever the .exe/.app was double-clicked
     // from) — never chdir into the bundle, and pin it to userData (writable) so nothing
@@ -51,7 +55,6 @@ function startServerAndWindow() {
     });
     child.stderr.on('data', (d) => process.stderr.write(d));
 
-    win = new BrowserWindow({ width: 1280, height: 900 });
 }
 
 app.whenReady().then(startServerAndWindow);
