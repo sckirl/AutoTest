@@ -4,7 +4,10 @@ const path = require('path');
 const acorn = require('acorn');
 const walk = require('acorn-walk');
 
-const DB_PATH = path.join(__dirname, 'action_database.json');
+// Electron redirects writable application state outside the read-only app.asar.
+// Keep the Action Library on the same state path as mappings and runtime data.
+const DB_DIR = process.env.AUTOTEST_STATE_DIR || __dirname;
+const DB_PATH = path.join(DB_DIR, 'action_database.json');
 
 function extractVariables(text) {
     if (!text || typeof text !== 'string') return [];

@@ -28,6 +28,8 @@ const multer = require('multer');
 // ponytail: shared helpers module (resolveDriversRoot already pulled in above, before DRIVERS bootstrap)
 const { isSafeChain, interpolate, q, tokenizeLiterals, sweepOrphans, safeSessionId, normalizePlatform, buildCodegenArgs, buildCodegenEnv } = require('../core/helpers');
 const { resolveProvider, complete } = require('../core/llm');
+const cdpSession = require('../core/cdp_session');
+const { buildPrompt } = require('../core/prompt');
 const ActionDB = require('../core/action_db');
 const { generateBlueprintFromExcel } = require('../core/scenario_parser');
 
@@ -179,7 +181,8 @@ function launchVisibleCodegen({ targetUrl, outputPath }) {
         cli: PLAYWRIGHT_CLI,
         targetUrl,
         outputPath,
-        profileDir: path.join(CORE_DIR, 'autotest')
+        profileDir: path.join(CORE_DIR, 'autotest'),
+        useSystemChrome: !BUNDLED_BROWSER
     });
     const env = buildCodegenEnv({
         baseEnv: process.env,
@@ -201,6 +204,10 @@ function launchVisibleCodegen({ targetUrl, outputPath }) {
 }
 
 function launchVisibleReplay({ specPath }) {
+    const configPath = path.join(CORE_DIR, 'playwright.config.ts');
+    if (isPackaged()) {
+        fs.copyFileSync(path.join(ROOT_DIR, 'playwright.config.ts'), configPath);
+    }
     const env = buildCodegenEnv({
         baseEnv: process.env,
         browserPath: BUNDLED_BROWSER,
@@ -208,7 +215,8 @@ function launchVisibleReplay({ specPath }) {
         nodePath: isPackaged() ? path.join(process.resourcesPath, 'app.asar', 'node_modules') : path.join(ROOT_DIR, 'node_modules'),
         packaged: isPackaged()
     });
-    const child = spawn(process.execPath, [PLAYWRIGHT_CLI, 'test', specPath, '--headed'], {
+    if (!BUNDLED_BROWSER) env.AUTOTEST_SYSTEM_CHROME = '1';
+    const child = spawn(process.execPath, [PLAYWRIGHT_CLI, 'test', '--config', configPath, path.basename(specPath), '--headed'], {
         env, shell: false, windowsHide: false, detached: false
     });
     trackedProcesses.add(child);
@@ -396,7 +404,10 @@ app.get('/scan', (req, res) => {
         // A0.6.5 follow-up: this used to re-walk the raw Excel with its own copy of the
         // parsing loop, so the Scenario_ID dedup (and every other) fix in scenario_parser.js
         // never applied here. Route through the one real parser instead.
-        const { blueprint } = generateBlueprintFromExcel(UPLOADED_EXCEL);
+        const blueprintPath = path.join(CORE_DIR, 'blueprint.json');
+        const blueprint = fs.existsSync(blueprintPath)
+            ? JSON.parse(fs.readFileSync(blueprintPath, 'utf8'))
+            : generateBlueprintFromExcel(UPLOADED_EXCEL).blueprint;
 
         const stepMap = new Map();
         const scenarios = [];
@@ -417,7 +428,8 @@ app.get('/scan', (req, res) => {
                         label,
                         status: isMapped ? 'mapped' : 'missing',
                         flows: [currentScenario],
-                        scenarioId: currentScenario
+                        scenarioId: currentScenario,
+                        expectedResult: step.Expected_Result || ''
                     });
                 } else {
                     stepMap.get(label).flows.push(currentScenario);
@@ -437,6 +449,29 @@ app.get('/scan', (req, res) => {
     } catch (err) {
         console.error("Scan Error:", err);
         res.status(400).json({ error: err.message });
+    }
+});
+
+app.post('/save-expected-result', (req, res) => {
+    const { scenarioId, label, expectedResult } = req.body || {};
+    if (typeof scenarioId !== 'string' || !scenarioId.trim() ||
+        typeof label !== 'string' || !label.trim() ||
+        (expectedResult !== undefined && typeof expectedResult !== 'string')) {
+        return res.status(400).json({ error: 'scenarioId, label, and expectedResult are required.' });
+    }
+    try {
+        const blueprintPath = path.join(CORE_DIR, 'blueprint.json');
+        if (!fs.existsSync(blueprintPath)) return res.status(404).json({ error: 'No local blueprint exists.' });
+        const blueprint = JSON.parse(fs.readFileSync(blueprintPath, 'utf8'));
+        const scenario = blueprint.find(s => s.Scenario_ID === scenarioId.trim());
+        const step = scenario && Array.isArray(scenario.Flow)
+            ? scenario.Flow.find(s => s.Mapping_Key === label.trim()) : null;
+        if (!step) return res.status(404).json({ error: 'Scenario step not found.' });
+        step.Expected_Result = expectedResult || '';
+        fs.writeFileSync(blueprintPath, JSON.stringify(blueprint, null, 2));
+        res.json({ message: 'Expected result saved locally.' });
+    } catch (e) {
+        res.status(400).json({ error: 'Expected result could not be saved: ' + e.message });
     }
 });
 
@@ -755,6 +790,7 @@ app.post('/run', async (req, res) => {
                 : path.join(ROOT_DIR, 'node_modules')
         });
         if (isPackaged()) pwEnv.ELECTRON_RUN_AS_NODE = '1';
+        if (!BUNDLED_BROWSER) pwEnv.AUTOTEST_SYSTEM_CHROME = '1';
         const pw = spawn(process.execPath, pwArgs, { env: pwEnv, shell: false });
 
         activeRunner = pw;  // DEF-HIGH-004 FIX: separate runner ref
@@ -826,6 +862,8 @@ app.post('/run', async (req, res) => {
 app.post('/restart', (req, res) => {
     try {
         activeRun = null;
+        activeSuggestion = null;
+        if (activeCodegen && activeCodegen.isSuggestion) activeCodegen = null;
         fs.writeFileSync(MAPPINGS_PATH, JSON.stringify({}, null, 2));
         if (fs.existsSync(UPLOADED_EXCEL)) fs.unlinkSync(UPLOADED_EXCEL);
         if (fs.existsSync(RUNTIME_DATA_PATH)) fs.unlinkSync(RUNTIME_DATA_PATH);
@@ -948,8 +986,15 @@ function readSuggestionContext(scenarioId, label) {
 }
 
 function parseSuggestion(code, label) {
-    if (String(code).trim() === 'CANNOT_MAP') return { cannotMap: true, steps: [] };
-    const steps = parseRecordedCode(code);
+    const raw = String(code).trim();
+    if (raw === 'CANNOT_MAP') return { cannotMap: true, steps: [] };
+    const actionCode = raw.split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line.startsWith('await page.'))
+        .join('\n');
+    if (!actionCode && /\bCANNOT_MAP\b/.test(raw)) return { cannotMap: true, steps: [] };
+    if (!actionCode) throw new Error('The suggestion contained no Playwright actions.');
+    const steps = parseRecordedCode(actionCode);
     if (steps.length === 0) throw new Error('The suggestion contained no Playwright actions.');
     for (const step of steps) {
         if (step.type !== 'goto' && !isSafeChain(step.target)) {
@@ -977,7 +1022,7 @@ function persistMapping(label, code, scenarioId) {
 
 async function generateSuggestion(session) {
     const provider = resolveProvider(process.env);
-    const ariaSnapshot = await session.page.locator('body').ariaSnapshot();
+    const ariaSnapshot = (await session.page.locator('body').ariaSnapshot()).slice(0, 2000);
     const proposal = await complete(provider, buildPrompt({
         ariaSnapshot,
         label: session.label,
@@ -996,6 +1041,9 @@ async function generateSuggestion(session) {
     if (parsed.cannotMap) return { status: 'cannot_map', proposal };
     try {
         await cdpSession.executeSteps(session.page, [{ Mapping_Key: session.label, Data: session.row.Data || {}, resolvedSteps: parsed.steps }], session.iterData);
+        // Refresh the live accessibility tree after execution so the next attempt is
+        // grounded in the page state produced by the proposed action.
+        session.lastAriaSnapshot = (await session.page.locator('body').ariaSnapshot()).slice(0, 2000);
         return { status: 'ready', proposal };
     } catch (e) {
         session.steps = null;
@@ -1021,7 +1069,7 @@ app.post('/suggest', async (req, res) => {
     if (typeof label !== 'string' || !label.trim() || typeof scenarioId !== 'string' || !scenarioId.trim()) {
         return res.status(400).json({ error: 'label and scenarioId are required.' });
     }
-    activeSuggestion = { label: label.trim(), scenarioId, rejected: [], proposal: null, steps: null };
+    activeSuggestion = { label: label.trim(), scenarioId, rejected: [], proposal: null, steps: null, attempts: 1 };
     activeCodegen = { killed: false, exitCode: null, isSuggestion: true };
     try {
         Object.assign(activeSuggestion, readSuggestionContext(scenarioId, label));
@@ -1034,8 +1082,22 @@ app.post('/suggest', async (req, res) => {
         }
         activeSuggestion.page = await cdpSession.getPage();
         await cdpSession.executeSteps(activeSuggestion.page, activeSuggestion.preceding, activeSuggestion.iterData);
-        const result = await generateSuggestion(activeSuggestion);
-        if (result.status === 'cannot_map') {
+        let result;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            activeSuggestion.attempts = attempt;
+            try {
+                result = await generateSuggestion(activeSuggestion);
+            } catch (e) {
+                result = { status: 'rejected', proposal: activeSuggestion.proposal, error: e.message };
+            }
+            if (result.status === 'ready' || result.status === 'cannot_map') break;
+            if (activeSuggestion.proposal) activeSuggestion.rejected.push(activeSuggestion.proposal);
+            if (attempt < 3) {
+                await cdpSession.rewind(activeSuggestion.page, activeSuggestion.preceding, activeSuggestion.iterData);
+            }
+        }
+        result.attempts = activeSuggestion.attempts;
+        if (result.status === 'cannot_map' || result.status === 'rejected' && activeSuggestion.attempts >= 3) {
             activeSuggestion = null;
             activeCodegen = null;
         }
@@ -1050,7 +1112,13 @@ app.post('/suggest', async (req, res) => {
 
 app.post('/suggest/reject', async (req, res) => {
     if (!activeSuggestion) return res.status(409).json({ error: 'No active suggestion.' });
+    if (activeSuggestion.attempts >= 3) {
+        activeSuggestion = null;
+        activeCodegen = null;
+        return res.status(429).json({ error: 'Maximum of 3 suggestion attempts reached for this step.' });
+    }
     if (activeSuggestion.proposal) activeSuggestion.rejected.push(activeSuggestion.proposal);
+    activeSuggestion.attempts++;
     try {
         await cdpSession.rewind(activeSuggestion.page, activeSuggestion.preceding, activeSuggestion.iterData);
         const result = await generateSuggestion(activeSuggestion);
@@ -1071,7 +1139,8 @@ app.post('/suggest/accept', (req, res) => {
         return res.status(409).json({ error: 'No executable suggestion to accept.' });
     }
     try {
-        persistMapping(activeSuggestion.label, activeSuggestion.proposal, activeSuggestion.scenarioId);
+        const code = req.body && typeof req.body.code === 'string' ? req.body.code : activeSuggestion.proposal;
+        persistMapping(activeSuggestion.label, code, activeSuggestion.scenarioId);
         activeSuggestion = null;
         activeCodegen = null;
         res.json({ message: 'Suggestion accepted.' });

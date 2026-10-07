@@ -185,7 +185,7 @@ function compile() {
                         code += `      await driver.pause(800);\n`;
                         code += `      await driver.saveScreenshot(path.join(resultsDir, 'STEP_${i + 1}.png'));\n`;
                     } else {
-                        code += `      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});\n`;
+                        code += `      await page.waitForTimeout(1000).catch(() => {}); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});\n`;
                         code += `      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});\n`;
                         code += `      await page.screenshot({ path: path.join(resultsDir, 'STEP_${i + 1}.png'), fullPage: true });\n`;
                         code += `      });\n`;
@@ -197,7 +197,7 @@ function compile() {
                 code += `      await driver.pause(800);\n`;
                 code += `      await driver.saveScreenshot(path.join(resultsDir, 'FINAL.png'));\n`;
             } else {
-                code += `      await page.waitForTimeout(1000); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});\n`;
+                code += `      await page.waitForTimeout(1000).catch(() => {}); await page.waitForLoadState('domcontentloaded').catch(() => {}); await page.waitForLoadState('networkidle').catch(() => {});\n`;
                 code += `      await page.evaluate(() => { document.body.style.minHeight = '100vh'; window.scrollBy(0, 1); window.scrollBy(0, -1); }).catch(() => {});\n`;
                 code += `      await page.screenshot({ path: path.join(resultsDir, 'FINAL.png'), fullPage: true });\n`;
                 // DEF-NEW-004 FIX: Stop tracing and save trace.zip per scenario

@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/ 
-dist/
+
+core/dist/ 
+dist/ 
+dist-corrected/ 
 
 # Test/runtime artifacts
 results/
@@ -62,3 +65,4 @@ DRIVERS/ms-playwright/
 # PHASE B: AUTOTEST_CDP_PROFILE=isolated puts a whole Chrome profile under the state dir.
 # Path-scoped to core/ per AGENTS.md rule 15 (a bare pattern would exclude unrelated files).
 core/autotest/
+

@@ -33,6 +33,13 @@ All modifications to the system must adhere to these architectural rules:
 
 ---
 
+## 2.1 Change Log Requirement
+
+Every code, configuration, documentation, or dependency change MUST update
+`BRAIN/CHANGE-LOG.md` in the same change. Each entry must include the date,
+the affected files, a concise description, and validation status. Do not
+rewrite or delete prior entries; append the newest entry at the top.
+
 ## 3. Multi-Agent Orchestration Strategy
 If further expansion is requested, deploy these specialized agent personas:
 

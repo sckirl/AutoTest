@@ -14,8 +14,13 @@ function buildRequest(provider, prompt) {
         options: {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + provider.apiKey },
-            body: JSON.stringify({ model: provider.model, messages: [{ role: 'user', content: prompt }] }),
-            signal: AbortSignal.timeout(30_000),
+            body: JSON.stringify({
+                model: provider.model,
+                messages: [{ role: 'user', content: prompt }],
+                max_tokens: 2048,
+                temperature: 0
+            }),
+            signal: AbortSignal.timeout(120_000),
         },
     };
 }

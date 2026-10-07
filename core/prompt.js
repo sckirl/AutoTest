@@ -11,7 +11,7 @@ function buildPrompt({ ariaSnapshot, label, data = {}, rejected = [] }) {
         `PREVIOUSLY REJECTED: ${JSON.stringify(rejected)}`,
         '',
         'RULES',
-        '1. Output ONLY await page.... lines. No imports, wrapper, prose, or markdown.',
+        '1. Output ONLY await page.... lines. No reasoning, imports, wrapper, prose, or markdown.',
         '2. Emit as many lines as the step needs.',
         '3. Every referenced element MUST appear in the page tree. Never invent one.',
         '4. For each TEST DATA key, use the quoted string value {key}, never its literal value.',

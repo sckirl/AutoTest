@@ -207,8 +207,10 @@ function hasSensitiveKey(obj) {
     return !!obj && Object.keys(obj).some(k => /password|secret|token|pin/i.test(k));
 }
 
-function buildCodegenArgs({ cli, targetUrl, outputPath, profileDir }) {
-    return [cli, 'codegen', targetUrl, '--output', outputPath, '--user-data-dir', profileDir];
+function buildCodegenArgs({ cli, targetUrl, outputPath, profileDir, useSystemChrome = false }) {
+    const args = [cli, 'codegen', targetUrl, '--output', outputPath, '--user-data-dir', profileDir];
+    if (useSystemChrome) args.push('--channel', 'chrome');
+    return args;
 }
 
 function buildCodegenEnv({ baseEnv, browserPath, browsersPath, nodePath, packaged }) {
