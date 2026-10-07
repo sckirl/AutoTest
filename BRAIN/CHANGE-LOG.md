@@ -5,6 +5,26 @@ validation status. Newest entries are added at the top.
 
 ---
 
+## 2026-10-07 — Restore Electron window creation for startup tests
+
+### Purpose
+
+GitHub Actions `test` failed in `tests/electron_test.js` because Electron never
+created a browser window before waiting for the forked Studio server to emit
+`STUDIO_PORT`, causing `electronApplication.firstWindow` to time out.
+
+### Changed
+
+- `electron/main.js` now creates `BrowserWindow` at startup before forking
+  `studio/server.js`, restoring the expected startup flow.
+- `BRAIN/CHANGE-LOG.md` updated for this fix.
+
+### Validation
+
+- `node tests/electron_test.js` (targeted regression for the failing job path).
+
+---
+
 ## 2026-10-05 — Make reset reliable and keep configured Suggest available
 
 ### Purpose

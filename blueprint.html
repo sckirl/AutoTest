@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="AutoTest Studio connected business requirements and system blueprint">
+<title>AutoTest Studio — Connected BRD & Project Blueprint</title>
+<style>
+:root{--blue:#0d5cab;--deep:#0f549f;--nav:#156db8;--ink:#1f2937;--muted:#65748b;--bg:#f5f5f5;--card:#fff;--line:#d9e2ec;--ok:#147a46;--okbg:#dff7ea;--warn:#896709;--warnbg:#fff0c8;--bad:#a11515;--badbg:#ffe1e1;--planned:#5f3d91;--plannedbg:#eee5ff;--code:#17202a}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Open Sans",sans-serif;line-height:1.55}header{background:linear-gradient(135deg,#014c8b,#156db8);color:#fff;padding:48px max(24px,calc((100% - 1240px)/2));}header h1{font-family:Arial,Montserrat,sans-serif;font-size:clamp(30px,4vw,52px);line-height:1.08;margin:0 0 14px;max-width:900px}header p{font-size:18px;max-width:930px;margin:8px 0}.eyebrow{font-size:12px;font-weight:bold;letter-spacing:.12em;text-transform:uppercase;opacity:.9}.container{max-width:1240px;margin:0 auto;padding:26px 24px 80px}.toc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;margin:0 0 26px;box-shadow:0 2px 8px #15324d0d}.toc ol{columns:3;margin:8px 0 0;padding-left:22px}.toc li{margin:4px 18px 4px 0}.toc a{color:var(--deep);font-weight:600}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin:16px 0;box-shadow:0 2px 8px #15324d0a}.card h3{margin-top:0;color:var(--deep)}section{scroll-margin-top:18px}h2{font-family:Arial,Montserrat,sans-serif;color:var(--deep);font-size:29px;border-bottom:3px solid #86c7ff;padding-bottom:7px;margin:42px 0 14px}h3{font-size:20px;margin:26px 0 8px;color:var(--deep)}h4{font-size:16px;color:var(--deep);margin:20px 0 5px}p{max-width:1000px}.lead{font-size:19px}.small{font-size:13px;color:var(--muted)}.feynman{border-left:6px solid var(--blue);background:#eaf4ff;padding:16px 20px;border-radius:8px;margin:14px 0}.quote{border-left:5px solid #f0ad00;background:#fffaf0;padding:12px 16px}.status{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:bold;white-space:nowrap}.verified{background:var(--okbg);color:var(--ok)}.backend{background:var(--warnbg);color:var(--warn)}.blocker{background:var(--badbg);color:var(--bad)}.planned{background:var(--plannedbg);color:var(--planned)}.out{background:#e5e7eb;color:#4b5563}table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);font-size:13px;margin:12px 0 22px}th{background:#86c7ff;color:#12345c;text-align:left;font-weight:bold}th,td{padding:9px 10px;border:1px solid var(--line);vertical-align:top}tbody tr:nth-child(odd){background:#f8fbff}.scroll{overflow-x:auto}.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:12px;background:#f8fafc;margin:2px}.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:14px 0}.node{flex:1 1 135px;min-width:130px;border:2px solid var(--blue);border-radius:9px;background:#eaf4ff;padding:10px;text-align:center;font-size:13px;font-weight:bold}.node.store{border-color:#607d9b;background:#eef3f8}.node.bad{border-color:var(--bad);background:var(--badbg);color:#4b1010}.node.plan{border-color:var(--planned);background:var(--plannedbg)}.arrow{align-self:center;font-size:22px;color:var(--muted)}pre{background:var(--code);color:#e7edf3;padding:16px;border-radius:8px;overflow:auto;font-size:12px;line-height:1.45;white-space:pre-wrap}code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.callout{padding:14px 17px;border-radius:8px;border:1px solid var(--line);background:#fff}.callout.bad{border-left:6px solid var(--bad);background:#fff8f8}.callout.ok{border-left:6px solid var(--ok);background:#f5fff9}.callout.plan{border-left:6px solid var(--planned);background:#fbf8ff}.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}.kpi{font-size:30px;font-weight:bold;color:var(--deep);display:block}.checklist{list-style:none;padding:0}.checklist li{margin:7px 0;padding-left:26px;position:relative}.checklist li:before{content:"□";position:absolute;left:0;color:var(--blue);font-size:20px;line-height:1}.checklist li.done:before{content:"✓";color:var(--ok)}details{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:9px 0}summary{cursor:pointer;font-weight:bold;color:var(--deep)}footer{border-top:1px solid var(--line);margin-top:45px;padding-top:20px;color:var(--muted);font-size:13px}@media(max-width:800px){.toc ol{columns:1}.two{grid-template-columns:1fr}header{padding:32px 20px}.container{padding:18px 14px 50px}table{font-size:12px}}
+@media print{header{color:#000;background:#fff;border-bottom:2px solid #000}.toc{box-shadow:none}.card,table{break-inside:avoid}a{color:#000;text-decoration:none}.container{padding:0}.no-print{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">AutoTest Studio · Business Requirements · System Connectivity · Project Blueprint</div>
+  <h1>One system, one source of truth, every screen connected to durable state.</h1>
+  <p>This is the complete project understanding in plain language. It documents what the repository claims, what the code actually connects, what the user reports as broken, and what must be accepted before release.</p>
+  <p><strong>Audit date:</strong> 2026-10-02 · <strong>Document status:</strong> baseline blueprint, not a claim that every current feature is production-ready.</p>
+</header>
+<main class="container">
+<nav class="toc" aria-label="Table of contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#readme">How to read this</a></li>
+    <li><a href="#executive">Executive BRD</a></li>
+    <li><a href="#health">Current health and blockers</a></li>
+    <li><a href="#scope">Scope, users, and rules</a></li>
+    <li><a href="#screens">Screen and control catalogue</a></li>
+    <li><a href="#stores">Data and artifact catalogue</a></li>
+    <li><a href="#connections">Connectivity contracts</a></li>
+    <li><a href="#workflows">End-to-end workflows</a></li>
+    <li><a href="#architecture">Architecture and deployment</a></li>
+    <li><a href="#timeline">Actual timeline</a></li>
+    <li><a href="#phases">Repair and delivery phases</a></li>
+    <li><a href="#testing">Acceptance and release gates</a></li>
+    <li><a href="#audit">Ponytail audit</a></li>
+    <li><a href="#appendix">Traceability appendix</a></li>
+  </ol>
+</nav>
+
+<section id="readme">
+<h2>1. How to read this blueprint</h2>
+<div class="feynman"><strong>Feynman explanation:</strong> Think of AutoTest as a restaurant. Excel is the order sheet. The UI is the waiter. Express routes are the kitchen tickets. JSON files are the pantry shelves. The compiler is the chef. Playwright is the delivery driver. A button is only truly connected when the waiter sends the correct ticket, the pantry changes, the chef can use the changed ingredient, and the customer sees the result after the restaurant restarts.</div>
+<p>This document uses five labels:</p>
+<div class="grid">
+ <div class="card"><span class="status verified">CONNECTED / VERIFIED</span><p>Evidence exists that the user-facing operation reaches the expected route, persists to the intended store, survives reload/restart, and is consumed downstream.</p></div>
+ <div class="card"><span class="status backend">IMPLEMENTED / BACKEND-ONLY</span><p>A route or unit behavior exists, but the real UI gesture, packaged path, or restart durability has not passed. This is not release acceptance.</p></div>
+ <div class="card"><span class="status blocker">BROKEN / RELEASE BLOCKER</span><p>User-observed or reproduced behavior prevents a normal tester from completing the intended workflow.</p></div>
+ <div class="card"><span class="status planned">PLANNED</span><p>Architectural direction or future work, not a promise that the current build implements it.</p></div>
+ <div class="card"><span class="status out">OUT OF SCOPE</span><p>Explicitly excluded from the current acceptance boundary, such as real-device Appium verification.</p></div>
+</div>
+<div class="callout bad"><strong>Important:</strong> Existing API tests prove that an endpoint can work in a test process. They do not prove that a visible button opens, sends the correct payload, writes the packaged writable database, survives restart, or renders its result. The five reported failures remain blockers until interaction-level evidence closes those gaps.</div>
+<p class="small">Primary sources: <a href="AGENTS.md">AGENTS.md</a>, <a href="FUTURE_ARCHITECTURE.md">FUTURE_ARCHITECTURE.md</a>, <a href="TEST_SCENARIOS.md">TEST_SCENARIOS.md</a>, <a href="TEST_RESULTS.md">TEST_RESULTS.md</a>, current code audit.</p>
+</section>
+
+<section id="executive">
+<h2>2. Executive BRD</h2>
+<h3>2.1 Product purpose</h3>
+<p>AutoTest Studio is a local, data-driven end-to-end testing workbench. A test analyst uploads an Excel scenario matrix, maps each business step to Playwright actions, optionally reuses actions from a persistent Action Library, supplies test-data iterations, executes scenarios, and reviews screenshots, traces, and run results.</p>
+<h3>2.2 Business problem</h3>
+<p>Manual UAT teams need repeatable browser tests without writing a complete test suite by hand. Corporate or air-gapped environments need the application, dependencies, and browsers bundled locally. Test evidence must be saved in a predictable location and must not silently report success when a mapping, data value, or execution failed.</p>
+<h3>2.3 Users</h3>
+<table><thead><tr><th>Role</th><th>Job to be done</th><th>Must be able to</th></tr></thead><tbody>
+<tr><td>Test analyst</td><td>Turn a business scenario into a repeatable test</td><td>Upload Excel, record or manually map, reuse a library action, edit data, execute, inspect evidence.</td></tr>
+<tr><td>QA lead / auditor</td><td>Trust the evidence and failure state</td><td>See exactly which scenario/iteration passed or failed and open its screenshot/result artifacts.</td></tr>
+<tr><td>Packager / IT</td><td>Deliver a no-install target artifact</td><td>Build Windows/macOS Electron output; target tester needs no Node, npm, Playwright install, or internet.</td></tr>
+<tr><td>Optional LLM operator</td><td>Accelerate mapping in an office network</td><td>Configure a compatible internal provider; accept/reject/edit suggestions without making the LLM a required dependency.</td></tr>
+</tbody></table>
+<h3>2.4 Product promise</h3>
+<ul class="checklist">
+<li>Excel scenario data becomes a visible, inspectable blueprint.</li>
+<li>Mappings are stored as executable structured steps, not hallucinated reconstructed arguments.</li>
+<li>Reusable actions and groups are one canonical library, not a dummy UI cache.</li>
+<li>Blank data is deliberate; missing data fails loudly.</li>
+<li>Execution produces evidence and an honest terminal status.</li>
+<li>Packaged mode keeps writable state outside read-only <code>app.asar</code>.</li>
+<li>Recording uses an isolated <code>autotest</code> profile by default and does not touch normal Chrome data.</li>
+</ul>
+<h3>2.5 Non-goals</h3>
+<ul><li>No silent fallback from a failed mapping to an empty passing step.</li><li>No normal-Chrome profile inspection or deletion.</li><li>No reset/delete feature for the isolated Chrome profile.</li><li>No requirement that a target tester install Node/npm or access the internet.</li><li>No real-device Appium acceptance in the current phase.</li></ul>
+</section>
+
+<section id="health">
+<h2>3. Current health and release blockers</h2>
+<p>These are the five failures reported by the user. They are recorded as customer evidence, not dismissed because lower-level API tests exist.</p>
+<div class="scroll"><table><thead><tr><th>ID</th><th>User-observed symptom</th><th>Expected behavior</th><th>Connection currently implicated</th><th>Status</th><th>Acceptance evidence required</th></tr></thead><tbody>
+<tr><td>AL-01</td><td>Action Library <strong>Delete</strong> shows an error instead of deleting.</td><td>Confirm, delete the selected action/group from the canonical store, remove its group references, refresh the list, and show a durable success message.</td><td>UI delete handlers at <code>studio-ui.html:986-996</code>/<code>1093-1103</code> call real DELETE routes. In packaged mode the ActionDB path is derived from <code>core/action_db.js:7</code> and is not relocated to Electron userData.</td><td><span class="status blocker">BLOCKER</span></td><td>Click Delete in packaged app → assert DELETE request → assert JSON store changed → reload app → item absent → compiler/scan no longer resolves it.</td></tr>
+<tr><td>AL-02</td><td><strong>Link to Library...</strong> does not work and does not give a dropdown.</td><td>For an unmapped step, show current actions/groups from the same canonical database; selecting one links the Excel label, updates ActionDB synonyms and mappings cache, refreshes scan status, and resolves during compile.</td><td>Selector is conditionally created only when <code>s.status === 'missing'</code> and <code>db.actions/groups</code> are non-empty (<code>studio-ui.html:606-647</code>). A missing/failed ActionDB load or a stale status means no selector appears. Link handler calls <code>POST /link-synonym</code> at <code>1105-1121</code>.</td><td><span class="status blocker">BLOCKER</span></td><td>Seed canonical library → open Mappings → selector visible for missing row → choose action/group → assert POST payload and both stores → reload → row mapped → compile resolves same steps.</td></tr>
+<tr><td>AL-03</td><td>Action Library/database gives <code>Save Error: ENOENT no such file or directory</code>.</td><td>Create/edit/group save writes to one writable database location in both web and packaged modes, with clear error only for an actual invalid state.</td><td><code>DB_PATH = path.join(__dirname,'action_database.json')</code> (<code>core/action_db.js:7</code>) points beside code. Electron packages code in read-only <code>app.asar</code>; other state is relocated through <code>AUTOTEST_STATE_DIR</code>. ActionDB does not currently use that environment variable.</td><td><span class="status blocker">BLOCKER</span></td><td>In unpacked and packaged builds, create/edit/delete/group/link; inspect the same configured state root; restart process; GET /action-db returns identical data; execution consumes it.</td></tr>
+<tr><td>AL-04</td><td>Edit popup fields do not respond; <strong>+ New Action</strong> and <strong>+ New Action Group</strong> do not reliably open/work.</td><td>Buttons open visible responsive modals; every field accepts keyboard input; save uses the selected record ID; close resets only modal state; group picker lists current actions and persists checked IDs.</td><td>Handlers exist at <code>studio-ui.html:929-1091</code> and real POST routes at <code>server.js:1097-1125</code>. The current failure is an interaction-level defect not covered by the route-only action DB tests; it must be reproduced in the real packaged browser and checked for overlay/DOM/event errors.</td><td><span class="status blocker">BLOCKER</span></td><td>Real browser click each create/edit button; assert modal visibility, focus, typed values, selected checkboxes, request body, store change, refresh, and close/reopen behavior.</td></tr>
+<tr><td>EX-01</td><td><strong>Execute Test Scenario</strong> produces a faulty directory/path that cannot be opened.</td><td>After execution, each scenario/iteration has a stable evidence folder; PNG and result links resolve from the current app route in web and packaged modes; the Results button opens the correct index.</td><td>Compiler writes via <code>AUTOTEST_RESULTS_DIR</code> (<code>core/compiler.js:113-117</code>). Dashboard builds screenshot link as relative <code>results/${scenarioId}/FINAL.png</code> and opens <code>/results</code> (<code>studio-ui.html:1446-1459</code>). The relative link and packaged result-root mapping require packaged UI verification.</td><td><span class="status blocker">BLOCKER</span></td><td>Run scenario in packaged app; assert exact results root and folder; click every PNG/folder link; assert HTTP 200 and correct file; restart app and reopen /results.</td></tr>
+</tbody></table></div>
+<div class="callout bad"><strong>Release decision:</strong> Do not call the Action Library or Execution features accepted until AL-01 through AL-04 and EX-01 pass the gesture-to-restart acceptance sequence below. The repair order begins with one canonical writable state root, because CRUD and linking cannot be trusted while persistence is split.</div>
+</section>
+
+<section id="scope">
+<h2>4. Scope, users, and governing rules</h2>
+<h3>4.1 In-scope capability map</h3>
+<div class="grid">
+<div class="card"><h3>Blueprint intake</h3><p>Upload <code>.xlsx</code>, parse scenario/flow/data rows, warn on merged/duplicate rows, persist blueprint and upload.</p></div>
+<div class="card"><h3>Mapping</h3><p>Record with visible Playwright Codegen, manually edit code, parse safe AST steps, preview, replay preceding mapped steps.</p></div>
+<div class="card"><h3>Action Library</h3><p>Persist atomic actions, synonyms, groups/chains; link labels; resolve the same steps in scan, preview, replay, and compiler.</p></div>
+<div class="card"><h3>Data Matrix</h3><p>Harvest <code>{variable}</code> names, save per-scenario iterations, preserve explicit blanks, fail on absent keys.</p></div>
+<div class="card"><h3>Execution and evidence</h3><p>Compile web/mobile output, run with workers/headless choice, capture screenshots/traces/report, render pass/fail dashboard.</p></div>
+<div class="card"><h3>Delivery</h3><p>Web mode for development and Electron NSIS/DMG packaging for target environments; state outside read-only package.</p></div>
+</div>
+<h3>4.2 Hard invariants</h3>
+<table><thead><tr><th>Invariant</th><th>Plain-language rule</th><th>Source of truth</th></tr></thead><tbody>
+<tr><td>One canonical library</td><td>The Action Library UI, linker, preview, scan, replay, and compiler must read the same action/group records.</td><td><code>action_database.json</code> through <code>core/action_db.js</code>; target path is shared writable state.</td></tr>
+<tr><td>One writable state root</td><td>Packaged code is read-only; all mutable JSON, uploads, generated specs, and reports go to userData-derived paths.</td><td><code>AUTOTEST_STATE_DIR</code>, <code>AUTOTEST_DATA_DIR</code>, <code>AUTOTEST_RESULTS_DIR</code>; <code>electron/main.js:20-33</code>.</td></tr>
+<tr><td>Safe extraction</td><td>Store raw locator source from AST; do not reconstruct arbitrary arguments.</td><td><code>studio/server.js</code>, <code>core/action_db.js</code>, <code>core/helpers.js</code>.</td></tr>
+<tr><td>Strict data</td><td>Present value, including <code>""</code>, is used; absent key throws.</td><td><code>core/compiler.js</code>, <code>tests/interpolate_strict_test.js</code>.</td></tr>
+<tr><td>Honest result</td><td>Non-zero runner or compiler failure is failed/visible, not completed.</td><td><code>server.js:775-823</code>, UI polling at <code>studio-ui.html:1329-1367</code>.</td></tr>
+<tr><td>Isolated browser</td><td>Default recording profile is <code>autotest</code>; normal Chrome is never touched unless controlled developer opt-out.</td><td><code>core/cdp_session.js</code>, runtime configuration.</td></tr>
+</tbody></table>
+</section>
+
+<section id="screens">
+<h2>5. Screen and control catalogue</h2>
+<p>This table is the contract for every visible area. “Consumer” names the component that must read the resulting state later.</p>
+<div class="scroll"><table><thead><tr><th>Screen / control</th><th>User action</th><th>Request / handler</th><th>Store written</th><th>Downstream consumer</th><th>Current status</th></tr></thead><tbody>
+<tr><td>Studio: Excel drop/click</td><td>Choose or drop workbook</td><td><code>POST /upload</code>; <code>handleFile()</code> <code>studio-ui.html:509-535</code></td><td>Staged workbook → <code>scenario_uploaded.xlsx</code>; blueprint/warnings</td><td><code>GET /scan</code>, Data Matrix, compiler</td><td><span class="status backend">BACKEND + UI TESTED, PACKAGED GATE REQUIRED</span></td></tr>
+<tr><td>Studio: Base URL</td><td>Enter recording URL</td><td>Read by <code>openRecordModal()</code> <code>1168+</code></td><td>Not independently persisted</td><td>Record/codegen request</td><td><span class="status backend">SESSION STATE</span></td></tr>
+<tr><td>Platform selector</td><td>Choose web/mobile</td><td><code>POST /set-platform</code>; <code>server.js:1222-1235</code></td><td><code>platform_state.json</code></td><td>Record/run validation; compiler output</td><td><span class="status backend">BACKEND ROUTE EXISTS</span></td></tr>
+<tr><td>Mappings list</td><td>Inspect missing/mapped steps</td><td><code>GET /scan</code> + <code>GET /action-db</code>; <code>scanSteps()</code> <code>537-710</code></td><td>None directly</td><td>Displays blueprint/library resolution</td><td><span class="status backend">ROUTE COVERED; UI LINK BLOCKED</span></td></tr>
+<tr><td>Preview step/scenario</td><td>View generated mapping</td><td><code>GET /preview/:label</code>, <code>GET /preview-scenario/:id</code></td><td>None</td><td>Uses mappings then ActionDB resolution</td><td><span class="status verified">API VERIFIED</span></td></tr>
+<tr><td>Record</td><td>Open visible Codegen</td><td><code>POST /record</code>; codegen polling <code>GET /codegen-result/:id</code></td><td>Codegen output → mapping on save</td><td>AST parser, compiler, results</td><td><span class="status backend">DIRECT FLOW VERIFIED; PACKAGED GATE REQUIRED</span></td></tr>
+<tr><td>Manual mapping / Sync & Save Action</td><td>Edit code and save</td><td><code>POST /save-mapping</code>; <code>saveMapping()</code> <code>1252-1290</code></td><td><code>mappings.json</code></td><td>Scan, preview, replay, compiler</td><td><span class="status backend">API VERIFIED</span></td></tr>
+<tr><td>Suggest / accept / reject / edit</td><td>Ask optional LLM and approve/edit proposal</td><td><code>GET /suggest/status</code>, <code>POST /suggest*</code></td><td>Mapping on accept</td><td>CDP replay and compiler</td><td><span class="status planned">CONDITIONAL / OPTIONAL</span></td></tr>
+<tr><td>Action Library: load</td><td>Open tab</td><td><code>GET /action-db</code>; <code>loadActionLibrary()</code> <code>712-726</code></td><td>None</td><td>Renders actions/groups</td><td><span class="status blocker">BLOCKED IN PACKAGED STATE</span></td></tr>
+<tr><td>Action Library: New Action</td><td>Open form, type, save</td><td><code>openCreateActionModal()</code>; <code>POST /action-db/action</code></td><td>Action DB</td><td>Mappings linker, resolver, compiler</td><td><span class="status blocker">USER-REPORTED BROKEN</span></td></tr>
+<tr><td>Action Library: Edit</td><td>Open existing form and update</td><td><code>openEditActionModal()</code>; POST with existing ID</td><td>Action DB</td><td>Same action consumers</td><td><span class="status blocker">USER-REPORTED BROKEN</span></td></tr>
+<tr><td>Action Library: Delete</td><td>Confirm deletion</td><td>DELETE <code>/action-db/action/:id</code></td><td>Action DB + group member references</td><td>Resolver no longer returns action</td><td><span class="status blocker">USER-REPORTED BROKEN</span></td></tr>
+<tr><td>Action Group: New/Edit</td><td>Select actions and save chain</td><td><code>renderGroupActionsPicker()</code>; POST <code>/action-db/group</code></td><td>Action DB groups</td><td><code>resolveSteps()</code> unpacks member actions</td><td><span class="status blocker">USER-REPORTED BROKEN</span></td></tr>
+<tr><td>Action Group: Delete</td><td>Confirm deletion</td><td>DELETE <code>/action-db/group/:id</code></td><td>Action DB groups</td><td>Resolver no longer returns group</td><td><span class="status backend">ROUTE EXISTS; UI GATE REQUIRED</span></td></tr>
+<tr><td>Mappings: Link to Library dropdown</td><td>Select action/group for missing row</td><td>Dynamic selector <code>studio-ui.html:606-647</code>; POST <code>/link-synonym</code></td><td>Action DB synonyms + <code>mappings.json</code> cache</td><td>Scan status, preview, compiler</td><td><span class="status blocker">USER-REPORTED BROKEN</span></td></tr>
+<tr><td>Mappings: drag library card</td><td>Drag action/group onto row</td><td>HTML5 drop calls same <code>linkStepToLibrary()</code></td><td>Action DB + mappings cache</td><td>Same resolver path</td><td><span class="status backend">EVENT WIRING EXISTS; REAL GESTURE UNACCEPTED</span></td></tr>
+<tr><td>Data Matrix</td><td>Edit iteration values, save</td><td><code>GET/POST /data-matrix</code>; <code>initDataMatrix()</code>, <code>saveDataMatrix()</code></td><td><code>runtime_data.json</code></td><td>Compiler interpolation</td><td><span class="status backend">API/UI EDGE TESTED</span></td></tr>
+<tr><td>Execution: workers/headless/run</td><td>Execute scenarios</td><td><code>POST /run</code>; poll <code>GET /run-status</code></td><td>Generated specs, results, report</td><td>Results dashboard and /results</td><td><span class="status blocker">USER-REPORTED PATH FAILURE</span></td></tr>
+<tr><td>Execution: cancel</td><td>Stop run</td><td><code>POST /run-cancel</code></td><td>Run process/status</td><td>UI terminal status</td><td><span class="status verified">API TESTED</span></td></tr>
+<tr><td>Results dashboard</td><td>Open PNG/folder</td><td>Render JSON; links at <code>studio-ui.html:1446-1459</code></td><td>None</td><td><code>AUTOTEST_RESULTS_DIR</code> and <code>/results</code></td><td><span class="status blocker">PATH ACCEPTANCE REQUIRED</span></td></tr>
+<tr><td>Restart/reset</td><td>Confirm reset</td><td><code>POST /restart</code></td><td>Clears mappings/upload/runtime/results</td><td>Fresh scan and execution</td><td><span class="status backend">DESTRUCTIVE; TESTED API ONLY</span></td></tr>
+</tbody></table></div>
+</section>
+
+<section id="stores">
+<h2>6. Data and artifact catalogue</h2>
+<div class="scroll"><table><thead><tr><th>Store/artifact</th><th>Meaning</th><th>Current writer</th><th>Current reader</th><th>Packaged target</th><th>Risk/status</th></tr></thead><tbody>
+<tr><td><code>scenario_uploaded.xlsx</code></td><td>Validated active workbook</td><td><code>/upload</code></td><td>parser, scan, run</td><td><code>AUTOTEST_DATA_DIR</code></td><td><span class="status verified">RELOCATED</span></td></tr>
+<tr><td><code>blueprint.json</code></td><td>Parsed scenarios and flow rows</td><td>scenario parser</td><td>scan, suggestions, compiler</td><td><code>AUTOTEST_STATE_DIR</code></td><td><span class="status verified">RELOCATED</span></td></tr>
+<tr><td><code>blueprint_warnings.json</code></td><td>Parser warnings/errors</td><td>parser</td><td>upload/run error response</td><td><code>AUTOTEST_STATE_DIR</code></td><td><span class="status verified">RELOCATED</span></td></tr>
+<tr><td><code>mappings.json</code></td><td>Excel label → structured executable steps</td><td>save mapping, link synonym, suggestion accept</td><td>scan, preview, replay, compiler</td><td><code>AUTOTEST_STATE_DIR</code></td><td><span class="status verified">RELOCATED</span></td></tr>
+<tr><td><code>action_database.json</code></td><td>Canonical actions, groups, synonyms, variables</td><td><code>core/action_db.js</code></td><td>server routes, scan, preview, replay, compiler</td><td><strong>Must be</strong> <code>AUTOTEST_STATE_DIR/action_database.json</code></td><td><span class="status blocker">CURRENT PATH NOT RELOCATED</span></td></tr>
+<tr><td><code>runtime_data.json</code></td><td>Per-scenario data overrides/iterations</td><td>POST /data-matrix</td><td>compiler, suggestion context</td><td><code>AUTOTEST_STATE_DIR</code></td><td><span class="status verified">RELOCATED</span></td></tr>
+<tr><td><code>platform_state.json</code></td><td>Last selected web/mobile platform</td><td>POST /set-platform</td><td>server startup, /env</td><td><code>AUTOTEST_STATE_DIR</code></td><td><span class="status verified">RELOCATED</span></td></tr>
+<tr><td>Generated spec/replay/codegen</td><td>Transient executable scripts</td><td>compiler/record/replay</td><td>Playwright runner or polling</td><td>state root; swept after use</td><td><span class="status backend">CLEANUP/IGNORED ARTIFACT CONTRACT</span></td></tr>
+<tr><td>Results folders</td><td>Scenario/iteration screenshots, trace, report</td><td>generated spec + runner</td><td>run status/dashboard/results index</td><td><code>AUTOTEST_RESULTS_DIR</code></td><td><span class="status blocker">LINK/PACKAGED PATH GATE</span></td></tr>
+<tr><td><code>.env</code></td><td>Local configuration, never committed</td><td>operator</td><td>runtime env loader</td><td>project root/userData lookup</td><td><span class="status verified">SECRET MUST STAY LOCAL</span></td></tr>
+<tr><td><code>autotest</code> Chrome profile</td><td>Isolated persistent recording state</td><td>Codegen/CDP launcher</td><td>Chrome</td><td>state root/autotest</td><td><span class="status verified">NO RESET FEATURE</span></td></tr>
+</tbody></table></div>
+<div class="callout bad"><strong>Single-source rule:</strong> There must be exactly one ActionDB path resolver. The UI must never write a local copy and the compiler must never read a different copy. A packaged app must be able to show the physical state root for support without exposing secrets or normal Chrome data.</div>
+</section>
+
+<section id="connections">
+<h2>7. Connectivity contracts</h2>
+<h3>7.1 The universal connection test</h3>
+<div class="flow"><div class="node">1. Real user gesture</div><div class="arrow">→</div><div class="node">2. Correct request</div><div class="arrow">→</div><div class="node">3. Route validation</div><div class="arrow">→</div><div class="node store">4. Durable store write</div><div class="arrow">→</div><div class="node">5. Reload/restart</div><div class="arrow">→</div><div class="node">6. Downstream read</div><div class="arrow">→</div><div class="node">7. Visible result</div></div>
+<p>If any box fails, the feature is not connected. This is the acceptance model for Action Library CRUD, linking, Data Matrix, mapping save, execution, and results.</p>
+<h3>7.2 Action Library canonical contract</h3>
+<table><thead><tr><th>Operation</th><th>Canonical request</th><th>Required store mutation</th><th>Required downstream proof</th></tr></thead><tbody>
+<tr><td>Read</td><td>GET <code>/action-db</code></td><td>None</td><td>UI counts/cards equal file contents.</td></tr>
+<tr><td>Create/edit action</td><td>POST <code>/action-db/action</code> with optional stable <code>id</code></td><td>Upsert action, parse safe steps, derive variables, preserve createdAt.</td><td>Reload shows same action; scan/link selector lists it; compiler resolves its steps.</td></tr>
+<tr><td>Delete action</td><td>DELETE <code>/action-db/action/:id</code></td><td>Remove action and references from all groups.</td><td>Reload omits action; link selector omits it; existing mapping no longer resolves it unless explicitly cached by policy.</td></tr>
+<tr><td>Create/edit group</td><td>POST <code>/action-db/group</code> with action IDs</td><td>Upsert group and derived variables.</td><td>Reload shows member chain; resolver unpacks exact member steps; compiler executes order.</td></tr>
+<tr><td>Delete group</td><td>DELETE <code>/action-db/group/:id</code></td><td>Remove group.</td><td>Link selector and resolver no longer return group.</td></tr>
+<tr><td>Link label</td><td>POST <code>/link-synonym</code> {excelLabel,targetType,targetId}</td><td>Append synonym to ActionDB and synchronize <code>mappings.json</code>.</td><td>GET /scan changes missing→mapped; preview and compile use identical steps after restart.</td></tr>
+</tbody></table>
+<h3>7.3 Execution/results contract</h3>
+<p><code>POST /run</code> must compile from the active blueprint, mapping cache, ActionDB resolution, and runtime data; launch the correct runner; put every output under the configured results root; publish terminal status; and produce links that are valid from the app’s current URL in both web and Electron modes.</p>
+<div class="callout plan"><strong>Target simplification:</strong> expose a server-generated result URL/path in the run JSON rather than reconstructing <code>results/${scenarioId}/FINAL.png</code> in browser code. The server knows the actual results root; the browser should not guess it.</div>
+</section>
+
+<section id="workflows">
+<h2>8. End-to-end workflows</h2>
+<h3>8.1 Upload to execution</h3>
+<div class="flow"><div class="node">Upload .xlsx</div><div class="arrow">→</div><div class="node">Parse blueprint</div><div class="arrow">→</div><div class="node">Scan rows</div><div class="arrow">→</div><div class="node">Map or link</div><div class="arrow">→</div><div class="node">Data Matrix</div><div class="arrow">→</div><div class="node">Compile</div><div class="arrow">→</div><div class="node">Run</div><div class="arrow">→</div><div class="node">Evidence</div></div>
+<ol><li><strong>Upload:</strong> <code>POST /upload</code> stages and validates the workbook; failure is a visible error.</li><li><strong>Scan:</strong> parser creates blueprint; scan resolves each label from mappings then ActionDB.</li><li><strong>Map:</strong> record/manual save writes structured steps; library link writes synonym and mapping cache.</li><li><strong>Parameterize:</strong> Data Matrix stores iteration overrides; explicit blank is valid, absent key fails.</li><li><strong>Compile:</strong> compiler resolves mappings/library steps and produces a transient runner file under state root.</li><li><strong>Run:</strong> server launches Playwright or mobile script and records terminal status.</li><li><strong>Evidence:</strong> scenario/iteration folder contains screenshots and optional trace/report; UI links use server-known paths.</li></ol>
+<h3>8.2 Action Library linking</h3>
+<div class="flow"><div class="node">Open Mappings</div><div class="arrow">→</div><div class="node">GET /action-db</div><div class="arrow">→</div><div class="node">Render selector/cards</div><div class="arrow">→</div><div class="node">Choose action/group</div><div class="arrow">→</div><div class="node">POST /link-synonym</div><div class="arrow">→</div><div class="node store">ActionDB + mappings</div><div class="arrow">→</div><div class="node">GET /scan</div><div class="arrow">→</div><div class="node">Compiler resolves</div></div>
+<p>When the selector is absent, the first diagnostic question is not “is the HTML dummy?” but “did GET /action-db return a valid non-empty canonical library, and did scan classify this row as missing?” The current implementation makes selector rendering conditional on both values.</p>
+<h3>8.3 Packaged execution boundary</h3>
+<div class="flow"><div class="node">Installed app</div><div class="arrow">→</div><div class="node">app.asar code</div><div class="arrow">→</div><div class="node store">Electron userData</div><div class="arrow">→</div><div class="node store">state/data/results</div><div class="arrow">→</div><div class="node">runner + evidence</div></div>
+<p>The installed code can be read from <code>app.asar</code>, but mutable JSON and generated files cannot safely be written there. Every module that persists state must receive the same state directory.</p>
+</section>
+
+<section id="architecture">
+<h2>9. Architecture and deployment</h2>
+<h3>9.1 Components</h3>
+<table><thead><tr><th>Component</th><th>Responsibility</th><th>Must not own</th></tr></thead><tbody>
+<tr><td>Electron main</td><td>Start server, provide writable environment, create BrowserWindow, stop child.</td><td>Business state or duplicate UI persistence.</td></tr>
+<tr><td>Studio UI</td><td>Render screens, gather input, call routes, display success/error.</td><td>Canonical database logic; browser-local fake records.</td></tr>
+<tr><td>Express server</td><td>HTTP boundary, validation, orchestration, response contracts.</td><td>Guessing browser paths for files it already knows.</td></tr>
+<tr><td>ActionDB</td><td>Read/validate/upsert/delete/resolve actions and groups.</td><td>Hard-coded package-relative writable path.</td></tr>
+<tr><td>Parser</td><td>Excel → blueprint and warnings.</td><td>Mapping or execution semantics.</td></tr>
+<tr><td>Compiler</td><td>Blueprint + mapping + ActionDB + data → runner script.</td><td>UI state or result link construction.</td></tr>
+<tr><td>Runner</td><td>Execute generated spec and emit report/evidence.</td><td>Persisting library definitions.</td></tr>
+</tbody></table>
+<h3>9.2 Deployment modes</h3>
+<table><thead><tr><th>Mode</th><th>Start</th><th>Mutable state</th><th>Target requirement</th></tr></thead><tbody>
+<tr><td>Web/development</td><td><code>PORT=3000 node studio/server.js</code></td><td>Repository/core defaults unless env overrides</td><td>Node/npm/dependencies/browsers on developer machine.</td></tr>
+<tr><td>Electron unpacked</td><td><code>npm run pack</code>, launch unpacked executable</td><td>Electron userData</td><td>Build machine has dependencies/browser bundle.</td></tr>
+<tr><td>Electron distributable</td><td><code>npm run dist -- --publish never</code></td><td>Electron userData; bundled resources</td><td>Tester needs no Node/npm/Playwright install/internet; unsigned SmartScreen/notarization policy remains deployment concern.</td></tr>
+</tbody></table>
+<h3>9.3 Security and trust boundaries</h3>
+<ul><li>Excel, pasted Playwright, LLM output, labels, and data values are untrusted input.</li><li>Acorn AST extraction and <code>isSafeChain</code> are load-bearing security logic and must not be removed as “complexity.”</li><li>File uploads are size-limited and unsupported <code>setInputFiles</code> is rejected loudly.</li><li>Secrets in <code>.env</code> remain local and are never included in this blueprint, tests, commits, or packaged documentation.</li><li>Normal Chrome profile and its SSO/history/tabs are outside the product’s default access boundary.</li></ul>
+</section>
+
+<section id="timeline">
+<h2>10. Actual project timeline</h2>
+<p>This is historical chronology derived from repository history; it is not a forecast.</p>
+<div class="scroll"><table><thead><tr><th>Period</th><th>Milestone</th><th>What it established</th><th>Current meaning</th></tr></thead><tbody>
+<tr><td>May 2026</td><td>Node/Playwright MVP and mapping work</td><td>Basic scenario mapping, DDT, runner direction.</td><td>Foundation exists but early commits are historical context, not acceptance evidence.</td></tr>
+<tr><td>May 25</td><td>Air-gap and high-security hardening</td><td>Bundled drivers, process handling, restricted runtime assumptions.</td><td>Security and packaging constraints became first-class requirements.</td></tr>
+<tr><td>Jun 18–24</td><td>UX and Windows compatibility work</td><td>UI polish, modal behavior, driver/path fixes.</td><td>Useful history; interaction regressions still need current packaged verification.</td></tr>
+<tr><td>Aug 14</td><td>Persistent Action Database, synonyms, groups</td><td>Canonical reusable-action concept and API routes.</td><td>Core business capability, now blocked by packaged path/UI acceptance failures.</td></tr>
+<tr><td>Sep 21</td><td>Ponytail cleanup, mobile runner, codegen fixes</td><td>Shared helpers, mobile output, recording/replay hardening.</td><td>Reduced duplication; did not prove every UI gesture.</td></tr>
+<tr><td>Sep 22</td><td>A0 security/data/UI defect cycles</td><td>AST safety, trace handling, strict interpolation, upload/UI errors, mutexes, dynamic ports.</td><td>Strong backend/unit coverage; visible packaged workflow remains separate gate.</td></tr>
+<tr><td>Oct 2</td><td>Phase C slice and Electron packaging</td><td>Local .env loader, optional LLM plumbing, Electron shell, relocatable paths, visible Codegen, NSIS/DMG config.</td><td>Current baseline; ActionDB relocation and results link acceptance are still blockers.</td></tr>
+</tbody></table></div>
+<p class="small">Representative commits: <code>c1aea88</code> Action Database; <code>52e23db</code>–<code>5b8a2d0</code> defect hardening; <code>369db2c</code> dynamic port/resources path; <code>ea04df7</code> Electron packaging.</p>
+</section>
+
+<section id="phases">
+<h2>11. Repair and delivery phases</h2>
+<p>No unsupported calendar duration is invented. These are dependency-ordered phases with explicit exit gates.</p>
+<div class="scroll"><table><thead><tr><th>Phase</th><th>Purpose</th><th>Work included</th><th>Exit gate</th><th>Depends on</th></tr></thead><tbody>
+<tr><td>0 · Baseline</td><td>Make failures reproducible</td><td>Run web and packaged builds; capture browser console/network, exact paths, request bodies, and state roots for AL-01–AL-04/EX-01.</td><td>Each blocker has a literal reproduction and expected/actual record.</td><td>None.</td></tr>
+<tr><td>1 · Canonical state root</td><td>Stop ENOENT/split-brain persistence</td><td>Make ActionDB use the same writable state resolver as mappings/runtime/platform; define migration from existing DB; preserve corrupt-file backup behavior.</td><td>Create/edit/delete/link works after restart in web and Electron; exactly one DB is read.</td><td>Phase 0.</td></tr>
+<tr><td>2 · Action Library UI</td><td>Make visible controls trustworthy</td><td>Fix modal opening/focus/field input, response parsing, delete confirmation, group picker, empty/error states, and selector rendering. Add real browser tests.</td><td>AL-01–AL-04 full gesture → restart → downstream resolution passes.</td><td>Phase 1.</td></tr>
+<tr><td>3 · Execution/results</td><td>Make evidence links correct</td><td>Use server-generated result URLs or route-safe absolute paths; verify results root, scenario/iteration naming, report, PNG, trace, and /results index in both modes.</td><td>EX-01 passes with every dashboard link and after restart.</td><td>Phase 1; preferably Phase 2 for library-backed runs.</td></tr>
+<tr><td>4 · Full workflow acceptance</td><td>Prove the product loop</td><td>Real Excel upload → mapping/link → data matrix → execute → evidence; test clean state, repeated runs, errors, restart, and packaged app.</td><td>All touched TEST_SCENARIOS rows PASS in black-box loop; no known blocker.</td><td>Phases 2–3.</td></tr>
+<tr><td>5 · Distribution gates</td><td>Ship artifacts safely</td><td>Build Windows NSIS and macOS DMG on their native build environments; smoke test installed/unpacked app; document unsigned/codesigning caveats.</td><td>Target-machine checklist passes without Node/npm/internet.</td><td>Phase 4.</td></tr>
+<tr><td>6 · Optional Phase B/C</td><td>Add isolated CDP/LLM capability after core trust</td><td>Only after core CRUD/execution acceptance; keep LLM optional and isolated profile policy unchanged.</td><td>Feature-specific black-box and security acceptance.</td><td>Phase 5.</td></tr>
+</tbody></table></div>
+<h3>11.1 Suggested ownership</h3>
+<table><thead><tr><th>Workstream</th><th>Primary responsibility</th><th>Evidence artifact</th></tr></thead><tbody>
+<tr><td>Product/PM</td><td>Confirm exact desired delete/link/group/result behavior and prioritize blockers.</td><td>Approved BRD decisions and acceptance examples.</td></tr>
+<tr><td>Lead developer</td><td>Implement minimum state/path/UI fixes.</td><td>Focused diff, route contract, migration note.</td></tr>
+<tr><td>Black-box tester</td><td>Run real UI against live and packaged app, never judge source alone.</td><td><code>TEST_RESULTS.md</code> with literal requests/responses and screenshots.</td></tr>
+<tr><td>QA/auditor</td><td>Check security, data integrity, reporting, and package boundaries.</td><td>Release gate checklist and defect dispositions.</td></tr>
+<tr><td>IT/release</td><td>Build native installers and verify target restrictions.</td><td>Installer smoke report and delivery instructions.</td></tr>
+</tbody></table>
+</section>
+
+<section id="testing">
+<h2>12. Acceptance and release gates</h2>
+<h3>12.1 One feature, seven proofs</h3>
+<ol><li><strong>Gesture:</strong> a real user clicks/types/selects in the browser.</li><li><strong>Request:</strong> browser network log proves method/path/body.</li><li><strong>Validation:</strong> response status/schema and visible error are asserted.</li><li><strong>Write:</strong> exact canonical file/database changes are inspected.</li><li><strong>Restart:</strong> app/server is restarted and state remains.</li><li><strong>Consume:</strong> scan/preview/compiler/replay/results reads the same state.</li><li><strong>Package:</strong> test runs against the actual Electron writable path, not only repository mode.</li></ol>
+<h3>12.2 Release checklist</h3>
+<ul class="checklist">
+<li>ActionDB path is derived from the canonical writable state resolver.</li>
+<li>Existing ActionDB is migrated or safely preserved; corrupt files get backup.</li>
+<li>New Action opens, accepts keyboard input, saves, reloads, and is consumed.</li>
+<li>Edit opens with stable ID, updates the same record, and does not create a duplicate.</li>
+<li>Delete removes action/group and group references, then survives restart.</li>
+<li>New Group opens, lists current actions, persists checked order/IDs, and resolves in compile.</li>
+<li>Link dropdown appears for every truly missing step when library data exists.</li>
+<li>Link request updates ActionDB and mappings policy consistently; scan status changes.</li>
+<li>Execute writes evidence beneath configured results root, not guessed current working directory.</li>
+<li>PNG, trace, report, and results index links return valid content in web and Electron modes.</li>
+<li>Run failure is visible, terminal, and not mislabeled completed.</li>
+<li>Full <code>npm test</code> passes, plus real browser UI and packaged smoke tests.</li>
+<li>Black-box tester repeats the same scope after every developer fix.</li>
+</ul>
+<h3>12.3 Required future test cases</h3>
+<table><thead><tr><th>Case</th><th>Setup</th><th>Action</th><th>Assertion</th></tr></thead><tbody>
+<tr><td>AL-CRUD-PACKAGED</td><td>Packaged app, empty writable state</td><td>Create/edit/delete action</td><td>All requests succeed; DB is in userData; restart preserves final state.</td></tr>
+<tr><td>AL-GROUP-PACKAGED</td><td>Two actions exist</td><td>Create/edit/delete group</td><td>Picker and member order work; resolver/compiler consume chain.</td></tr>
+<tr><td>AL-LINK-UI</td><td>Uploaded workbook with missing label; library seeded</td><td>Open Mappings, choose dropdown entry</td><td>Selector is visible; request/store/scan/compiler all agree.</td></tr>
+<tr><td>AL-ERROR</td><td>Make state root unavailable or invalid</td><td>Save/delete</td><td>Actionable error names path/operation; no false success; UI remains usable.</td></tr>
+<tr><td>EX-PATH</td><td>Packaged run with scenario/iteration</td><td>Execute and click all evidence links</td><td>Every link resolves to actual file under results root, including after restart.</td></tr>
+<tr><td>EX-CLEAN</td><td>Run twice with different data</td><td>Execute twice</td><td>No stale report/evidence is presented as the second run.</td></tr>
+</tbody></table>
+</section>
+
+<section id="audit">
+<h2>13. Ponytail audit: complexity only</h2>
+<p>This section is deliberately separate from correctness and security. It lists simplification opportunities; it does not authorize changing load-bearing behavior. The existing project audit used the required tags and estimated approximately <strong>320 lines plus one heavy dependency</strong> as potentially removable.</p>
+<div class="callout plan"><strong>Rule:</strong> do not simplify away Acorn AST parsing, <code>isSafeChain</code>, process cleanup, crash-recovery sweeps, or packaged path handling. First make the system correct; then cut only verified dead weight.</div>
+<div class="scroll"><table><thead><tr><th>Rank</th><th>Finding</th><th>Replacement</th><th>Path / evidence</th><th>Disposition</th></tr></thead><tbody>
+<tr><td>1</td><td><strong>delete:</strong> generated <code>core/executed.spec.ts</code> committed as source.</td><td>Ignore generated output; generate it only in state root.</td><td><code>core/executed.spec.ts</code>; compiler writes it every run.</td><td>Safe after verifying tests do not require committed fixture.</td></tr>
+<tr><td>2</td><td><strong>delete:</strong> duplicated helper implementations of <code>isSafeChain</code>, <code>interpolate</code>, and <code>q</code>.</td><td>Use shared <code>core/helpers.js</code> only.</td><td>Historical audit: <code>studio/server.js</code> vs <code>core/compiler.js</code>.</td><td>Already partly addressed; verify no duplicate remains.</td></tr>
+<tr><td>3</td><td><strong>yagni:</strong> unused <code>globalBrowser</code>/<code>updateActivity</code> inactivity machinery.</td><td>Delete only the unused timer/state after usage search.</td><td>Historical audit; <code>studio/server.js</code>.</td><td>Normal review; do not confuse with active browser cleanup.</td></tr>
+<tr><td>4</td><td><strong>delete:</strong> duplicate startup orphan-cleanup loops.</td><td>One loop over the required writable directories.</td><td>Historical audit: <code>studio/server.js</code>.</td><td>Safe refactor after regression test.</td></tr>
+<tr><td>5</td><td><strong>yagni:</strong> <code>sit_runner.js</code> manual hard-coded runner.</td><td>Use maintained human workflow/black-box suites.</td><td><code>sit_runner.js</code> if still present and unused.</td><td>Verify usages before removal.</td></tr>
+<tr><td>6</td><td><strong>yagni:</strong> mandatory <code>webdriverio</code> dependency despite no real-device acceptance.</td><td>Keep only if mobile is an active supported deliverable; otherwise make optional/documented.</td><td><code>package.json</code>, <code>core/compiler.js</code>.</td><td>Product decision required; do not cut before mobile scope decision.</td></tr>
+<tr><td>7</td><td><strong>shrink:</strong> data-matrix HTML string assembly and direct user-data interpolation.</td><td>Build nodes with DOM APIs and assign <code>value</code>/<code>textContent</code>.</td><td><code>studio/studio-ui.html</code> data matrix section.</td><td>Security/correctness-adjacent; route to normal review, not blind cut.</td></tr>
+<tr><td>8</td><td><strong>shrink:</strong> repeated bundled-browser path probing.</td><td>Cache one resolved value at startup.</td><td><code>studio/server.js</code> and config.</td><td>Safe only if environment changes are not expected at runtime.</td></tr>
+<tr><td>9</td><td><strong>stdlib:</strong> orphan cleanup was considered for glob, but current <code>fs.readdirSync().filter()</code> is already the smaller stdlib solution.</td><td>Keep current implementation.</td><td>Historical Ponytail audit.</td><td>No change.</td></tr>
+</tbody></table></div>
+<p><strong>Net:</strong> historical audit estimate: <strong>-~320 lines, -1 heavy dependency possible</strong>. This is a ceiling, not a task commitment. Correctness fixes, security boundaries, and explicit product requirements always outrank code deletion.</p>
+</section>
+
+<section id="appendix">
+<h2>14. Traceability appendix</h2>
+<h3>14.1 Key files</h3>
+<table><thead><tr><th>File</th><th>Role in this blueprint</th></tr></thead><tbody>
+<tr><td><a href="studio/studio-ui.html">studio/studio-ui.html</a></td><td>All visible tabs, modals, controls, fetch calls, status rendering, dashboard link construction.</td></tr>
+<tr><td><a href="studio/server.js">studio/server.js</a></td><td>Express routes, state roots, parser/compiler orchestration, ActionDB routes, run lifecycle.</td></tr>
+<tr><td><a href="core/action_db.js">core/action_db.js</a></td><td>Canonical action/group/synonym persistence and resolution; current packaged path blocker at line 7.</td></tr>
+<tr><td><a href="core/compiler.js">core/compiler.js</a></td><td>Blueprint/mapping/library/data resolution and generated runner/evidence paths.</td></tr>
+<tr><td><a href="electron/main.js">electron/main.js</a></td><td>Electron process, userData environment, dynamic server port, BrowserWindow.</td></tr>
+<tr><td><a href="playwright.config.ts">playwright.config.ts</a></td><td>Runner testDir/outputDir/browser resolution in development and packaged modes.</td></tr>
+<tr><td><a href="TEST_SCENARIOS.md">TEST_SCENARIOS.md</a></td><td>Scenario contracts and route-level expected behavior.</td></tr>
+<tr><td><a href="TEST_RESULTS.md">TEST_RESULTS.md</a></td><td>Historical evidence; not a substitute for current packaged UI acceptance.</td></tr>
+<tr><td><a href="AGENTS.md">AGENTS.md</a></td><td>Architecture invariants and black-box tester loop.</td></tr>
+<tr><td><a href="FUTURE_ARCHITECTURE.md">FUTURE_ARCHITECTURE.md</a></td><td>Phase A/B/C scope and historical design decisions.</td></tr>
+</tbody></table>
+<h3>14.2 Route inventory</h3>
+<p><span class="pill">GET /</span><span class="pill">POST /upload</span><span class="pill">GET/POST /data-matrix</span><span class="pill">GET /scan</span><span class="pill">POST /record</span><span class="pill">GET /codegen-result/:sessionId</span><span class="pill">POST /save-mapping</span><span class="pill">POST /run</span><span class="pill">POST /restart</span><span class="pill">GET /suggest/status</span><span class="pill">POST /suggest</span><span class="pill">POST /suggest/reject</span><span class="pill">POST /suggest/accept</span><span class="pill">POST /suggest/cancel</span><span class="pill">GET /action-db</span><span class="pill">POST /action-db/action</span><span class="pill">DELETE /action-db/action/:id</span><span class="pill">POST /action-db/group</span><span class="pill">DELETE /action-db/group/:id</span><span class="pill">POST /link-synonym</span><span class="pill">GET /mapping/:label</span><span class="pill">GET /preview/:label</span><span class="pill">GET /preview-scenario/:scenarioId</span><span class="pill">GET/POST /env and /set-platform</span><span class="pill">GET /run-status</span><span class="pill">POST /record-cancel</span><span class="pill">POST /run-cancel</span></p>
+<h3>14.3 Diagram attachment</h3>
+<p><a href="blueprint.mmd" download>Download the editable Mermaid source: blueprint.mmd</a>. The same source is embedded below for offline copying.</p>
+<details><summary>Embedded Mermaid source</summary><pre><code id="mermaid-source">%% See blueprint.mmd for the editable attachment.
+%% The attachment contains the component flowchart, lifecycle sequence, state machine, and packaged writable-state boundary.
+</code></pre></details>
+<h3>14.4 Open decisions for the next business review</h3>
+<ol><li>Should deleting an action that is referenced by a saved Excel mapping remove only the library entry, or also invalidate the mapping with a visible warning?</li><li>Should “Link to Library” create a synonym only, or replace/create a durable <code>mappings.json</code> entry as the primary link?</li><li>Should results be opened inside the Electron window, in the system file manager, or in the default browser?</li><li>Should mobile/Appium remain a supported product path now, or be explicitly deferred?</li><li>What exact user-facing wording and recovery action is required for an unavailable state root?</li><li>Which historical generated files and dead scripts may be deleted after usage verification?</li></ol>
+<footer>
+<strong>Document boundary:</strong> This blueprint documents the current repository and user-reported failures. It does not claim that blockers are fixed and does not change application code. The separate <a href="blueprint.mmd">blueprint.mmd</a> file is the editable Mermaid attachment. No secrets, local API keys, or normal Chrome data are included.
+</footer>
+</section>
+</main>
+</body>
+</html>
