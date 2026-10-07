@@ -25,15 +25,10 @@
       "playwright.config.ts",
       "node_modules/**/*"
     ],
-    "extraResources": [
-      {
-        "from": "DRIVERS/ms-playwright",
-        "to": "DRIVERS/ms-playwright"
-      }
-    ],
     "asar": true,
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,
@@ -64,14 +59,22 @@
     "@playwright/test": "^1.61.0",
     "acorn": "^8.16.0",
     "acorn-walk": "^8.3.5",
+    "approve": "^0.0.12",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "geckodriver": "^6.1.1",
     "multer": "^2.1.1",
-    "webdriverio": "^8.14.6",
+    "scripts": "^0.1.0",
+    "webdriverio": "^9.32.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "electron": "^44.4.3",
     "electron-builder": "^26.15.3"
+  },
+  "allowScripts": {
+    "electron-winstaller@5.4.0": true,
+    "geckodriver@4.2.1": true,
+    "edgedriver@6.3.1": true
   }
 }

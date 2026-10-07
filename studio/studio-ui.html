@@ -50,6 +50,7 @@
         .btn-record { background: #FFF5F4; color: var(--danger); border: 1px solid var(--danger); }
         .btn-remap { background: #FFFFFF; color: var(--primary-action); border: 1px solid var(--primary-action); }
         .btn-suggest { background: #F5F3FF; color: #6D28D9; border: 1px solid #8B5CF6; }
+        .btn-suggest:disabled { background: #E5E7EB; color: #6B7280; border-color: #9CA3AF; cursor: not-allowed; opacity: 1; }
 
         #status-box { margin-top: 20px; padding: 16px; border-radius: 4px; font-size: 13px; display: none; font-weight: 600; white-space: pre-wrap; }
         .status-info { background: #F0F8FF; color: var(--primary-action); border-left: 4px solid var(--primary-action); }
@@ -99,7 +100,7 @@
         <div class="modal-content" style="max-width: 680px; width: 90%;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <h3 id="modal-title" style="margin: 0; font-size: 18px;">Record Action</h3>
-                <button class="btn btn-secondary" onclick="closeModal()" style="padding: 4px 10px; font-size: 12px;" title="Close Modal">Close</button>
+                <button id="modal-close-btn" class="btn btn-secondary" onclick="closeModal()" style="padding: 4px 10px; font-size: 12px;" title="Close Modal">Close</button>
             </div>
             <div id="record-guide-banner" style="background: #F0F7FF; border: 1px solid #C2E0FF; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; color: #1E3A8A;">
                 Initializing recorder...
@@ -111,11 +112,11 @@
                 <input type="text" id="save-to-lib-name" placeholder="Action name" style="display:none; padding:6px 8px; border-radius:6px; border:1px solid #ddd; font-size:13px;" />
             </label>
             <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px;">
-                <button class="btn btn-secondary" onclick="pasteFromClipboard()">Paste Clipboard</button>
-                <button class="btn btn-danger" onclick="closeModal()">Cancel & Close Replay</button>
+                <button id="paste-clipboard-btn" class="btn btn-secondary" onclick="pasteFromClipboard()">Paste Clipboard</button>
+                <button id="cancel-modal-btn" class="btn btn-danger" onclick="closeModal()">Cancel & Close Replay</button>
                 <div id="suggest-actions" style="display:none; gap:10px;">
-                    <button class="btn btn-secondary" onclick="rejectSuggestion()">Reject & Retry</button>
-                    <button class="btn btn-suggest" onclick="acceptSuggestion()">Accept Suggestion</button>
+                    <button id="reject-suggestion-btn" class="btn btn-secondary" onclick="rejectSuggestion()">Reject & Retry</button>
+                    <button id="accept-suggestion-btn" class="btn btn-suggest" onclick="acceptSuggestion()">Accept Suggestion</button>
                 </div>
                 <button id="save-mapping-btn" class="btn btn-primary" style="width: auto;" onclick="saveMapping()">Sync & Save Action</button>
             </div>
@@ -343,6 +344,7 @@
         let isUserInteracting = false;
         let llmEnabled = false;
         let suggestionActive = false;
+        const suggestionAttempts = {};
 
         async function loadSuggestStatus() {
             try {
@@ -351,15 +353,25 @@
             } catch (e) { llmEnabled = false; }
         }
 
+        function setSuggestionLoading(loading) {
+            codeArea.readOnly = loading;
+            ['modal-close-btn', 'paste-clipboard-btn', 'cancel-modal-btn', 'reject-suggestion-btn',
+                'accept-suggestion-btn', 'save-mapping-btn'].forEach(id => {
+                const button = document.getElementById(id);
+                if (button) button.disabled = loading;
+            });
+        }
+
         async function suggestStep(label, scenarioId) {
             currentLabel = label;
             currentScenarioId = scenarioId;
             suggestionActive = true;
             modal.style.display = 'flex';
             codeArea.value = '';
+            setSuggestionLoading(true);
             codeArea.placeholder = 'Asking the configured office LLM...';
             document.getElementById('modal-title').textContent = `AI Suggestion: "${label}"`;
-            document.getElementById('record-guide-banner').textContent = 'Replaying preceding steps and asking the configured office LLM.';
+            document.getElementById('record-guide-banner').textContent = 'Asking the configured office LLM to reason through the step. Controls are disabled until the final Playwright proposal is ready.';
             document.getElementById('suggest-actions').style.display = 'flex';
             document.getElementById('save-mapping-btn').textContent = 'Edit manually';
             document.getElementById('save-mapping-btn').onclick = editSuggestion;
@@ -372,42 +384,72 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Suggestion failed.');
                 if (data.status === 'cannot_map') {
+                    suggestionAttempts[`${scenarioId}:${label}`] = 3;
                     suggestionActive = false;
+                    setSuggestionLoading(false);
                     modal.style.display = 'none';
                     showStatus('The AI could not map this step. Use Record or Manual instead.', 'warning');
                     return;
                 }
                 codeArea.value = data.proposal || '';
+                setSuggestionLoading(false);
                 codeArea.placeholder = 'Review the suggestion, edit it if needed, or reject it and retry.';
                 document.getElementById('record-guide-banner').textContent = 'Review the suggestion. Accept it, reject it and retry, or edit manually.';
-                if (data.status === 'rejected') showStatus(data.error || 'The suggestion could not execute.', 'warning');
+                if (data.status === 'rejected') {
+                    const key = `${scenarioId}:${label}`;
+                    suggestionAttempts[key] = Math.max(suggestionAttempts[key] || 0, data.attempts || 1);
+                    showStatus(data.error || 'The suggestion could not execute.', 'warning');
+                    await scanSteps();
+                }
             } catch (e) {
+                const key = `${scenarioId}:${label}`;
+                suggestionAttempts[key] = (suggestionAttempts[key] || 0) + 1;
                 suggestionActive = false;
+                setSuggestionLoading(false);
                 modal.style.display = 'none';
                 showStatus('Suggestion unavailable: ' + e.message, 'error');
+                await scanSteps();
             }
         }
 
         async function rejectSuggestion() {
+            setSuggestionLoading(true);
+            codeArea.placeholder = 'Asking the configured office LLM for a replacement proposal...';
+            document.getElementById('record-guide-banner').textContent = 'Asking the configured office LLM to reconsider the step. Controls are disabled until the next final Playwright proposal is ready.';
             try {
                 const res = await fetch('/suggest/reject', { method: 'POST' });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Retry failed.');
                 if (data.status === 'cannot_map') {
+                    suggestionAttempts[`${currentScenarioId}:${currentLabel}`] = 3;
+                    setSuggestionLoading(false);
                     showStatus('The AI could not map this step. Use Record or Manual instead.', 'warning');
                     return;
                 }
                 codeArea.value = data.proposal || '';
+                setSuggestionLoading(false);
+                codeArea.placeholder = 'Review the suggestion, edit it if needed, or reject it and retry.';
+                document.getElementById('record-guide-banner').textContent = 'Review the suggestion. Accept it, reject it and retry, or edit it manually.';
                 showStatus('New suggestion ready for review.', 'success');
-            } catch (e) { showStatus('Suggestion retry failed: ' + e.message, 'error'); }
+            } catch (e) {
+                const key = `${currentScenarioId}:${currentLabel}`;
+                suggestionAttempts[key] = (suggestionAttempts[key] || 0) + 1;
+                setSuggestionLoading(false);
+                showStatus('Suggestion retry failed: ' + e.message, 'error');
+                await scanSteps();
+            }
         }
 
         async function acceptSuggestion() {
             try {
-                const res = await fetch('/suggest/accept', { method: 'POST' });
+                const exactCode = codeArea.value;
+                const res = await fetch('/suggest/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: exactCode }) });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Could not accept suggestion.');
+                await navigator.clipboard.writeText(exactCode);
+                try { await fetch('/record-cancel', { method: 'POST' }); } catch (e) {}
                 suggestionActive = false;
+                setSuggestionLoading(false);
                 modal.style.display = 'none';
                 showStatus(data.message || 'Suggestion accepted.', 'success');
                 await scanSteps();
@@ -417,6 +459,7 @@
         async function editSuggestion() {
             try { await fetch('/suggest/cancel', { method: 'POST' }); } catch (e) {}
             suggestionActive = false;
+            setSuggestionLoading(false);
             document.getElementById('suggest-actions').style.display = 'none';
             document.getElementById('save-mapping-btn').textContent = 'Sync & Save Action';
             document.getElementById('save-mapping-btn').onclick = saveMapping;
@@ -518,6 +561,9 @@
                 const res = await fetch('/upload', { method: 'POST', body: formData });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok) {
+                    if (!keepMappings) {
+                        Object.keys(suggestionAttempts).forEach(key => delete suggestionAttempts[key]);
+                    }
                     // A0.8.8: surface duplicate-scenario, merged-cell, or other parse warnings
                     // in #status-box rather than dropping them.
                     if (Array.isArray(data.warnings) && data.warnings.length > 0) {
@@ -590,6 +636,22 @@
                     const labelDiv = document.createElement('div');
                     labelDiv.className = 'step-label';
                     labelDiv.textContent = s.label;                    // safe: no HTML injection
+                    const expectedDetails = document.createElement('details');
+                    expectedDetails.className = 'expected-result-details';
+                    const expectedSummary = document.createElement('summary');
+                    expectedSummary.textContent = 'Expected Result (review only)';
+                    expectedDetails.appendChild(expectedSummary);
+                    const expectedInput = document.createElement('textarea');
+                    expectedInput.value = s.expectedResult || '';
+                    expectedInput.placeholder = 'Enter expected result';
+                    expectedInput.rows = 2;
+                    expectedInput.addEventListener('change', async () => {
+                        const save = await fetch('/save-expected-result', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ scenarioId: s.scenarioId, label: s.label, expectedResult: expectedInput.value }) });
+                        if (!save.ok) showStatus('Expected result save failed.', 'error');
+                    });
+                    expectedDetails.appendChild(expectedInput);
+                    labelDiv.appendChild(expectedDetails);
 
                     const btnGroup = document.createElement('div');
                     btnGroup.style.cssText = 'display:flex; gap:8px; align-items:center; flex-wrap:wrap;';
@@ -653,15 +715,17 @@
                     recBtn.addEventListener('click', () => openRecordModal(s.label, s.scenarioId));
 
                     if (s.status === 'missing') {
-                        const canSuggest = llmEnabled && !data.steps.slice(0, data.steps.indexOf(s)).some(previous =>
-                            previous.scenarioId === s.scenarioId && previous.status === 'missing');
+                        const attemptKey = `${s.scenarioId}:${s.label}`;
+                        const exhausted = (suggestionAttempts[attemptKey] || 0) >= 3;
+                        const canSuggest = llmEnabled && !exhausted;
                         const suggestBtn = document.createElement('button');
                         suggestBtn.className = 'btn btn-suggest';
                         suggestBtn.textContent = 'Suggest';
                         suggestBtn.disabled = !canSuggest;
                         suggestBtn.title = !llmEnabled
                             ? 'Suggestions are disabled until LLM_BASE_URL, LLM_API_KEY, and LLM_MODEL are configured.'
-                            : canSuggest ? 'Ask the configured office LLM to suggest this mapping' : 'Map the preceding missing step first.';
+                            : exhausted ? 'Suggestions disabled after 3 failed attempts for this step.'
+                            : 'Ask the configured office LLM to suggest this mapping';
                         if (canSuggest) suggestBtn.addEventListener('click', () => suggestStep(s.label, s.scenarioId));
                         btnGroup.appendChild(suggestBtn);
                     }
@@ -1242,6 +1306,7 @@
                 try { await fetch('/suggest/cancel', { method: 'POST' }); } catch (e) {}
                 suggestionActive = false;
             }
+            setSuggestionLoading(false);
             document.getElementById('suggest-actions').style.display = 'none';
             document.getElementById('save-mapping-btn').textContent = 'Sync & Save Action';
             document.getElementById('save-mapping-btn').onclick = saveMapping;
@@ -1258,6 +1323,7 @@
                     body: JSON.stringify({ label: currentLabel, code: codeArea.value, platform, scenarioId: currentScenarioId })
                 });
                 if (!res.ok) throw new Error((await res.json()).error);
+                await navigator.clipboard.writeText(codeArea.value);
 
                 // Optionally also save this same code as a named, reusable Action Library entry
                 // and link it back to this step in one action instead of a separate trip to the
@@ -1280,6 +1346,7 @@
                 }
 
                 showStatus("Action Mapped Successfully", "success");
+                try { await fetch('/record-cancel', { method: 'POST' }); } catch (e) {}
                 modal.style.display = 'none';
                 await scanSteps();
             } catch (e) {
@@ -1444,7 +1511,7 @@
                 badge.textContent = status.toUpperCase();
 
                 const pngLink = document.createElement('a');
-                pngLink.href = `results/${scenarioId}/FINAL.png`;
+                pngLink.href = `/results/${scenarioId}/FINAL.png`;
                 pngLink.target = '_blank';
                 pngLink.className = 'btn btn-secondary';
                 pngLink.style.cssText = 'padding:4px 8px; font-size:11px;';
@@ -1499,7 +1566,21 @@
         }
 
         async function restartSystem() {
-            if (confirm("Reset everything?")) { await fetch('/restart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clearMappings: true }) }); location.reload(); }
+            if (!confirm("Reset everything?")) return;
+            try {
+                const res = await fetch('/restart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ clearMappings: true })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'Reset failed.');
+                Object.keys(suggestionAttempts).forEach(key => delete suggestionAttempts[key]);
+                showStatus(data.message || 'Reset.', 'success');
+                location.reload();
+            } catch (e) {
+                showStatus('Reset failed: ' + e.message, 'error');
+            }
         }
 
         async function pasteFromClipboard() {

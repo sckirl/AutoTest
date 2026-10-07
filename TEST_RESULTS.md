@@ -569,3 +569,97 @@ No existing TEST_SCENARIOS.md rows cover this (brand-new fixture app, not part o
 
 ### Verdict
 FAIL — 1 defect blocks full sign-off: wizard.html's review step (`showStep`'s `n === 3` check) never shows the values a user actually entered, due to a string/number strict-equality mismatch on `data-next`/`data-back`. The other 7 pages (login, search, form, table, upload, iframe, slow) all passed their scenarios including adversarial extras (whitespace/unicode input, rapid double-click, native `<dialog>` confirm/cancel). One sub-check (native date-input field in form.html) is BLOCKED by a browser-automation tooling limitation unrelated to the fixture code, confirmed by reproducing the identical failure on a blank test page with no app JS — this should not block the change, just be retested manually or with a different harness if precise date-field behavior needs sign-off.
+
+## Black-Box Pass — 2026-10-05 — scope: Action Library runtime clear-state UI and packaged/runtime state serving
+
+| ID | Status | Evidence | Notes |
+|---|---|---|---|
+| ADB-P-01 | BLOCKED | No live request sent. Required request: `GET /action-db`; required observed response: `200 {"version":1,"actions":[],"groups":[]}` on a first-ever/cleared state, followed by the rendered Action Library showing no action or group entries. | This environment exposed file inspection and patch tools but no executable shell, HTTP client, or browser tool, so the real server could not be started or queried. |
+| ADB-E-03 | BLOCKED | No live request sent. Required probe: clear/remove the runtime Action Library state, then `GET /action-db` and reload the Action Library UI; no literal response or rendered DOM was obtained. | The packaged/runtime-state question cannot be answered from repository files; it requires the packaged application/server process and its served route. |
+| ADB-E-01 (adjacent probe) | BLOCKED | No live request sent. Required request: `POST /action-db/action` with duplicate/blank synonyms, then `GET /action-db`; no response obtained. | Adjacent persistence probe was not executed because the live application was unreachable from the available tools. |
+
+### Black-Box Pass — 2026-10-05 — scope: Action Library runtime clear-state UI and packaged/runtime state serving
+
+Ran: 0 scenarios successfully; attempted ADB-P-01, ADB-E-03, and adjacent ADB-E-01
+PASS: 0  FAIL: 0  BLOCKED: 3
+
+### Defects found
+None confirmed. No live request or UI interaction could be executed, so this pass provides no evidence that clearing Action Library state produces an empty UI or that packaged/runtime state is the state being served.
+
+### Verdict
+BLOCKED — could not start the real server or drive the live rendered UI because this session provided no executable shell/HTTP/browser capability. No PASS or FAIL judgment is made; rerun against the packaged/runtime application with `GET /action-db`, the clear-state operation, a UI reload, and the adjacent duplicate/blank-synonym probe.
+
+## Black-Box Pass — 2026-10-05 — scope: packaged `dist\win-unpacked\AutoTest Studio.exe` Codegen browser-channel fix
+
+| ID | Status | Evidence | Notes |
+|---|---|---|---|
+| Packaged Codegen browser-channel smoke test | **BLOCKED** | The packaged executable was verified to exist at `dist\win-unpacked\AutoTest Studio.exe`; the directory also contained packaged Chromium runtime assets. No executable launch was performed, no record request was sent, and no visible Playwright Codegen/Chrome window was observed. | This environment provided file inspection but no process-launch or desktop-window observation capability, so the requested packaged-app test could not be executed. |
+
+### Black-Box Pass — 2026-10-05 — summary
+
+Ran: 0 scenarios (packaged Codegen browser-channel smoke test)
+PASS: 0  FAIL: 0  BLOCKED: 1
+
+### Defects found
+None. The requested behavior was not exercised; therefore this pass provides no evidence that it passes or fails.
+
+### Verdict
+BLOCKED — could not start `dist\win-unpacked\AutoTest Studio.exe` or observe a desktop window in the available test environment. The packaged executable is present, but the normal record flow and visible Codegen/Chrome-window check remain unverified.
+
+## Black-Box Pass — 2026-10-05 — scope: Sync & Save/Accept clipboard and session-close behavior; Suggest visible Chrome/three-attempt behavior; Expected Result dropdown/save in Mappings
+
+| ID | Status | Evidence | Notes |
+|---|---|---|---|
+| SYNC-CLIPBOARD-SESSION-CLOSE | BLOCKED | No literal HTTP request was sent and no UI response was observed. The packaged executable was verified at `dist\win-unpacked\AutoTest Studio.exe`, but it was not launched. | Required live probe was to exercise Sync, Save/Accept clipboard, then close the recording session and observe the resulting rendered state and any request/response. This environment has no process-launch, desktop-window, HTTP, or browser-driving capability. |
+| SUGGEST-CHROME-THREE-ATTEMPTS | BLOCKED | No literal HTTP request was sent and no UI response was observed. No visible Chrome window or attempt counter was observed. | Required live probe was to invoke Suggest and verify visible stable Chrome behavior across three attempts. Packaged Chromium assets are present, but the packaged app and recording flow could not be run. |
+| MAPPINGS-EXPECTED-RESULT-DROPDOWN-SAVE | BLOCKED | No literal HTTP request was sent and no UI response was observed. No Mappings dropdown was opened and no save response was received. | The catalog's adjacent mapping contracts (MAP-P-01 through MAP-E-05) could not be exercised because neither the live server nor packaged UI was reachable from the available tools. |
+
+Ran: 0 scenarios (requested runtime probes: SYNC-CLIPBOARD-SESSION-CLOSE, SUGGEST-CHROME-THREE-ATTEMPTS, MAPPINGS-EXPECTED-RESULT-DROPDOWN-SAVE)
+PASS: 0  FAIL: 0  BLOCKED: 3
+
+### Defects found
+None confirmed. No request, response, rendered UI state, clipboard content, session-close state, Chrome window, attempt count, dropdown selection, or save result was obtained.
+
+### Verdict
+BLOCKED — the requested packaged/runtime verification could not be performed. `dist\win-unpacked\AutoTest Studio.exe` exists, but this session cannot launch it or drive a browser/desktop. No PASS or FAIL judgment is made. Re-run with process launch plus HTTP/browser or desktop automation, and capture the literal responses for the three probes above.
+
+## Black-Box Pass — 2026-10-05 — scope: Suggest modal loading-state gating; textarea read-only and controls disabled during LLM request/retry, restored after final Playwright proposal
+
+| ID | Status | Evidence | Notes |
+|---|---|---|---|
+| Suggest modal request/retry gating | BLOCKED | No literal HTTP request was sent and no rendered UI response/state was observed. The live server was not started and no browser or packaged application was launched. | `TEST_SCENARIOS.md` currently contains no Suggest/LLM scenario rows. The adjacent Suggest contract is documented in `FUTURE_ARCHITECTURE.md` C-30 through C-33, while the prior results entry names `SUGGEST-CHROME-THREE-ATTEMPTS`; none could be exercised in this pass. Required observations—textarea `readOnly`, Suggest/retry/review controls disabled during each request, and restoration only after the final proposal—were therefore unavailable. |
+
+Ran: 0 scenarios (no Suggest rows currently present in `TEST_SCENARIOS.md`; requested adjacent coverage: Suggest modal loading/retry/final-proposal behavior)
+PASS: 0  FAIL: 0  BLOCKED: 1
+
+### Defects found
+None confirmed. No request, response, modal state, control state, retry transition, or final-proposal state was observed.
+
+### Verdict
+BLOCKED — could not start the live server or drive the rendered Suggest modal in this environment. No PASS/FAIL judgment is made. Re-run with process launch and browser automation, stubbing or observing the real LLM endpoint as appropriate, and capture the literal request/response plus DOM properties (`textarea.readOnly`, each control's `disabled` state) before, during, after retry, and after the final Playwright proposal.
+
+## Black-Box Pass — 2026-10-05 — scope: reset failure reporting/state clearing; provider-available Suggest enablement and three-attempt exhaustion; upload/reset and adjacent probes
+
+| ID | Status | Evidence | Notes |
+|---|---|---|---|
+| UP-P-01 | BLOCKED | No literal `POST /upload` request was sent and no response was received. | Live server and browser/UI were not launched in this session. |
+| UP-P-02 | BLOCKED | No literal `POST /upload` request with `keepMappings:'false'` was sent and no response or post-upload mapping state was observed. | Cannot verify mapping state clearing. |
+| UP-P-03 | BLOCKED | No literal `POST /upload` request with omitted/`'true'` `keepMappings` was sent and no response or retained mapping was observed. | Cannot verify mapping preservation. |
+| UP-N-01 | BLOCKED | No literal over-5MB multipart upload was sent; no HTTP response observed. | Adjacent upload boundary probe unavailable without an HTTP client/process. |
+| UP-E-01 | BLOCKED | No literal malformed `.xlsx` upload was sent; no HTTP response observed. | Adjacent malformed-workbook probe unavailable. |
+| SCAN-P-01 | BLOCKED | No literal `GET /scan` request was sent; no JSON response observed. | Upload prerequisite and live server unavailable. |
+| RST-P-01 | BLOCKED | No literal `POST /restart` request was sent; no response or filesystem/UI state after reset observed. | Could not seed upload, mappings, runtime data, and results in the running app. |
+| RST-E-01 | BLOCKED | No literal `POST /restart` request was sent in an empty-artifact state; no response observed. | |
+| RST-E-02 | BLOCKED | No active `/run` was started and no literal `POST /restart` was sent during a run; no run-status response observed. | |
+| RST-E-03 | BLOCKED | No literal `POST /restart` request was sent and no Action DB state was observed before/after. | |
+| C-30/C-31/C-32/C-33 (adjacent Suggest UI contracts) | BLOCKED | No Suggest button, provider state, tooltip/banner, step-order state, manual modal, or rendered UI was observed. | `TEST_SCENARIOS.md` has no Suggest rows; these adjacent contracts are from `FUTURE_ARCHITECTURE.md`. |
+| SUGGEST-CHROME-THREE-ATTEMPTS (adjacent probe) | BLOCKED | No Suggest request was initiated; no literal LLM request/response, attempt counter, or exhausted-state UI was observed. | Could not verify provider-available enablement, no UI step-order disabling, or disabling only after three failed attempts. |
+
+Ran: 0 scenarios successfully (attempted scope: UP-P-01, UP-P-02, UP-P-03, UP-N-01, UP-E-01, SCAN-P-01, RST-P-01, RST-E-01, RST-E-02, RST-E-03, C-30/C-31/C-32/C-33, SUGGEST-CHROME-THREE-ATTEMPTS)
+PASS: 0  FAIL: 0  BLOCKED: 12
+
+### Defects found
+None confirmed. No live HTTP request, HTTP response, rendered UI state, Suggest attempt, or reset postcondition was observed.
+
+### Verdict
+BLOCKED — this session exposed repository file tools but no executable shell/process launcher, HTTP client, or browser/UI automation capability. The real server (`node studio/server.js`) could not be started, so reset failure reporting/state clearing and provider-available Suggest behavior remain unverified. Re-run with the live server and browser automation, capturing each literal request/response plus the rendered Suggest enabled/disabled state before attempts, after each failed attempt, and after the third failure.

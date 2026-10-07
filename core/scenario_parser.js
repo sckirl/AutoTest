@@ -30,12 +30,13 @@ function generateBlueprintFromExcel(excelPath) {
 
     // Dynamic Header Detection across first 10 rows
     let headerRowIdx = -1;
-    let scenarioIdx = -1, labelIdx = -1, testDataIdx = -1;
+    let scenarioIdx = -1, labelIdx = -1, testDataIdx = -1, expectedResultIdx = -1;
     for (let i = 0; i < Math.min(rows.length, 10); i++) {
         const headers = rows[i].map(h => String(h || '').toLowerCase());
         scenarioIdx = headers.findIndex(h => h.includes('scenario number') || h.includes('scenario id'));
         labelIdx = headers.findIndex(h => h.includes('scenario name') || h.includes('label'));
         testDataIdx = headers.findIndex(h => h.includes('test data'));
+        expectedResultIdx = headers.findIndex(h => h === 'expected result' || h.includes('expected result'));
         if (scenarioIdx !== -1 && labelIdx !== -1) {
             headerRowIdx = i;
             break;
@@ -51,6 +52,7 @@ function generateBlueprintFromExcel(excelPath) {
         const scenarioNum = String(rows[r][scenarioIdx] || "").trim();
         const labelOrTitle = String(rows[r][labelIdx] || "").trim();
         const testDataRaw = testDataIdx !== -1 ? String(rows[r][testDataIdx] || "").trim() : "";
+        const expectedResult = expectedResultIdx !== -1 ? String(rows[r][expectedResultIdx] || "").trim() : "";
 
         if (scenarioNum.match(/^(?!\d+$).+/)) {
             // Start of a new scenario
@@ -106,7 +108,8 @@ function generateBlueprintFromExcel(excelPath) {
 
             currentScenario.Flow.push({
                 Mapping_Key: labelOrTitle,
-                Data: data
+                Data: data,
+                Expected_Result: expectedResult
             });
         }
     }

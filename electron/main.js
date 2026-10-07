@@ -6,12 +6,24 @@
 const { app, BrowserWindow } = require('electron');
 const { fork } = require('child_process');
 const path = require('path');
+const { loadRuntimeEnv } = require('../core/runtime_env');
 
 let win = null;
 let child = null;
 
 function startServerAndWindow() {
     const userData = app.getPath('userData');
+    const envFile = path.join(userData, '.env');
+    const sourceEnvFile = path.join(__dirname, '../.env');
+    loadRuntimeEnv();
+    if (!process.env.AUTOTEST_CHROME_PATH && !process.env.CDP_DEBUG_PORT) {
+        process.env.AUTOTEST_ENV_FILE = envFile;
+        loadRuntimeEnv();
+        if (!process.env.AUTOTEST_CHROME_PATH && !process.env.CDP_DEBUG_PORT && !__dirname.includes('app.asar')) {
+            process.env.AUTOTEST_ENV_FILE = sourceEnvFile;
+            loadRuntimeEnv();
+        }
+    }
     // A2/ENOTDIR: app.asar is a FILE, never a cwd. fork() inherits this process's cwd by
     // default, but Electron launches with cwd=/ (or wherever the .exe/.app was double-clicked
     // from) — never chdir into the bundle, and pin it to userData (writable) so nothing
@@ -25,6 +37,8 @@ function startServerAndWindow() {
             AUTOTEST_DATA_DIR: userData,
             AUTOTEST_RESULTS_DIR: path.join(userData, 'results'),
             AUTOTEST_CDP_PROFILE: 'isolated',
+            AUTOTEST_CHROME_PATH: process.env.AUTOTEST_CHROME_PATH || '',
+            CDP_DEBUG_PORT: process.env.CDP_DEBUG_PORT || '9222',
             // A1.3 known-gap bridge: fork()'d server.js sees process.resourcesPath natively,
             // but the scenario_parser.js/compiler.js children IT execSync's do not — they
             // read this env var instead (core/helpers.js resolveDriversRoot()).

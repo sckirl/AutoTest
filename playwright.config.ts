@@ -58,6 +58,7 @@ export default defineConfig({
   reporter: 'list',
   use: {
     headless: process.env.PW_HEADLESS === '1',
+    channel: process.env.AUTOTEST_SYSTEM_CHROME === '1' ? 'chrome' : undefined,
     screenshot: 'off',
     trace: 'off',
     // Support for bundled/portable chromium
@@ -68,6 +69,7 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        channel: process.env.AUTOTEST_SYSTEM_CHROME === '1' ? 'chrome' : undefined,
         executablePath: bundledExecutable,
       },
     },
