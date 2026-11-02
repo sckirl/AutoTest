@@ -1,5 +1,7 @@
 # AutoTest Studio: Test Scenario Catalog
 
+> **Current acceptance amendment — 2026-10-17:** UP-E-01 is corrected from the historical false-success description to the existing strict upload contract (A0.6.2): malformed input must return 400 and preserve the active project. UP-N-02 adds missing-file preservation. This strengthens the contract; it does not waive a failure. [BRAIN/Implementation Progress.md](BRAIN/Implementation%20Progress.md) records executed evidence; historical rows elsewhere still require reconciliation before their scope is implemented.
+
 Scope: every server route in [studio/server.js](studio/server.js), the compiler
 ([core/compiler.js](core/compiler.js)), and the Action Database
 ([core/action_db.js](core/action_db.js)), with **Mapping Actions** and
@@ -41,10 +43,26 @@ rejected), **E** = edge (boundary, concurrency, malformed state).
 
 | ID | Cat | Scenario | Expected Result |
 |---|---|---|---|
-| CGR-P-01 | P | Poll after codegen wrote `codegen_<id>.js` | `{ ready: true, code }`; file deleted after read (single consumption) |
-| CGR-N-01 | N | Poll before the file exists yet | `{ ready: false }` |
-| CGR-E-01 | E | Poll same `sessionId` twice after it's ready | Second call returns `{ ready: false }` (file already unlinked), no double-consume |
-| CGR-E-02 | E | Unknown/garbage `sessionId` | Same as N-01, `{ ready: false }`, no error thrown |
+| CGR-P-01 | P | Poll after the owned plain-codegen child closes successfully with final output | `{ ready: true, code }` matches final output exactly; read does not delete the file |
+| CGR-N-01 | N | Poll while the owned recorder is still running, including an early existing output file | `ready:false,status:running`; a valid session-owned `previewCode` may be displayed provisionally, but never treated as final or destructively consumed |
+| CGR-E-01 | E | Poll same completed `sessionId` twice within retained session lifetime | Both return identical final code; lost responses are retryable |
+| CGR-E-02 | E | Unknown numeric session or malformed session ID | Unknown numeric ID stays not ready; malformed ID returns 400; no arbitrary file is served |
+| CGR-E-03 | E | Recorder fails or is cancelled after an early output exists | Explicit failure/cancellation, never ready-success; prior mapping unchanged |
+| CGR-E-04 | E | Cancel A, start B, then delayed A close/result arrives | A cannot clear B ownership or overwrite B textarea |
+| CGR-E-05 | E | User edits textarea before final response arrives | Automatic final result does not overwrite user edits; final captured code remains available in a read-only section; explicit review remains required |
+| CGR-E-06 | E | Intermediate replay recording has no CLI export | UI states manual-copy fallback; no false automatic captured-success |
+| CGR-E-07 | E | Tester focuses textarea during recording without editing | Final source is inserted normally; focus alone does not discard it |
+| CGR-E-08 | E | Manual preview arrives after input edits or a newer modal opens | Response cannot replace newer/user-edited text |
+
+### Live preview during recording
+
+| ID | Cat | Scenario | Expected Result |
+|---|---|---|---|
+| CGR-L-01 | P | Perform navigation/action in real codegen while it stays open | New generated actions appear automatically as provisional live preview; ready remains false and recording Save is disabled |
+| CGR-L-02 | E | Output file is temporarily incomplete while being written | Last valid live snapshot remains; partial source is not published or executed |
+| CGR-L-03 | E | Live poll responses arrive out of order | Lower preview version cannot overwrite newer visible source; old session responses cannot affect new modal |
+| CGR-L-04 | E | Tester edits AutoTest while recording continues | Preserve edits; update read-only live source; successful close changes it to final source and enables review/save |
+| CGR-L-05 | E | Recording ends in failure/cancel, then tester opens Manual or Suggest | No final-success; recording save remains blocked; fresh mode restores its own correct controls |
 
 ## 4. Saving a Mapping (`POST /save-mapping`)
 
@@ -208,7 +226,8 @@ before recording the next action.
 | UP-P-02 | P | Upload with `keepMappings: 'false'` | `mappings.json` reset to `{}` on upload |
 | UP-P-03 | P | Upload with `keepMappings` omitted/`'true'` | Existing `mappings.json` left intact |
 | UP-N-01 | N | Upload a file over 5MB | Rejected by multer's `limits.fileSize` before reaching the handler |
-| UP-E-01 | E | `scenario_parser.js` throws on a malformed workbook | Caught, logged, upload still responds `200 { message: 'Uploaded.' }` (parser failure doesn't fail the upload); worth flagging as a UX gap in the doc |
+| UP-E-01 | E | `scenario_parser.js` throws on a malformed workbook | `400 { error }` names the real validation failure; active workbook, blueprint, mappings and data iterations remain unchanged; request staging file removed |
+| UP-N-02 | N | Upload request has no file, including after a previous valid upload | `400 { error: 'No file uploaded.' }`; active project unchanged |
 | SCAN-P-01 | P | Scan after a well-formed upload | Returns `{ steps, scenarios, scenarioVariables }` with each step's `mapped`/`missing` status |
 | SCAN-N-01 | N | Excel has fewer than 2 rows | `400 { error: 'Malformed Template: Excel file is empty or missing data rows.' }` |
 | SCAN-N-02 | N | Header row (within first 10 rows) never contains both "scenario number/id" and "scenario name/label" | `400 { error: "Malformed Template: Could not find 'Scenario Number' and 'Scenario Name' columns." }` |

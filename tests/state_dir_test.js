@@ -1,8 +1,6 @@
 // A1.2/A1.3 (FUTURE_ARCHITECTURE.md) — port defaults to an OS-assigned free port instead of a
 // hardcoded 3000, and DRIVERS_ROOT resolves under process.resourcesPath once Electron packages
 // this app. Covers matrix items A-5 and A-7.
-// ponytail: A1.1's full STATE_DIR/DATA_DIR/RESULTS_DIR relocation (A-1/A-2/A-3/A-4/A-6) has no
-// consumer yet (no Electron shell / A2 exists in this repo) — deferred until A2 lands, add then.
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -36,38 +34,68 @@ if (hadEnvResourcesPath) process.env.RESOURCES_PATH = savedEnvResourcesPath; els
 
 const ROOT = path.join(__dirname, '..');
 const CHILD_TIMEOUT_MS = 15000;
+const TEST_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'autotest-state-dir-test-'));
 
-function spawnServer(env, stdioMode) {
-    return spawn('node', ['studio/server.js'], { cwd: ROOT, env: { ...process.env, ...env }, stdio: stdioMode });
+function testEnv(overrides = {}) {
+    const { PORT, ...cleanEnv } = process.env;
+    const env = {
+        ...cleanEnv,
+        AUTOTEST_STATE_DIR: path.join(TEST_ROOT, 'state'),
+        AUTOTEST_DATA_DIR: path.join(TEST_ROOT, 'data'),
+        AUTOTEST_RESULTS_DIR: path.join(TEST_ROOT, 'results'),
+        ...overrides,
+        AUTOTEST_CDP_PROFILE: 'isolated',
+        AUTOTEST_PLATFORM: 'web',
+        LLM_BASE_URL: '',
+        LLM_API_KEY: '',
+        LLM_MODEL: '',
+    };
+    for (const key of ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GEMINI_API_KEY']) delete env[key];
+    return env;
+}
+for (const key of ['AUTOTEST_STATE_DIR', 'AUTOTEST_DATA_DIR', 'AUTOTEST_RESULTS_DIR']) fs.mkdirSync(testEnv()[key], { recursive: true });
+
+function spawnServer(env, stdioMode, cwd = ROOT) {
+    return spawn(process.execPath, [path.join(ROOT, 'studio/server.js')], { cwd, env: testEnv(env), stdio: stdioMode });
 }
 // cross-model-found: waiting on 'exit' with no timeout meant a regression that hangs the child
 // could hang the whole suite forever.
-function waitForExit(child) {
+function waitForExit(child, timeoutMs = CHILD_TIMEOUT_MS) {
+    if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve(child.exitCode);
     return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error(`FAIL: child did not exit within ${CHILD_TIMEOUT_MS}ms — likely hung`)), CHILD_TIMEOUT_MS);
-        child.on('exit', code => { clearTimeout(timer); resolve(code); });
+        const timer = setTimeout(() => reject(new Error(`FAIL: child did not exit within ${timeoutMs}ms — likely hung`)), timeoutMs);
+        child.once('exit', code => { clearTimeout(timer); resolve(code); });
     });
+}
+async function stopChild(child) {
+    if (child.exitCode !== null || child.signalCode !== null) return;
+    const exited = waitForExit(child, 2000);
+    child.kill('SIGTERM');
+    try { await exited; }
+    catch {
+        child.kill('SIGKILL');
+        await waitForExit(child, 2000);
+    }
 }
 
 // A-5: PORT unset → server picks its own free port and announces it, doesn't fall back to 3000
 async function testDynamicPort() {
     // cross-model-found: omit the PORT key entirely — a set-but-empty string ('') is a different
     // env state than unset, even though both are falsy to `||`.
-    const { PORT, ...envWithoutPort } = process.env;
-    const server = spawnServer(envWithoutPort, ['ignore', 'pipe', 'inherit']);
+    const inherited = Object.fromEntries(['LLM_BASE_URL', 'LLM_API_KEY', 'LLM_MODEL'].map(key => [key, process.env[key]]));
+    Object.assign(process.env, { LLM_BASE_URL: 'http://127.0.0.1:1/v1', LLM_API_KEY: 'synthetic-test-key', LLM_MODEL: 'synthetic-test-model' });
+    const server = spawnServer({}, ['ignore', 'pipe', 'inherit']);
     try {
-        let out = '';
-        server.stdout.on('data', d => out += d);
-        const port = await new Promise((resolve, reject) => {
-            const timer = setTimeout(() => { clearInterval(check); reject(new Error('FAIL: no STUDIO_PORT= line within 10s')); }, 10000);
-            const check = setInterval(() => {
-                const m = /STUDIO_PORT=(\d+)/.exec(out);
-                if (m) { clearInterval(check); clearTimeout(timer); resolve(Number(m[1])); }
-            }, 100);
-        });
+        const line = await waitForLine(server, /STUDIO_PORT=(\d+)/, 10000);
+        const port = Number(line[1]);
         assert.ok(port > 0, 'FAIL: announced port must be a real OS-assigned port');
+        const status = await fetch(`http://127.0.0.1:${port}/suggest/status`, { signal: AbortSignal.timeout(3000) });
+        assert.strictEqual((await status.json()).enabled, false, 'standalone relocation tests must keep inherited provider settings disabled');
     } finally {
-        server.kill('SIGKILL');
+        await stopChild(server);
+        for (const [key, value] of Object.entries(inherited)) {
+            if (value === undefined) delete process.env[key]; else process.env[key] = value;
+        }
     }
 }
 
@@ -85,10 +113,10 @@ function waitForLine(child, regex, timeoutMs) {
 }
 
 async function testPortCollision() {
-    const first = spawnServer({ PORT: '3987' }, ['ignore', 'pipe', 'inherit']);
+    const first = spawnServer({ PORT: '0' }, ['ignore', 'pipe', 'inherit']);
     try {
-        await waitForLine(first, /STUDIO_PORT=/, 10000);
-        const second = spawnServer({ PORT: '3987' }, ['ignore', 'ignore', 'pipe']);
+        const ready = await waitForLine(first, /STUDIO_PORT=(\d+)/, 10000);
+        const second = spawnServer({ PORT: ready[1] }, ['ignore', 'ignore', 'pipe']);
         try {
             let stderr = '';
             second.stderr.on('data', d => stderr += d);
@@ -97,32 +125,34 @@ async function testPortCollision() {
             assert.ok(!/TypeError/.test(stderr), `FAIL: collision should not crash with a TypeError, got: ${stderr}`);
             assert.ok(/Failed to start server/.test(stderr), `FAIL: expected a clear startup-failure message, got: ${stderr}`);
         } finally {
-            second.kill('SIGKILL');
+            await stopChild(second);
         }
     } finally {
-        first.kill('SIGKILL');
+        await stopChild(first);
     }
 }
 
 // doubt-review-found: a non-numeric PORT must be rejected, not silently become a Unix socket path
 async function testInvalidPort() {
-    const child = spawnServer({ PORT: 'abc' }, ['ignore', 'ignore', 'pipe']);
+    const cwd = fs.mkdtempSync(path.join(TEST_ROOT, 'invalid-port-'));
+    const child = spawnServer({ PORT: 'abc' }, ['ignore', 'ignore', 'pipe'], cwd);
     try {
         let stderr = '';
         child.stderr.on('data', d => stderr += d);
         const code = await waitForExit(child);
         assert.notStrictEqual(code, 0, 'FAIL: non-numeric PORT should exit non-zero');
         assert.ok(/Invalid PORT/.test(stderr), `FAIL: expected a clear "Invalid PORT" message, got: ${stderr}`);
-        assert.ok(!fs.existsSync(path.join(ROOT, 'abc')), 'FAIL: must not create a stray socket file named after the bad PORT value');
+        assert.ok(!fs.existsSync(path.join(cwd, 'abc')), 'FAIL: must not create a stray socket file named after the bad PORT value');
     } finally {
-        child.kill('SIGKILL');
+        await stopChild(child);
     }
 }
 
 // cross-model-found: a numeric-but-out-of-range PORT (>65535) passed the digits-only regex and
 // crashed with a raw ERR_SOCKET_BAD_PORT before the 'error' handler was even attached.
 async function testOutOfRangePort() {
-    const child = spawnServer({ PORT: '70000' }, ['ignore', 'ignore', 'pipe']);
+    const cwd = fs.mkdtempSync(path.join(TEST_ROOT, 'out-of-range-port-'));
+    const child = spawnServer({ PORT: '70000' }, ['ignore', 'ignore', 'pipe'], cwd);
     try {
         let stderr = '';
         child.stderr.on('data', d => stderr += d);
@@ -131,7 +161,7 @@ async function testOutOfRangePort() {
         assert.ok(/Invalid PORT/.test(stderr), `FAIL: expected a clear "Invalid PORT" message, got: ${stderr}`);
         assert.ok(!/RangeError/.test(stderr), `FAIL: should not crash with a raw RangeError, got: ${stderr}`);
     } finally {
-        child.kill('SIGKILL');
+        await stopChild(child);
     }
 }
 
@@ -148,7 +178,7 @@ async function testStateDirRelocation() {
             assert.ok(fs.existsSync(path.join(tmpState, 'mappings.json')),
                 "FAIL: AUTOTEST_STATE_DIR should receive mappings.json on startup, not the app's own core/");
         } finally {
-            server.kill('SIGKILL');
+            await stopChild(server);
         }
     } finally {
         fs.rmSync(tmpState, { recursive: true, force: true });
@@ -170,7 +200,7 @@ function testCompilerRespectsStateDir() {
         }, null, 2));
         execFileSync(process.execPath, [path.join(ROOT, 'core/compiler.js')], {
             cwd: ROOT,
-            env: { ...process.env, AUTOTEST_STATE_DIR: tmpState }
+            env: testEnv({ AUTOTEST_STATE_DIR: tmpState })
         });
         assert.ok(fs.existsSync(path.join(tmpState, 'executed.spec.ts')),
             'FAIL: compiler.js should write executed.spec.ts under AUTOTEST_STATE_DIR, not core/');
@@ -194,7 +224,7 @@ function testGeneratedSpecUsesResultsDirEnv() {
         }, null, 2));
         execFileSync(process.execPath, [path.join(ROOT, 'core/compiler.js')], {
             cwd: ROOT,
-            env: { ...process.env, AUTOTEST_STATE_DIR: tmpState }
+            env: testEnv({ AUTOTEST_STATE_DIR: tmpState })
         });
         const generated = fs.readFileSync(path.join(tmpState, 'executed.spec.ts'), 'utf8');
         assert.ok(/AUTOTEST_RESULTS_DIR/.test(generated),
@@ -223,7 +253,7 @@ test('relocated spec runs', async () => { expect(1 + 1).toBe(2); });
             cwd: ROOT,
             // NODE_PATH: matches the fix in studio/server.js's runner spawn — a relocated spec
             // can't otherwise resolve `@playwright/test` by walking up from its own directory.
-            env: { ...process.env, AUTOTEST_STATE_DIR: tmpState, NODE_PATH: path.join(ROOT, 'node_modules') },
+            env: testEnv({ AUTOTEST_STATE_DIR: tmpState, NODE_PATH: path.join(ROOT, 'node_modules') }),
         }).toString();
         assert.ok(!/No tests found/i.test(out),
             'FAIL: a spec relocated via AUTOTEST_STATE_DIR must be found by Playwright, not reported missing');
@@ -248,12 +278,12 @@ function testOutputDirFollowsResultsDir() {
         // the error object in that case rather than treating "no tests" as a failure.
         let out;
         try {
-            out = execFileSync('node', [
+            out = execFileSync(process.execPath, [
                 path.join(__dirname, '..', 'node_modules', '@playwright', 'test', 'cli.js'),
                 'test', '--config', cfgPath, '--list', '--reporter=json'
             ], {
                 cwd: path.join(__dirname, '..'),
-                env: { ...process.env, AUTOTEST_RESULTS_DIR: tmpResults, AUTOTEST_STATE_DIR: path.join(__dirname, '..', 'core') },
+                env: testEnv({ AUTOTEST_RESULTS_DIR: tmpResults, AUTOTEST_STATE_DIR: path.join(TEST_ROOT, 'list-state') }),
                 encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
             });
         } catch (e) {
@@ -282,5 +312,8 @@ Promise.resolve()
     .then(() => console.log('PASS: state_dir_test — DRIVERS_ROOT + dynamic port + clean EADDRINUSE + PORT validation + A1.1 relocation'))
     .catch(e => {
         console.error(e.message);
-        process.exit(1);
+        process.exitCode = 1;
+    })
+    .finally(() => {
+        fs.rmSync(TEST_ROOT, { recursive: true, force: true });
     });

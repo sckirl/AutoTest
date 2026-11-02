@@ -6,9 +6,9 @@ const path = require('path');
 const { spawn } = require('child_process');
 const { chromium } = require('playwright');
 
-const PORT = process.env.FIXTURE_TEST_PORT || 3999;
-const BASE = `http://localhost:${PORT}`;
 const ROOT = path.join(__dirname, '..');
+let PORT;
+let BASE;
 
 function ping() {
   return new Promise(resolve => {
@@ -25,10 +25,53 @@ async function waitForServer(timeoutMs = 8000) {
   throw new Error('Fixture server did not start.');
 }
 
+async function startFixtureServer() {
+  const server = spawn(process.execPath, [path.join(__dirname, 'fixtures/serve.js')], {
+    cwd: ROOT, env: { ...process.env, FIXTURE_PORT: '0' }, stdio: ['ignore', 'pipe', 'inherit']
+  });
+  try {
+    const port = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Fixture server did not announce its port.')), 8000);
+    let output = '';
+    server.stdout.setEncoding('utf8');
+    server.stdout.on('data', chunk => {
+      output += chunk;
+      const match = /FIXTURE_PORT=(\d+)/.exec(output);
+      if (match) { clearTimeout(timer); resolve(Number(match[1])); }
+    });
+    server.once('error', error => { clearTimeout(timer); reject(error); });
+    server.once('exit', code => { clearTimeout(timer); reject(new Error(`Fixture server exited before ready (${code}).`)); });
+    });
+    return { server, port };
+  } catch (error) {
+    await stopServer(server);
+    throw error;
+  }
+}
+
+async function stopServer(server) {
+  if (!server || server.exitCode !== null || server.signalCode !== null) return;
+  const wait = timeoutMs => new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Fixture server did not exit within ${timeoutMs}ms.`)), timeoutMs);
+    server.once('exit', code => { clearTimeout(timer); resolve(code); });
+  });
+  const exited = wait(2000);
+  server.kill('SIGTERM');
+  try { await exited; }
+  catch {
+    server.kill('SIGKILL');
+    await wait(2000);
+  }
+}
+
 async function main() {
-  const server = spawn('node', ['tests/fixtures/serve.js'], { cwd: ROOT, env: { ...process.env, FIXTURE_PORT: String(PORT) }, stdio: 'ignore' });
+  let server;
   let browser;
   try {
+    const fixture = await startFixtureServer();
+    server = fixture.server;
+    PORT = fixture.port;
+    BASE = `http://127.0.0.1:${PORT}`;
     await waitForServer();
     browser = await chromium.launch();
     const page = await browser.newPage();
@@ -97,7 +140,7 @@ async function main() {
     console.log('PASS: fixtures_smoke_test — all 8 fixture pages serve and behave');
   } finally {
     if (browser) await browser.close();
-    server.kill('SIGKILL');
+    await stopServer(server);
   }
 }
 

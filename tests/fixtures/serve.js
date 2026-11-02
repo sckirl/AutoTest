@@ -3,7 +3,11 @@
 const express = require('express');
 const path = require('path');
 
-const PORT = process.env.FIXTURE_PORT || 3999;
+const PORT = Number(process.env.FIXTURE_PORT || 3999);
 const app = express();
 app.use(express.static(path.join(__dirname, 'app')));
-app.listen(PORT, () => console.log(`Fixture app on http://localhost:${PORT}`));
+const server = app.listen(PORT, () => {
+  const port = server.address().port;
+  console.log(`FIXTURE_PORT=${port}`);
+  console.log(`Fixture app on http://localhost:${port}`);
+});

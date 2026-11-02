@@ -1,27 +1,8 @@
 // Prove-It: A0.7.3/4/5/7/8/9 — studio-ui.html defects from doubt-driven cycle 4.
 // Self-contained: spawns its own server, drives the real page with Playwright (already a
 // project dependency), stubs specific fetches with page.route rather than a fake DOM.
-const http = require('http');
-const path = require('path');
-const { spawn } = require('child_process');
 const { chromium } = require('playwright');
-
-const ROOT = path.join(__dirname, '..');
-const PORT = process.env.UI_TEST_PORT || 3958;
-const BASE = `http://localhost:${PORT}`;
-
-function ping() {
-  return new Promise(resolve => {
-    const r = http.get({ host: 'localhost', port: PORT, path: '/env', timeout: 500 }, res => { res.resume(); resolve(res.statusCode === 200); });
-    r.on('error', () => resolve(false));
-    r.on('timeout', () => { r.destroy(); resolve(false); });
-  });
-}
-async function waitForServer(timeoutMs = 10000) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) { if (await ping()) return; await new Promise(r => setTimeout(r, 200)); }
-  throw new Error('server did not start');
-}
+const { startStudio } = require('./run_all');
 
 let pass = 0, fail = 0;
 function check(name, cond) {
@@ -30,12 +11,13 @@ function check(name, cond) {
 }
 
 async function main() {
-  const server = spawn('node', ['studio/server.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT) }, stdio: ['ignore', 'ignore', 'inherit'] });
+  let studio;
   let browser = null;
   try {
+    studio = await startStudio();
+    const BASE = `http://127.0.0.1:${studio.port}`;
     // A0.8.9: browser launch inside try/finally so server is killed even if launch throws
     browser = await chromium.launch();
-    await waitForServer();
     const page = await browser.newPage();
     page.on('dialog', d => d.accept()); // handleFile's confirm()
     await page.goto(BASE + '/');
@@ -119,7 +101,7 @@ async function main() {
 
   } finally {
     if (browser) await browser.close().catch(() => {});
-    server.kill('SIGKILL');
+    if (studio) await studio.stop();
   }
 
   console.log(`\n--- Score: ${pass}/${pass + fail} PASSED ---`);

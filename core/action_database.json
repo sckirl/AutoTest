@@ -1,8 +1,6 @@
 {
   "version": 1,
-  "actions": [
-   
-  ],
+  "actions": [],
   "groups": [
     {
       "id": "grp_1786699558996_mhacc",
@@ -18,7 +16,8 @@
         "Login Chain",
         "Authentication Sequence",
         "Perform Login",
-        "Enter User Credentials"
+        "Enter User Credentials",
+        "Navigate to OrangeHRM"
       ],
       "variables": [
         "url",

@@ -1,25 +1,73 @@
 # AutoTest Studio Knowledge Graph (Index)
 
-> **🚀 New agent? Go straight to [[Next Direction]].** It has the verified current state, exact ordered task list, system flow diagram, and invariants. Everything else here is deeper context.
+CONFIDENCE: AMBIGUOUS
+RELATIONS:
+- depends_on::[[Engineering Plan]]
+- derived_from::[[Plan Reconciliation]]
+GOD_NODES: [[[Engineering Plan]], [[Module Contracts]]]
+SURPRISING_CONNECTIONS: Historical architecture and current runtime evidence may diverge; preserve both with explicit dates.
 
-Welcome to the central hub for the AutoTest Studio mental knowledge graph. This system is designed as a zero-install, air-gapped, data-driven Playwright testing engine.
+### KEY FINDINGS:
+- This retained context predates the current plan; its detailed claims below are historical until revalidated.
+- Current ownership, priorities and acceptance criteria are in Engineering Plan and Plan Reconciliation.
 
-## Core Concepts & God Nodes
-- [[Architecture]]: Overview of the offline-first, vanilla frontend, and bundled driver approach (a true Ponytail minimalist architecture).
-- [[Security & Compiler]]: Details on AST Extraction, the `isSafeChain` evaluator, and how Playwright scripts are generated in memory safely.
-- [[Data-Driven Parameterization]]: How UAT Excel matrices feed dynamic variables into the generated scripts using `{variable_name}` syntax.
-- [[Workflow & Execution]]: The step-by-step process of uploading matrices, mapping, executing, and harvesting artifacts.
-- [[Omnichannel Orchestration]]: How the same engine flawlessly handles both Web (Playwright) and Mobile (Appium) contexts via simple boolean conditionals instead of complex abstractions.
-- [[Zero-Trust Data Lifecycle]]: The flat-file override architecture (`runtime_data.json`) and strict garbage collection to prevent stale states.
-- [[Agent Personas]]: The zero-trust orchestration strategy for autonomous development and testing.
-- [[What Happened]]: **START HERE if picking up mid-stream.** Honest log of everything done, what worked, what failed, what's unverified, and the real backlog.
+### PRIMARY SOURCES:
+- [Playwright codegen](https://playwright.dev/docs/codegen) — VERIFIED accessible 2026-10-16; recording workflow reference only, not verification of every historical claim below.
+- Local source/document anchors remain in the retained body below. Unrevalidated historical claims are AMBIGUOUS.
 
-## Current Status (as of 2026-08-14)
+### SIGNIFICANCE:
+Preserves prior reasoning without allowing stale checkmarks to certify current behavior.
 
-> Round 21 certified defect-free. DEF-H8 (XSS via step label innerHTML) status unconfirmed in current code. Auto-recording feature exists but is unreliable. Mobile Appium path never E2E tested. Server restarts reset `activePlatform` to `web` — no disk persistence.
+### GAPS/CONSTRAINTS IDENTIFIED:
+Historical implementation and verification statements require current-code and runtime checks before use.
 
-## Why this exists?
-To empower non-technical QA testers to automate tests via a web UI without needing developer environment setups (`npm`, `npx`), bridging the gap between manual Excel matrices and automated Playwright execution.
+## Current engineering plan — finalized 2026-10-17
+
+Implementation is underway: [[Implementation Progress]] records actual slice status, Luna assignments and executed checks.
+
+- [[Engineering Plan]] — confirmed MVP, architecture choices and ordered G0–G12 implementation tasks.
+- [[Module Contracts]] — proposed files/functions, inputs, outputs, ownership, failure behavior and tests.
+- [[Recording Acceptance]] — real ComputerUse/codegen procedure, RC01–RC20, agent orchestration and release gates.
+- [[Engineering Audit]] — ranked current-tree findings in defect.md and their repair mapping.
+- [[Plan Reconciliation]] — improvements to previous plans and FigJam conflicts.
+
+[blueprint.html](../blueprint.html) summarizes these nodes. Current application acceptance: **NOT ESTABLISHED by this planning change**. Older entries below are historical context.
+
+> **🚀 New agent? Go straight to [[Next Direction]].** Ordered task list, verified state,
+> system diagram, invariants. Everything else is deeper context.
+
+Zero-install, air-gapped, data-driven E2E automation engine. Excel matrix → record/map →
+compile → execute → evidence in `/results/`.
+
+## Map
+
+- [[Architecture]] — components, state roots, packaged boundary, single-source rules.
+- [[Server-Split]] — **plan** to split `studio/server.js` (1391 lines, 31 routes) into thin
+  bootstrap + 4 flow routers + lib. Status: plan, not yet executed.
+- [[Security & Compiler]] — Acorn AST extraction, `isSafeChain`, evidence/redaction rules.
+- [[Data-Driven Parameterization]] — `{var}` 3-way rule (value / deliberate blank / absent throws).
+- [[Workflow & Execution]] — the 5-tab loop: Studio → Mappings → Library → Data Matrix → Execution.
+- [[Zero-Trust Data Lifecycle]] — flat-file stores, wipe hooks, no ghost state.
+- [[Omnichannel Orchestration]] — web/mobile platform toggle, what mobile can/can't do.
+- [[Agent Personas]] — Zero-Trust QA, Lead Dev, PM Auditor, Black-Box Tester + mandatory loop.
+- [[Maintainer Reference]] — every section and named function: purpose, inputs/outputs, callers, invariants, safe-change checklists.
+- [[What Happened]] — honest log: done, failed, unverified, backlog.
+- [[Ponytail Audit]] — complexity-only findings; load-bearing list (do not cut).
+- [[Next Direction]] — **start here for work.** Current verified state + exact ordered tasks.
+
+## Current Status (as of 2026-10-07, verified against master)
+
+- Core loop works: upload → scan → record/manual/link/suggest → data matrix → run → evidence.
+- Already-fixed-in-code (were open in Aug docs): shared `core/helpers.js`, browser-path cache,
+  merged orphan sweep, dead `updateActivity` removed, `sit_runner.js` deleted,
+  `platform_state.json` persisted, ActionDB on `AUTOTEST_STATE_DIR`, generated specs gitignored.
+- Not yet accepted: AL-01–AL-04 / EX-01 need packaged gesture→restart proof (see [[Next Direction]]).
+- Source docs: [blueprint.html](../blueprint.html) (PRD, §1–14),
+  [FigJam board](https://www.figma.com/board/9KC30qRJbzAjk9VZihuDtS/AutoTest-Blueprint?node-id=0-1&t=KeNd93qMgT498YHq-1)
+  (4 flows + red/blue alignment marks), [AGENTS.md](../AGENTS.md) (invariants + black-box loop).
 
 ## Design Philosophy (Ponytail)
-AutoTest embraces a strict minimalist footprint: **No build steps**, **Vanilla HTML/CSS/JS frontend**, and **local bundled dependencies**. Over-engineering is strictly rejected in favor of raw, offline-capable execution.
+
+Shortest diff wins — after full comprehension. No build step, vanilla UI, bundled deps,
+`fs`-JSON stores. Never simplify away: Acorn parsing, `isSafeChain`, process cleanup,
+crash sweeps, packaged paths, validation at trust boundaries. See [[Ponytail Audit]].

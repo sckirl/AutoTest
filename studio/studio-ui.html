@@ -105,7 +105,12 @@
             <div id="record-guide-banner" style="background: #F0F7FF; border: 1px solid #C2E0FF; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; color: #1E3A8A;">
                 Initializing recorder...
             </div>
+            <div id="codegen-preview-label" style="display:none; margin:0 0 6px; color:#92400E; font-size:12px; font-weight:700;"></div>
             <textarea id="recorded-code" placeholder="Wait for browser to open..."></textarea>
+            <details id="codegen-retained" style="display:none; margin:8px 0 12px;">
+                <summary id="codegen-retained-summary">Final captured code</summary>
+                <pre id="codegen-retained-source" style="white-space:pre-wrap; overflow:auto; max-height:180px;"></pre>
+            </details>
             <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--muted-text); margin-bottom:10px; cursor:pointer;">
                 <input type="checkbox" id="save-to-lib-toggle" onchange="document.getElementById('save-to-lib-name').style.display = this.checked ? 'inline-block' : 'none';" />
                 Also save to Action Library as:
@@ -338,10 +343,16 @@
         const stepListUi = document.getElementById('step-list-ui');
         const modal = document.getElementById('record-modal');
         const codeArea = document.getElementById('recorded-code');
+        const retainedCode = document.getElementById('codegen-retained');
+        const retainedCodeSource = document.getElementById('codegen-retained-source');
+        const retainedCodeSummary = document.getElementById('codegen-retained-summary');
+        const codegenPreviewLabel = document.getElementById('codegen-preview-label');
 
         let currentLabel = "";
         let currentScenarioId = "";
         let isUserInteracting = false;
+        let codeAreaRevision = 0;
+        let codeAreaRenderRevision = 0;
         let llmEnabled = false;
         let suggestionActive = false;
         const suggestionAttempts = {};
@@ -363,6 +374,15 @@
         }
 
         async function suggestStep(label, scenarioId) {
+            const operation = ++recordModalOperation;
+            stopCodegenPoll();
+            codegenPending = false;
+            codegenLive = false;
+            codegenSaveBlocked = false;
+            latestCodegenPreviewBody = '';
+            codegenFinalAvailable = false;
+            retainedCode.style.display = 'none';
+            retainedCodeSource.textContent = '';
             currentLabel = label;
             currentScenarioId = scenarioId;
             suggestionActive = true;
@@ -382,6 +402,7 @@
                     body: JSON.stringify({ label, scenarioId })
                 });
                 const data = await res.json();
+                if (recordModalOperation !== operation) return;
                 if (!res.ok) throw new Error(data.error || 'Suggestion failed.');
                 if (data.status === 'cannot_map') {
                     suggestionAttempts[`${scenarioId}:${label}`] = 3;
@@ -402,6 +423,7 @@
                     await scanSteps();
                 }
             } catch (e) {
+                if (recordModalOperation !== operation) return;
                 const key = `${scenarioId}:${label}`;
                 suggestionAttempts[key] = (suggestionAttempts[key] || 0) + 1;
                 suggestionActive = false;
@@ -413,12 +435,14 @@
         }
 
         async function rejectSuggestion() {
+            const operation = recordModalOperation;
             setSuggestionLoading(true);
             codeArea.placeholder = 'Asking the configured office LLM for a replacement proposal...';
             document.getElementById('record-guide-banner').textContent = 'Asking the configured office LLM to reconsider the step. Controls are disabled until the next final Playwright proposal is ready.';
             try {
                 const res = await fetch('/suggest/reject', { method: 'POST' });
                 const data = await res.json();
+                if (recordModalOperation !== operation) return;
                 if (!res.ok) throw new Error(data.error || 'Retry failed.');
                 if (data.status === 'cannot_map') {
                     suggestionAttempts[`${currentScenarioId}:${currentLabel}`] = 3;
@@ -432,6 +456,7 @@
                 document.getElementById('record-guide-banner').textContent = 'Review the suggestion. Accept it, reject it and retry, or edit it manually.';
                 showStatus('New suggestion ready for review.', 'success');
             } catch (e) {
+                if (recordModalOperation !== operation) return;
                 const key = `${currentScenarioId}:${currentLabel}`;
                 suggestionAttempts[key] = (suggestionAttempts[key] || 0) + 1;
                 setSuggestionLoading(false);
@@ -441,6 +466,8 @@
         }
 
         async function acceptSuggestion() {
+            ++recordModalOperation;
+            stopCodegenPoll();
             try {
                 const exactCode = codeArea.value;
                 const res = await fetch('/suggest/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: exactCode }) });
@@ -457,6 +484,7 @@
         }
 
         async function editSuggestion() {
+            ++recordModalOperation;
             try { await fetch('/suggest/cancel', { method: 'POST' }); } catch (e) {}
             suggestionActive = false;
             setSuggestionLoading(false);
@@ -509,8 +537,22 @@
 
         initContext(); // Run immediately to set initial state
 
-        codeArea.onfocus = () => isUserInteracting = true;
-        codeArea.oninput = () => isUserInteracting = true;
+        codeArea.oninput = () => {
+            isUserInteracting = true;
+            codeAreaRevision++;
+            codeAreaRenderRevision++;
+            if (codegenSaveBlocked && latestCodegenPreviewBody) {
+                retainedCodeSummary.textContent = codegenLive ? 'Latest live preview (provisional; not saved)' : 'Last preview (provisional; not saved)';
+                retainedCodeSource.textContent = latestCodegenPreviewBody;
+                retainedCode.style.display = 'block';
+                codegenPreviewLabel.textContent = codegenLive ? 'Your edits are kept; latest live preview is below (provisional)' : 'Your edits are kept; last preview is below (provisional; recording ended without final capture)';
+                codegenPreviewLabel.style.display = 'block';
+            } else if (codegenFinalAvailable && latestCodegenPreviewBody) {
+                retainedCodeSummary.textContent = 'Final captured code (your edits above were kept)';
+                retainedCodeSource.textContent = latestCodegenPreviewBody;
+                retainedCode.style.display = 'block';
+            }
+        };
 
         document.addEventListener('DOMContentLoaded', async () => {
             const res = await fetch('/run-status');
@@ -1186,6 +1228,20 @@
         }
 
         let codegenPollTimer = null;
+        let codegenPollSessionId = null;
+        let recordModalOperation = 0;
+        let codegenPending = false;
+        let codegenLive = false;
+        let codegenSaveBlocked = false;
+        let latestCodegenPreviewBody = '';
+        let codegenFinalAvailable = false;
+
+        function stopCodegenPoll(sessionId) {
+            if (sessionId && codegenPollSessionId !== sessionId) return;
+            if (codegenPollTimer) clearInterval(codegenPollTimer);
+            codegenPollTimer = null;
+            codegenPollSessionId = null;
+        }
 
         // Extracts only the Playwright test body lines from codegen --output file
         // ponytail: regex not parser, drops import/test() boilerplate, keeps await lines
@@ -1197,29 +1253,84 @@
             return brace >= 0 ? raw.slice(brace + 1, raw.lastIndexOf('}')).trim() : raw;
         }
 
-        function startCodegenPoll(sessionId) {
+        function startCodegenPoll(sessionId, operation, initialRevision) {
+            stopCodegenPoll();
+            codegenPollSessionId = sessionId;
             let attempts = 0;
+            let latestPreviewVersion = 0;
             const MAX = 200; // 5 minutes @ 1.5s
-            codegenPollTimer = setInterval(async () => {
+            const timer = setInterval(async () => {
                 if (attempts++ > MAX) {
-                    clearInterval(codegenPollTimer);
-                    showStatus('Codegen session timed out. Paste your code manually above.', 'warning');
+                    clearInterval(timer);
+                    if (recordModalOperation !== operation) return;
+                    if (codegenPollSessionId === sessionId) stopCodegenPoll(sessionId);
+                    codegenLive = false;
+                    codegenPending = false;
+                    codegenSaveBlocked = true;
+                    codegenPreviewLabel.textContent = 'Recording timed out — last preview is provisional; not saved';
+                    codegenPreviewLabel.style.display = 'block';
+                    showStatus('Codegen timed out. The provisional preview cannot be saved; close this modal and choose Manual Map to continue.', 'warning');
                     return;
                 }
                 try {
                     const r = await fetch(`/codegen-result/${sessionId}`);
                     const d = await r.json();
-                    if (d.ready && d.code) {
-                        clearInterval(codegenPollTimer);
-                        const body = extractCodegenBody(d.code);
-                        if (body.trim().length > 0) {
+                    if (recordModalOperation !== operation || codegenPollSessionId !== sessionId || d.sessionId !== sessionId) return;
+                    if (!r.ok) {
+                        stopCodegenPoll(sessionId);
+                        codegenLive = false;
+                        codegenPending = false;
+                        codegenSaveBlocked = true;
+                        codegenPreviewLabel.textContent = 'Recording failed or was cancelled — last preview is provisional; not saved';
+                        codegenPreviewLabel.style.display = 'block';
+                        showStatus((d.error || 'Recording did not complete successfully.') + ' The provisional preview cannot be saved; choose Manual Map to continue.', 'error');
+                        return;
+                    }
+                    if (!d.ready && d.status === 'running' && typeof d.previewCode === 'string' && d.previewVersion > latestPreviewVersion) {
+                        latestPreviewVersion = d.previewVersion;
+                        const body = extractCodegenBody(d.previewCode);
+                        latestCodegenPreviewBody = body;
+                        if (codeAreaRevision === initialRevision) {
                             codeArea.value = body;
+                            codeAreaRenderRevision++;
+                            retainedCode.style.display = 'none';
+                        } else {
+                            retainedCodeSummary.textContent = 'Latest live preview (provisional; not saved)';
+                            retainedCodeSource.textContent = body;
+                            retainedCode.style.display = 'block';
                         }
-                        isUserInteracting = true;
-                        showStatus('Codegen captured! Review the code and click "Sync & Save Action".', 'success');
+                        codegenPreviewLabel.textContent = codeAreaRevision === initialRevision
+                            ? 'Live preview — provisional; not saved'
+                            : 'Your edits are kept; latest live preview is below (provisional)';
+                        codegenPreviewLabel.style.display = 'block';
+                        showStatus('Live Codegen preview updated. Capture is provisional until the recorder closes.', 'info');
+                    }
+                    if (d.ready && typeof d.code === 'string') {
+                        stopCodegenPoll(sessionId);
+                        codegenPending = false;
+                        codegenLive = false;
+                        codegenSaveBlocked = false;
+                        document.getElementById('save-mapping-btn').disabled = false;
+                        codegenPreviewLabel.style.display = 'none';
+                        const body = extractCodegenBody(d.code);
+                        latestCodegenPreviewBody = body;
+                        codegenFinalAvailable = true;
+                        const inserted = body.trim().length > 0 && codeAreaRevision === initialRevision;
+                        if (inserted) {
+                            codeArea.value = body;
+                            isUserInteracting = true;
+                            codeAreaRenderRevision++;
+                            retainedCode.style.display = 'none';
+                        } else if (body.trim().length > 0) {
+                            retainedCodeSummary.textContent = 'Final captured code (your edits above were kept)';
+                            retainedCodeSource.textContent = body;
+                            retainedCode.style.display = 'block';
+                        }
+                        showStatus(inserted ? 'Codegen captured. Review the code and click "Sync & Save Action".' : body.trim().length ? 'Codegen finished. Your edits were kept; the final capture is available below.' : 'Codegen finished without recorded actions.', inserted ? 'success' : 'warning');
                     }
                 } catch (e) { /* network blip, keep polling */ }
             }, 1500);
+            codegenPollTimer = timer;
         }
 
         function resetSaveToLibToggle(label) {
@@ -1230,9 +1341,22 @@
         }
 
         async function openRecordModal(label, scenarioId) {
+            const operation = ++recordModalOperation;
+            const initialRevision = codeAreaRevision;
+            const initialRenderRevision = codeAreaRenderRevision;
+            stopCodegenPoll();
+            codegenPending = true;
+            codegenLive = false;
+            codegenSaveBlocked = true;
+            latestCodegenPreviewBody = '';
+            codegenFinalAvailable = false;
             currentLabel = label; currentScenarioId = scenarioId;
             isUserInteracting = false;
             codeArea.value = '';
+            retainedCode.style.display = 'none';
+            retainedCodeSource.textContent = '';
+            codegenPreviewLabel.style.display = 'none';
+            document.getElementById('save-mapping-btn').disabled = true;
             resetSaveToLibToggle(label);
             codeArea.placeholder = 'Initializing recording session...';
             const guideBanner = document.getElementById('record-guide-banner');
@@ -1241,7 +1365,7 @@
             // Fetch existing mapping so the previous script is loaded when recording
             fetch(`/preview/${encodeURIComponent(label)}`)
                 .then(r => r.json())
-                .then(data => { if (data.code && !data.code.startsWith('// Not')) codeArea.value = data.code; })
+                .then(data => { if (recordModalOperation === operation && codeAreaRevision === initialRevision && codeAreaRenderRevision === initialRenderRevision && data.code && !data.code.startsWith('// Not')) { codeArea.value = data.code; codeAreaRenderRevision++; } })
                 .catch(() => {});
 
             modal.style.display = 'flex';
@@ -1256,20 +1380,31 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ label, scenarioId, url, platform })
                 });
+                if (recordModalOperation !== operation) return;
                 if (!res.ok) throw new Error((await res.json()).error || 'Server error');
                 const data = await res.json();
+                if (recordModalOperation !== operation) return;
 
                 if (data.isReplay) {
-                    showStatus('Replay session active, preceding steps are running in the browser.', 'info');
-                    codeArea.placeholder = 'REPLAY ACTIVE\n\n1. A visible Playwright window is open and replaying mapped steps.\n2. When replay pauses, perform the new action in that window.\n3. Inspect or modify the generated code in Playwright Codegen.\n4. Close the Playwright window to transfer code here, then click "Sync & Save Action".';
-                    guideBanner.innerHTML = '<strong>Replay Mode:</strong> A visible Playwright Codegen window is replaying the mapped steps. Perform the new action there, inspect or modify the generated code, then close that window to transfer it into this modal. Click <strong>"Sync & Save Action"</strong> when ready.';
+                    codegenPending = false;
+                    codegenSaveBlocked = false;
+                    document.getElementById('save-mapping-btn').disabled = false;
+                    showStatus('Replay session active. Copy the new action from Playwright Inspector and paste it here.', 'info');
+                    codeArea.placeholder = 'REPLAY ACTIVE\n\n1. Perform the new action in the visible Playwright window.\n2. Use Copy in Playwright Inspector and paste the code here.\n3. Review it and click "Sync & Save Action".';
+                    guideBanner.innerHTML = '<strong>Replay Mode:</strong> Perform the new action, then use Copy in Playwright Inspector and paste the code here. Replay output is not transferred automatically.';
                 } else {
-                    showStatus('Playwright Codegen active. Perform the action in the visible window, then close it to transfer code here.', 'warning');
-                    codeArea.placeholder = 'CODEGEN ACTIVE\n\n1. A visible Playwright Codegen window is open with the isolated autotest profile.\n2. Interact with the page there.\n3. Inspect or modify the generated code there.\n4. Close the Playwright window to transfer code here.\n5. Review it and click "Sync & Save Action".';
-                    guideBanner.innerHTML = '<strong>Visible Playwright Codegen:</strong> Perform the action in the separate window, inspect or modify the generated code there, then close it to transfer the code into this modal. Your normal Chrome profile is not used.';
-                    if (data.sessionId) startCodegenPoll(data.sessionId);
+                    codegenLive = true;
+                    showStatus('Playwright Codegen active. Close the recorder when finished to capture its final output.', 'warning');
+                    codeArea.placeholder = 'LIVE CODEGEN PREVIEW\n\nThe provisional code updates here as you interact with the visible recorder. It becomes final after Codegen closes.';
+                    guideBanner.innerHTML = '<strong>Visible Playwright Codegen:</strong> The code below updates while you record. It is provisional until you close Codegen; then the final source replaces it and becomes available to save.';
+                    if (data.sessionId) startCodegenPoll(data.sessionId, operation, initialRevision);
                 }
             } catch (e) {
+                if (recordModalOperation !== operation) return;
+                codegenLive = false;
+                codegenPending = false;
+                codegenSaveBlocked = true;
+                document.getElementById('save-mapping-btn').disabled = true;
                 // A0.7.9 FIX: every other dynamic render in this file was deliberately moved off
                 // innerHTML for exactly this reason (DEF-H8/DEF-CRIT-002/003) — this one still
                 // interpolated a caught message directly into markup.
@@ -1279,11 +1414,27 @@
                 strong.style.color = '#DC2626';
                 guideBanner.appendChild(strong);
                 guideBanner.appendChild(document.createTextNode(' ' + e.message));
+                guideBanner.appendChild(document.createTextNode(' Choose Manual Map or close this modal to cancel.'));
+                codegenPreviewLabel.textContent = 'Recording did not start — no final capture is available';
+                codegenPreviewLabel.style.display = 'block';
                 showStatus('Failed to launch: ' + e.message, 'error');
             }
         }
 
         function openManualModal(label, scenarioId) {
+            const operation = ++recordModalOperation;
+            const initialRevision = codeAreaRevision;
+            const initialRenderRevision = codeAreaRenderRevision;
+            retainedCode.style.display = 'none';
+            retainedCodeSource.textContent = '';
+            latestCodegenPreviewBody = '';
+            codegenFinalAvailable = false;
+            codegenPreviewLabel.style.display = 'none';
+            codegenPending = false;
+            codegenLive = false;
+            codegenSaveBlocked = false;
+            document.getElementById('save-mapping-btn').disabled = false;
+            stopCodegenPoll();
             currentLabel = label; currentScenarioId = scenarioId;
             isUserInteracting = true;
             codeArea.value = '';
@@ -1296,12 +1447,19 @@
             // ponytail: load existing code into textarea so human can see + edit it
             fetch(`/preview/${encodeURIComponent(label)}`)
                 .then(r => r.json())
-                .then(data => { if (data.code && !data.code.startsWith('// Not')) codeArea.value = data.code; })
+                .then(data => { if (recordModalOperation === operation && codeAreaRevision === initialRevision && codeAreaRenderRevision === initialRenderRevision && data.code && !data.code.startsWith('// Not')) { codeArea.value = data.code; codeAreaRenderRevision++; } })
                 .catch(() => {});
         }
 
         async function closeModal() {
-            clearInterval(codegenPollTimer);
+            ++recordModalOperation;
+            stopCodegenPoll();
+            codegenPending = false;
+            codegenLive = false;
+            codegenSaveBlocked = false;
+            latestCodegenPreviewBody = '';
+            codegenFinalAvailable = false;
+            document.getElementById('save-mapping-btn').disabled = false;
             if (suggestionActive) {
                 try { await fetch('/suggest/cancel', { method: 'POST' }); } catch (e) {}
                 suggestionActive = false;
@@ -1315,6 +1473,10 @@
         }
 
         async function saveMapping() {
+            if (codegenSaveBlocked) {
+                showStatus(codegenPending ? 'Close the recorder before saving its provisional preview.' : 'No final recorder capture is available. Choose Manual Map to continue.', 'warning');
+                return;
+            }
             const platform = document.getElementById('platform-toggle').value;
             try {
                 const res = await fetch('/save-mapping', {
@@ -1586,7 +1748,7 @@
         async function pasteFromClipboard() {
             try {
                 const text = await navigator.clipboard.readText();
-                if (text) { codeArea.value = text; isUserInteracting = true; }
+                if (text) { codeArea.value = text; isUserInteracting = true; codeAreaRevision++; codeAreaRenderRevision++; }
             } catch (e) { alert("Clipboard access denied."); }
         }
 

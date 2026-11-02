@@ -65,6 +65,9 @@ let activeRun = null;
 let globalBrowser = null; 
 const trackedProcesses = new Set(); // ponytail: still used for cleanupAll on exit
 let activeCodegen = null;  // DEF-CRIT-001 FIX: single codegen guard
+const codegenSessions = new Map();
+const CODEGEN_SESSION_LIMIT = 20;
+let codegenSessionSequence = 0;
 let activeRunner = null;   // DEF-HIGH-004 FIX: separate runner ref
 let activeSuggestion = null; // Phase C: one live suggestion session at a time
 
@@ -176,7 +179,16 @@ function getBrowserEnv(extraEnv = {}) {
     return env;
 }
 
-function launchVisibleCodegen({ targetUrl, outputPath }) {
+function rememberCodegenSession(session) {
+    codegenSessions.set(session.id, session);
+    while (codegenSessions.size > CODEGEN_SESSION_LIMIT) {
+        const oldest = codegenSessions.keys().next().value;
+        if (codegenSessions.get(oldest).status === 'running') break;
+        codegenSessions.delete(oldest);
+    }
+}
+
+function launchVisibleCodegen({ targetUrl, outputPath, session }) {
     const args = buildCodegenArgs({
         cli: PLAYWRIGHT_CLI,
         targetUrl,
@@ -192,18 +204,60 @@ function launchVisibleCodegen({ targetUrl, outputPath }) {
         packaged: isPackaged()
     });
     const child = spawn(process.execPath, args, { env, shell: false, windowsHide: false, detached: false });
+    session.child = child;
     trackedProcesses.add(child);
     activeCodegen = child;
-    child.on('error', e => console.error('[CODEGEN SPAWN ERROR]', e.message));
-    child.on('close', code => {
+    child.on('error', e => {
+        console.error('[CODEGEN SPAWN ERROR]', e.message);
+        if (codegenSessions.get(session.id) === session && session.status === 'running') {
+            session.status = 'failed';
+            session.error = e.message;
+        }
+    });
+    child.on('close', (code, signal) => {
         trackedProcesses.delete(child);
         if (activeCodegen === child) activeCodegen = null;
+        if (codegenSessions.get(session.id) === session && session.status === 'running') {
+            if (code === 0 && !signal) {
+                try {
+                    session.code = fs.readFileSync(outputPath, 'utf8');
+                    session.status = 'complete';
+                } catch (e) {
+                    session.status = 'failed';
+                    session.error = `Codegen output unavailable: ${e.message}`;
+                }
+            } else {
+                session.status = 'failed';
+                session.error = `Codegen exited with code ${code}.`;
+            }
+        }
+        try { fs.unlinkSync(outputPath); } catch (e) {}
         console.log(`[CODEGEN] process closed with code ${code}, output: ${outputPath}`);
     });
     return child;
 }
 
-function launchVisibleReplay({ specPath }) {
+function hasPlaywrightTestBody(source) {
+    const ast = acorn.parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
+    const pending = [ast];
+    while (pending.length) {
+        const node = pending.pop();
+        if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'test' &&
+            node.arguments.some(arg => {
+                if (!['ArrowFunctionExpression', 'FunctionExpression'].includes(arg.type) ||
+                    arg.body.type !== 'BlockStatement' || arg.body.body.length === 0) return false;
+                return arg.params.some(param => param.type === 'ObjectPattern' && param.properties.some(property =>
+                    property.type === 'Property' && property.key.type === 'Identifier' && property.key.name === 'page'));
+            })) return true;
+        for (const value of Object.values(node)) {
+            if (Array.isArray(value)) pending.push(...value.filter(child => child && typeof child.type === 'string'));
+            else if (value && typeof value.type === 'string') pending.push(value);
+        }
+    }
+    return false;
+}
+
+function launchVisibleReplay({ specPath, session }) {
     const configPath = path.join(CORE_DIR, 'playwright.config.ts');
     if (isPackaged()) {
         fs.copyFileSync(path.join(ROOT_DIR, 'playwright.config.ts'), configPath);
@@ -219,12 +273,17 @@ function launchVisibleReplay({ specPath }) {
     const child = spawn(process.execPath, [PLAYWRIGHT_CLI, 'test', '--config', configPath, path.basename(specPath), '--headed'], {
         env, shell: false, windowsHide: false, detached: false
     });
+    session.child = child;
     trackedProcesses.add(child);
     activeCodegen = child;
     child.on('error', e => console.error('[REPLAY SPAWN ERROR]', e.message));
     child.on('close', code => {
         trackedProcesses.delete(child);
         if (activeCodegen === child) activeCodegen = null;
+        if (codegenSessions.get(session.id) === session && session.status === 'manual-copy' && code !== 0) {
+            session.status = 'failed';
+            session.error = `Replay exited with code ${code}.`;
+        }
         try { fs.unlinkSync(specPath); } catch (e) {}
         console.log(`[REPLAY] process closed with code ${code}`);
     });
@@ -528,7 +587,7 @@ app.post('/record', async (req, res) => {
     const { label, url, scenarioId } = req.body;
     console.log(`\nCodegen launched for: "${label}" in scenario: "${scenarioId}"`);
 
-    const sessionId = Date.now().toString();
+    const sessionId = `${Date.now()}${String(++codegenSessionSequence).padStart(3, '0')}`;
 
     // Replay logic check
     const blueprintPath = path.join(CORE_DIR, 'blueprint.json');
@@ -566,6 +625,8 @@ app.post('/record', async (req, res) => {
     // restores the supported CLI flow; the CDP _enableRecorder path was unreliable in packaged
     // Electron and returned ENABLE_RECORDER_FAILED without producing code.
     if (precedingMappedSteps.length > 0) {
+        const session = { id: sessionId, status: 'manual-copy', code: null };
+        rememberCodegenSession(session);
         let runtimeData = {};
         if (fs.existsSync(RUNTIME_DATA_PATH)) {
             try { runtimeData = JSON.parse(fs.readFileSync(RUNTIME_DATA_PATH, 'utf8')); } catch (e) {}
@@ -596,12 +657,14 @@ app.post('/record', async (req, res) => {
         replayCode += `  await page.pause();\n});\n`;
         try {
             fs.writeFileSync(replaySpecPath, replayCode);
-            launchVisibleReplay({ specPath: replaySpecPath });
+            launchVisibleReplay({ specPath: replaySpecPath, session });
             return res.json({
-                sessionId, isReplay: true,
-                message: 'Playwright replay opened. Review the preceding steps in the visible window, perform the new action, then close it to transfer code here.'
+                sessionId, isReplay: true, manualCopy: true,
+                message: 'Playwright replay opened. Perform the new action, then use Copy in Playwright Inspector and paste the code here; replay output is not transferred automatically.'
             });
         } catch (e) {
+            session.status = 'failed';
+            session.error = e.message;
             try { fs.unlinkSync(replaySpecPath); } catch (e2) {}
             activeCodegen = null;
             return res.status(500).json({ error: `Playwright replay could not start: ${e.message}` });
@@ -609,39 +672,50 @@ app.post('/record', async (req, res) => {
     }
 
     // Plain visible Codegen: the analyst gets the actual Playwright recorder window and can
-    // inspect/edit generated actions there. Closing Codegen flushes codegen_<sessionId>.js;
-    // the existing UI poll imports it into the AutoTest modal for final review/save.
+    // inspect/edit generated actions there. The matching successful close publishes its final file.
     const outputPath = path.join(CORE_DIR, `codegen_${sessionId}.js`);
+    const session = { id: sessionId, status: 'running', code: null, outputPath, previewCode: null, previewVersion: 0 };
+    rememberCodegenSession(session);
     const targetUrl = (url && url.startsWith('http')) ? url : 'about:blank';
     try {
-        launchVisibleCodegen({ targetUrl, outputPath });
+        launchVisibleCodegen({ targetUrl, outputPath, session });
     } catch (e) {
+        session.status = 'failed';
+        session.error = e.message;
         activeCodegen = null;
         return res.status(500).json({ error: `Playwright Codegen could not start: ${e.message}` });
     }
     res.json({ sessionId, isReplay: false, message: 'Playwright Codegen opened. Perform the action there, review/edit the generated code, then close Codegen to transfer it here.' });
 });
 
-// GET /codegen-result/:sessionId: returns recorded code once codegen writes the file
-// Client polls this every 1.5s after /record. File deleted after first read.
+// GET /codegen-result/:sessionId: publish syntax-checked provisional snapshots while the
+// session-owned child runs, then authoritative output only after that child closes successfully.
 app.get('/codegen-result/:sessionId', (req, res) => {
-    // A0.6.1 FIX: unauthenticated path traversal — reject anything but a real session id
-    // (the server only ever generates digit-string ids), then confirm defense-in-depth
-    // that the resolved path never leaves CORE_DIR before reading OR deleting it.
+    // A0.6.1: the client supplies only an opaque numeric ID. Resolve the output path
+    // from the server-owned session record; never accept a client-supplied file path.
     const id = safeSessionId(req.params.sessionId);
     if (!id) return res.status(400).json({ error: 'Invalid session id.' });
-    const outputPath = path.join(CORE_DIR, `codegen_${id}.js`);
-    if (path.resolve(outputPath) !== outputPath || !outputPath.startsWith(CORE_DIR + path.sep)) {
-        return res.status(400).json({ error: 'Invalid session id.' });
+    const session = codegenSessions.get(id);
+    if (!session) return res.json({ ready: false, sessionId: id, status: 'unknown' });
+    if (session.status === 'complete') return res.json({ ready: true, sessionId: id, code: session.code });
+    if (session.status === 'failed' || session.status === 'cancelled') {
+        return res.status(409).json({ error: session.error || 'Recording was cancelled.', sessionId: id, status: session.status });
     }
-    if (!fs.existsSync(outputPath)) return res.json({ ready: false });
-    try {
-        const raw = fs.readFileSync(outputPath, 'utf8');
-        fs.unlinkSync(outputPath);
-        res.json({ ready: true, code: raw });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    if (session.status === 'running' && session.outputPath === path.join(CORE_DIR, `codegen_${id}.js`)) {
+        try {
+            const raw = fs.readFileSync(session.outputPath, 'utf8');
+            if (raw && raw !== session.previewCode) {
+                if (hasPlaywrightTestBody(raw)) {
+                    session.previewCode = raw;
+                    session.previewVersion++;
+                }
+            }
+        } catch (e) { /* keep the last complete syntax snapshot while Codegen writes */ }
     }
+    res.json({
+        ready: false, sessionId: id, status: session.status, manualCopy: session.status === 'manual-copy',
+        ...(session.previewCode ? { previewCode: session.previewCode, previewVersion: session.previewVersion } : {})
+    });
 });
 
 
@@ -1324,6 +1398,12 @@ app.post('/record-cancel', async (req, res) => {
     }
     // DEF-HIGH-004 FIX: Only kill the codegen process, NOT the test runner
     if (activeCodegen && !activeCodegen.killed) {
+        for (const session of codegenSessions.values()) {
+            if (session.child === activeCodegen && (session.status === 'running' || session.status === 'manual-copy')) {
+                session.status = 'cancelled';
+                session.error = 'Recording was cancelled.';
+            }
+        }
         try { activeCodegen.kill('SIGKILL'); } catch (e) {}
         activeCodegen = null;
     }

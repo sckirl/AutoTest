@@ -3,18 +3,19 @@
 // Scenario_ID collide into one results folder and the UI can never see the second one).
 const assert = require('assert');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const XLSX = require('xlsx');
-const { generateBlueprintFromExcel } = require('../core/scenario_parser');
 
-const TMP = path.join(__dirname, '_tmp_scenario_parser');
+const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'autotest-scenario-parser-'));
+const previousEnv = Object.fromEntries(['AUTOTEST_STATE_DIR', 'AUTOTEST_DATA_DIR', 'AUTOTEST_RESULTS_DIR'].map(key => [key, process.env[key]]));
+process.env.AUTOTEST_STATE_DIR = path.join(tempRoot, 'state');
+process.env.AUTOTEST_DATA_DIR = path.join(tempRoot, 'data');
+process.env.AUTOTEST_RESULTS_DIR = path.join(tempRoot, 'results');
+const TMP = path.join(tempRoot, 'work');
 fs.mkdirSync(TMP, { recursive: true });
-
-// generateBlueprintFromExcel always writes core/blueprint.json as a side effect (relative to
-// cwd, for the real server.js caller) regardless of the input path — back it up like
-// mobile_compile_test.js does, so this test doesn't clobber the developer's real blueprint.
-const blueprintPath = path.join(__dirname, '..', 'core', 'blueprint.json');
-const blueprintBackup = fs.existsSync(blueprintPath) ? fs.readFileSync(blueprintPath, 'utf8') : null;
+fs.mkdirSync(process.env.AUTOTEST_STATE_DIR, { recursive: true });
+const { generateBlueprintFromExcel } = require('../core/scenario_parser');
 
 function writeSheet(name, rows) {
   const wb = XLSX.utils.book_new();
@@ -90,7 +91,8 @@ try {
   }
   console.log('PASS: scenario_parser throws on missing file, warns on dropped rows, dedupes IDs, flags repeated labels');
 } finally {
-  fs.rmSync(TMP, { recursive: true, force: true });
-  if (blueprintBackup === null) { try { fs.unlinkSync(blueprintPath); } catch (e) {} }
-  else fs.writeFileSync(blueprintPath, blueprintBackup);
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+  for (const [key, value] of Object.entries(previousEnv)) {
+    if (value === undefined) delete process.env[key]; else process.env[key] = value;
+  }
 }

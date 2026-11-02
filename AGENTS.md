@@ -1,5 +1,61 @@
 # AutoTest Studio: Agent Orchestration & Context
 
+## Current engineering direction — 2026-10-17
+
+Gabriel Alvin confirmed: independent offline desktop installs, easy tester and maintainer setup, manual Playwright codegen recording followed by complete workbook-scenario replay as MVP. AI-assisted mapping and real mobile execution are deferred. The detailed current plan is [BRAIN/Engineering Plan.md](BRAIN/Engineering%20Plan.md); file/function contracts are [BRAIN/Module Contracts.md](BRAIN/Module%20Contracts.md); agent assignments and runtime gates are [BRAIN/Recording Acceptance.md](BRAIN/Recording%20Acceptance.md). `blueprint.html` is the summarized view.
+
+This amendment supersedes conflicting historical status/priority statements below and in older BRAIN plans. It does not waive security/data/isolation rules. Electron already exists; the handoff below is historical, not proof of a native installed release. Current `/record` uses visible CLI codegen; CDP helpers remain for optional paths. Rule 16 below is the earlier CDP-specific ownership contract: preserve normal-profile isolation and never kill unowned debug Chrome, but do not describe default CLI recording as CDP-attached. Changes to bundled-versus-stable-Chrome policy require an explicit documented architecture amendment and native recording proof.
+
+### Delegated model policy — 2026-10-17
+
+Gabriel Alvin requires every newly launched subagent to use `gpt-6-luna`. Spawn with an explicit model and fresh context (`fork_turns="none"`) plus a scoped task brief. Do not reuse earlier inherited-model audit agents for new work. The coordinating model can remain Sol. Model policy is an execution preference, not evidence of correctness.
+
+### Verified lessons and mandatory prevention
+
+1. **Do not promise zero defects.** State tested conditions and evidence limits. Record actual mistakes with trigger/consequence/prevention; do not invent future lessons.
+2. **Read current code before trusting BRAIN checkmarks.** Old dates, comments and tests are not present release acceptance. Reconcile claims through [BRAIN/Plan Reconciliation.md](BRAIN/Plan%20Reconciliation.md).
+3. **A successful spawn is not a working recorder.** Realistic acceptance uses browser-use with headed Chrome and actual clicks; ComputerUse operates native dialogs and actual Playwright codegen/Inspector controls when available. Programmatic file assignment and JavaScript click/handler injection are supplemental, not native-interaction proof. Launch-argument tests cannot close the real-codegen gate. ComputerUse must operate AutoTest, target browser and Inspector, transfer genuine generated code, save via UI and replay the whole scenario.
+4. **A replay spec is not a recorder export.** `page.pause()` can open codegen controls but does not prove automatic output transfer. Use the shown, tested Copy/paste path when required; never manufacture codegen output for acceptance.
+5. **Syntax checks cannot catch every regression.** The stray upload `d` is valid syntax yet throws on every upload. Require an actual valid and invalid request for changed intake behavior.
+6. **Never accept partial recordings.** Unknown action, matcher, argument form, alias or control flow rejects the whole import with location; preserve the prior mapping. Missing mappings/unknown emitted actions must fail scenario preflight rather than disappear.
+7. **Keep one action interpretation.** Record/library parsing, preview, preceding replay and final compile share validated semantics. A route-file split alone does not solve duplicated behavior.
+8. **Every async callback belongs to one operation.** Timers and child exits may change only their matching run/session. Test cancel A → start B → delayed A close/timer. A kill signal is not proof the child exited.
+9. **Protect developer data during tests.** Audit tests themselves for hardcoded repo paths/ports; separate state/data/results/profile roots per run. Do not run the complete legacy suite until both harness and individual tests are isolated. Never use normal Chrome data.
+10. **Data corruption is not empty input.** Explicit blank remains deliberate; absent keys and corrupt JSON fail loudly. Never silently switch matrix values/iterations to defaults. First format-changing slice includes backup, legacy migration and rollback tests.
+11. **Display labels are not unique artifact IDs.** `PT.1` and `PT-1` collide after cleaning. Quote all generated strings; preserve run/scenario/iteration identities and verify report counts/links.
+12. **Package proof uses the package.** Source Electron launch is development coverage. Inspect resources and record/replay the native installed artifact with no Node/npm, no developer cache and no internet. macOS results cannot certify Windows.
+13. **Single desktop still needs ownership.** Different ports do not isolate shared state/profile. Serialize GUI control, state migrations and same-file edits; one state owner per installation.
+14. **Maintain independence.** Developer implements; static QA writes `defect.md`; fresh-context black-box tester reads observable contracts, runs the entire assigned scope and writes runtime evidence to `TEST_RESULTS.md`. Never marks PASS from source inspection or patches the system it certifies.
+15. **Make status honest.** Label source inspection, bounded code probe, unit, API integration, real codegen and installed-package evidence separately. Required FAIL/BLOCKED/NOT RUN keeps its gate open; retain prior failures. Baseline capture can finish with assigned defects without claiming acceptance.
+16. **Keep changes reviewable.** Preserve dirty work and unfinished plans. Move-only slices keep behavior; behavior changes get explicit regression checks. Group by ownership, not line count. No new framework/dependency or file-per-function architecture without a demonstrated need.
+17. **Test the resources, not just their path strings.** During G1a a harness fixture passed while real Studio failed because temporary directories did not exist. A fixture must actually write to every promised root; verify real startup before using a harness result as application evidence. Explicitly blank optional-provider env settings so dotenv cannot refill them.
+
+18. **Verify dependency absence directly.** During the full-workbook run an empty wrapped file-search result was incorrectly reported as missing Playwright Chrome. The exact bundled executable existed. Check the documented path with a direct listing and distinguish missing files from native app-access rejection before declaring an environmental blocker.
+
+19. **Compare the displayed capture with the completed recorder output.** In the full-workbook native baseline, AutoTest advertised captured code containing only about:blank while the completed recorder file contained the OrangeHRM navigation. A first-created export or success banner does not prove the final source reached the modal. Verify source equality after recording ends; native Inspector Copy/Paste remains its own gate.
+
+20. **Restart completed agents explicitly.** During final-delivery review, correction messages sent to a completed developer did not restart work. Use followup_task for an idle/completed agent, then verify its running status; send_message alone only queues context.
+
+21. **An app path does not isolate its browser profile.** During final-delivery QA, the Studio UI browser was opened by app path without an explicit temporary user-data-dir. The recorder itself had an isolated profile, but that did not establish UI-browser isolation. Use a task-owned temporary profile or the in-app browser for Studio; never infer isolation from a bundled executable path, and never clear or kill an unowned browser to clean up.
+
+22. **Test response order across related features.** Separate modal-preview and final-poll tests missed a combined race: a late old preview overwrote already delivered final code because automatic insertion did not advance the revision. Test final-result-first/preview-last explicitly; invalidate older writes when a newer programmatic result is applied.
+
+### Automatic final-output delivery amendment — 2026-10-17
+
+Gabriel Alvin authorized session-owned final codegen-file delivery as the primary path into AutoTest. Realistic ComputerUse recording remains mandatory, but native Inspector Copy/Paste is now a fallback rather than a prerequisite for this path. This supersedes conflicting Copy/Paste-only acceptance wording above. Wait for successful matching child close before final delivery; failed/cancelled sessions and stale callbacks cannot publish success or overwrite another session/user edits. Keep explicit review/save. Intermediate replay and installed packages require separate proof.
+
+23. **Valid JavaScript is not necessarily a complete codegen snapshot.** Live-preview tests showed an import-only prefix passed Acorn yet was rendered as bogus action text by the wrapper fallback. Require the expected generated test-body envelope before publishing a live snapshot; retain the last valid version across partial writes.
+
+### Live feedback requirement — 2026-10-17
+
+Gabriel Alvin requires generated actions to appear during native recording. Provide a clearly provisional live preview via the existing polling route, then finalize only after successful owned child close. Early file existence remains insufficient for completed capture. Preserve actual edits and expose live/final source separately when needed; prevent provisional recordings from being saved as completed actions. This supersedes close-only display wording above.
+
+24. **Verify native focus before typing.** During Oct 21 ComputerUse QA, an address-bar shortcut reached the Username field and an unverified address-bar selection produced malformed navigation; codegen correctly recorded those unintended actions. Inspect native AX focus/selected text before typing URLs, discard polluted captures without saving, and retain the failed attempts in runtime evidence.
+
+Current source findings are in [defect.md](defect.md). The original planning pass changed documentation only. Current implemented slices and executed checks are tracked in [BRAIN/Implementation Progress.md](BRAIN/Implementation%20Progress.md); complete recording and installed-package acceptance remain separate gates.
+
+---
+
 This document encapsulates the complete project vision, architectural details, and specialized agent directives. All AI agents interacting with this repository MUST assimilate this context to ensure zero-defect continuity.
 
 ---

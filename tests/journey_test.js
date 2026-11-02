@@ -12,15 +12,15 @@
 // so it never touches the repo tree (A-2) and can't collide with the shared suite's :3000.
 const http = require('http');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 const XLSX = require('xlsx');
+const { startStudio } = require('./run_all');
 
 const ROOT = path.join(__dirname, '..');
-const FIXTURE_PORT = Number(process.env.JOURNEY_FIXTURE_PORT || 3997);
-const SERVER_PORT = Number(process.env.JOURNEY_SERVER_PORT || 3996);
-const FIXTURE_BASE = `http://localhost:${FIXTURE_PORT}`;
+let FIXTURE_PORT;
+let SERVER_PORT;
+let FIXTURE_BASE;
 
 let pass = 0, fail = 0;
 const log = [];
@@ -33,7 +33,7 @@ function req(method, urlPath, body, port = SERVER_PORT) {
   return new Promise((resolve, reject) => {
     const data = body !== undefined ? JSON.stringify(body) : null;
     const r = http.request({
-      hostname: 'localhost', port, path: urlPath, method,
+      hostname: '127.0.0.1', port, path: urlPath, method,
       headers: { 'Content-Type': 'application/json', 'Content-Length': data ? Buffer.byteLength(data) : 0 }
     }, res => { let d = ''; res.on('data', c => d += c); res.on('end', () => resolve({ status: res.statusCode, body: d })); });
     r.on('error', reject);
@@ -48,7 +48,7 @@ function uploadExcel(buf) {
     const pre = `--${boundary}\r\nContent-Disposition: form-data; name="excel"; filename="j.xlsx"\r\nContent-Type: application/octet-stream\r\n\r\n`;
     const body = Buffer.concat([Buffer.from(pre), buf, Buffer.from(`\r\n--${boundary}--\r\n`)]);
     const r = http.request({
-      hostname: 'localhost', port: SERVER_PORT, path: '/upload', method: 'POST',
+      hostname: '127.0.0.1', port: SERVER_PORT, path: '/upload', method: 'POST',
       headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': body.length }
     }, res => { let d = ''; res.on('data', c => d += c); res.on('end', () => resolve({ status: res.statusCode, body: d })); });
     r.on('error', reject);
@@ -56,26 +56,25 @@ function uploadExcel(buf) {
   });
 }
 
-function ping(port, urlPath) {
-  return new Promise(resolve => {
-    const r = http.get({ host: 'localhost', port, path: urlPath, timeout: 500 }, res => { res.resume(); resolve(res.statusCode === 200); });
-    r.on('error', () => resolve(false));
-    r.on('timeout', () => { r.destroy(); resolve(false); });
-  });
-}
-async function waitFor(port, urlPath, label, timeoutMs = 20000) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    if (await ping(port, urlPath)) return;
-    await new Promise(r => setTimeout(r, 200));
-  }
-  throw new Error(`${label} did not start on :${port}`);
-}
-
 function sheet(rows) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows));
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+}
+
+async function stopFixtureServer(server) {
+  if (!server || server.exitCode !== null || server.signalCode !== null) return;
+  const waitForExit = timeoutMs => new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`fixture app did not exit within ${timeoutMs}ms`)), timeoutMs);
+    server.once('exit', code => { clearTimeout(timer); resolve(code); });
+  });
+  const exited = waitForExit(2000);
+  server.kill('SIGTERM');
+  try { await exited; }
+  catch {
+    server.kill('SIGKILL');
+    await waitForExit(2000);
+  }
 }
 
 // Waits for a /run to leave the running phase, returns the final status object.
@@ -93,40 +92,33 @@ async function runToCompletion(body, timeoutMs = 120000) {
 }
 
 async function main() {
-  // Same guard run_all.js uses: if a prior (killed-but-not-yet-reaped) journey server still
-  // holds the port, this test would silently drive THAT server — which has a different temp
-  // STATE/RESULTS dir, so every evidence assertion fails for a reason that looks like a real
-  // bug. Observed once running the suite back-to-back. Fail loudly instead.
-  for (const [port, label] of [[SERVER_PORT, 'studio'], [FIXTURE_PORT, 'fixture app']]) {
-    if (await ping(port, port === SERVER_PORT ? '/env' : '/login.html')) {
-      console.error(`Port ${port} is already in use by another ${label} server. Stop it before running this test.`);
-      process.exit(1);
-    }
-  }
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'autotest-journey-'));
-  const RESULTS = path.join(tmp, 'results');
-  const fixtureSrv = spawn('node', ['tests/fixtures/serve.js'], {
-    cwd: ROOT, env: { ...process.env, FIXTURE_PORT: String(FIXTURE_PORT) }, stdio: 'ignore'
-  });
-  const studio = spawn('node', ['studio/server.js'], {
-    cwd: ROOT,
-    env: {
-      ...process.env,
-      PORT: String(SERVER_PORT),
-      AUTOTEST_STATE_DIR: tmp,
-      AUTOTEST_DATA_DIR: tmp,
-      AUTOTEST_RESULTS_DIR: RESULTS,
-    },
-    stdio: ['ignore', 'ignore', 'pipe'],
-  });
+  let fixtureSrv;
+  let studio;
   let stderr = '';
-  studio.stderr.on('data', d => { stderr += d.toString(); });
-
   const gitBefore = require('child_process').execFileSync('git', ['status', '--porcelain'], { cwd: ROOT, encoding: 'utf8' });
 
   try {
-    await waitFor(FIXTURE_PORT, '/login.html', 'fixture app');
-    await waitFor(SERVER_PORT, '/env', 'studio server');
+    fixtureSrv = spawn(process.execPath, [path.join(__dirname, 'fixtures/serve.js')], {
+      cwd: ROOT, env: { ...process.env, FIXTURE_PORT: '0' }, stdio: ['ignore', 'pipe', 'inherit']
+    });
+    const fixturePort = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('fixture app did not announce its dynamic port')), 10000);
+      let output = '';
+      fixtureSrv.stdout.setEncoding('utf8');
+      fixtureSrv.stdout.on('data', chunk => {
+        output += chunk;
+        const match = /FIXTURE_PORT=(\d+)/.exec(output);
+        if (match) { clearTimeout(timer); resolve(Number(match[1])); }
+      });
+      fixtureSrv.once('error', error => { clearTimeout(timer); reject(error); });
+      fixtureSrv.once('exit', code => { clearTimeout(timer); reject(new Error(`fixture app exited before ready (${code})`)); });
+    });
+    FIXTURE_PORT = fixturePort;
+    FIXTURE_BASE = `http://127.0.0.1:${FIXTURE_PORT}`;
+    studio = await startStudio();
+    SERVER_PORT = studio.port;
+    const RESULTS = studio.env.AUTOTEST_RESULTS_DIR;
+    const STATE = studio.env.AUTOTEST_STATE_DIR;
 
     // ---------- A-20: login success journey ----------
     let r = await uploadExcel(sheet([
@@ -214,7 +206,7 @@ async function main() {
     // deliberately renders the raw stored step (token and all); the compiled spec is where
     // each scenario's own Data actually lands, so that is what this asserts on.
     st = await runToCompletion({ workers: 1, headless: true, platform: 'web' });
-    const spec = fs.readFileSync(path.join(tmp, 'executed.spec.ts'), 'utf8');
+    const spec = fs.readFileSync(path.join(STATE, 'executed.spec.ts'), 'utf8');
     const blockA = spec.slice(spec.indexOf('J.3'), spec.indexOf('J.4'));
     const blockB = spec.slice(spec.indexOf('J.4'));
     check('A-22c compiled J.3 fills alice, not bob', /alice/.test(blockA) && !/bob/.test(blockA), blockA.slice(0, 300));
@@ -268,9 +260,8 @@ async function main() {
     log.push('  FAIL harness | ' + (e && (e.stack || e.message) || String(e)));
     if (stderr) log.push('    server stderr: ' + stderr.slice(-400));
   } finally {
-    studio.kill('SIGKILL');
-    fixtureSrv.kill('SIGKILL');
-    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) {}
+    if (studio) await studio.stop();
+    await stopFixtureServer(fixtureSrv);
   }
 
   console.log(log.join('\n'));

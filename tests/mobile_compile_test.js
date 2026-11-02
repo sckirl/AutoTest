@@ -3,25 +3,30 @@
 // emitting Mocha syntax (describe/it/before) that /run's Playwright Test CLI
 // cannot execute. Runs compiler.js in isolation, offline, no live server.
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const CORE = path.join(ROOT, 'core');
-const blueprintPath = path.join(CORE, 'blueprint.json');
-const mappingsPath = path.join(CORE, 'mappings.json');
-const mobileOut = path.join(CORE, 'executed.mobile.js');
-const webOut = path.join(CORE, 'executed.spec.ts');
+const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'autotest-mobile-compile-'));
+const previousEnv = Object.fromEntries(['AUTOTEST_STATE_DIR', 'AUTOTEST_DATA_DIR', 'AUTOTEST_RESULTS_DIR'].map(key => [key, process.env[key]]));
+process.env.AUTOTEST_STATE_DIR = path.join(tempRoot, 'state');
+process.env.AUTOTEST_DATA_DIR = path.join(tempRoot, 'data');
+process.env.AUTOTEST_RESULTS_DIR = path.join(tempRoot, 'results');
+const STATE = process.env.AUTOTEST_STATE_DIR;
+fs.mkdirSync(STATE, { recursive: true });
+fs.mkdirSync(process.env.AUTOTEST_DATA_DIR, { recursive: true });
+fs.mkdirSync(process.env.AUTOTEST_RESULTS_DIR, { recursive: true });
+const blueprintPath = path.join(STATE, 'blueprint.json');
+const mappingsPath = path.join(STATE, 'mappings.json');
+const mobileOut = path.join(STATE, 'executed.mobile.js');
+const webOut = path.join(STATE, 'executed.spec.ts');
 
 let pass = 0, fail = 0;
 function check(name, cond) {
   if (cond) { pass++; console.log(`  PASS ${name}`); }
   else { fail++; console.log(`  FAIL ${name}`); }
-}
-
-const backup = {};
-for (const p of [blueprintPath, mappingsPath]) {
-  backup[p] = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null;
 }
 
 const scenarioId = 'MOBILE_SELFCHECK';
@@ -35,7 +40,7 @@ fs.writeFileSync(mappingsPath, JSON.stringify({
 function compile(platform) {
   execFileSync(process.execPath, [path.join(CORE, 'compiler.js')], {
     cwd: ROOT,
-    env: { ...process.env, AUTOTEST_PLATFORM: platform }
+    env: { ...process.env, AUTOTEST_STATE_DIR: STATE, AUTOTEST_PLATFORM: platform }
   });
 }
 
@@ -179,11 +184,10 @@ try {
   check('Web output still uses Playwright Test (test.describe)', webCode.includes('test.describe('));
   check('Web output has no mobile driver() call', !webCode.includes('driver.$('));
 } finally {
-  for (const p of [blueprintPath, mappingsPath]) {
-    if (backup[p] === null) { try { fs.unlinkSync(p); } catch (e) {} }
-    else fs.writeFileSync(p, backup[p]);
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+  for (const [key, value] of Object.entries(previousEnv)) {
+    if (value === undefined) delete process.env[key]; else process.env[key] = value;
   }
-  try { fs.unlinkSync(mobileOut); } catch (e) {}
 }
 
 console.log(`\n--- Score: ${pass}/${pass + fail} PASSED ---`);

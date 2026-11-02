@@ -33,7 +33,7 @@ AutoTest has two run modes:
 - **Web mode:** Node.js runs the Express server and you open the Studio UI in Chrome.
 - **Electron mode:** the packaged app contains the server, Node runtime, application dependencies, and Playwright browser files. The target tester does not need Node.js, npm, or internet access.
 
-For either mode, stable Google Chrome is used for recording. Recording uses the separate persistent profile named `autotest`; the user's normal Chrome profile is not used. If stable Chrome is installed somewhere non-standard, configure its absolute executable path with `AUTOTEST_CHROME_PATH` in `.env`.
+Default CLI recording prefers the bundled Playwright browser and falls back to stable Google Chrome. Recording uses the separate persistent profile named `autotest`; the user's normal Chrome profile is not used. `AUTOTEST_CHROME_PATH` configures the optional CDP recording path.
 
 ### Web mode: run from the repository
 
@@ -98,7 +98,7 @@ An explicitly exported environment variable takes precedence over `.env`. Stable
 1. Upload your UAT Excel matrix.
 2. In **Mappings**, click **Record** or **Re-Map**.
 3. A visible Playwright Codegen window opens using the isolated `autotest` profile. Perform the action there and inspect or modify the generated code while recording.
-4. Close the Playwright Codegen window. The generated code is transferred into the AutoTest mapping modal.
+4. Watch generated actions appear as a provisional live preview in AutoTest. Finish and close the recorder to finalize the capture and enable Save. If you edit the box during recording, your text stays and an expandable section shows live/final generated source. Replay-before-recording follows the modal’s manual-copy instructions; automatic export for replay remains an open gate.
 5. Review the code, parameterize values with `{variable_name}` where needed, and click **Sync & Save Action**.
 6. Open **Execution** and run the scenarios.
 
@@ -202,7 +202,9 @@ The current macOS build is also unsigned unless a valid Developer ID identity is
 - **Web server with `PORT=3000`:** `http://127.0.0.1:3000`.
 - **Web server with no explicit port:** read `STUDIO_PORT=<number>` from the terminal and open that port.
 - **Electron app:** the embedded server uses a dynamically assigned localhost port. The Electron shell reads `STUDIO_PORT` automatically; the tester does not need to enter a port.
-- **Test harness:** `npm test` uses port 3000 internally and checks that it is free first.
+- **Test harness:** `npm test` starts owned local servers on OS-assigned ports, with disposable state/data/results roots and optional-provider settings disabled. It waits for owned server shutdown before removing its files. The configured offline suite includes `tests/upload_test.js`; no Node/browser downloads are performed by the harness.
+
+For a focused upload regression, run `node tests/upload_test.js`; it starts and stops its own isolated Studio. The offline suite checks API, parser/compiler, fixture journeys and development Electron behavior. Realistic acceptance is separate: use headed Chrome with the browser-use skill, actual pointer/keyboard actions, and ComputerUse for native file dialogs and Playwright Inspector. The detailed evidence and remaining gaps are in [BRAIN/Implementation Progress.md](BRAIN/Implementation%20Progress.md). A green offline suite does not certify real codegen transfer or a native installed package.
 
 ### Results and evidence
 

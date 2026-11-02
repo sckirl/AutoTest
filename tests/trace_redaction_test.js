@@ -8,24 +8,29 @@
 // contains a password/secret/token/pin-like key. Screenshots (a separate, non-traced call) still
 // run, and password-type inputs render as dots in a screenshot, so evidence isn't fully lost.
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
+const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'autotest-trace-redaction-'));
+const previousEnv = Object.fromEntries(['AUTOTEST_STATE_DIR', 'AUTOTEST_DATA_DIR', 'AUTOTEST_RESULTS_DIR'].map(key => [key, process.env[key]]));
+process.env.AUTOTEST_STATE_DIR = path.join(tempRoot, 'state');
+process.env.AUTOTEST_DATA_DIR = path.join(tempRoot, 'data');
+process.env.AUTOTEST_RESULTS_DIR = path.join(tempRoot, 'results');
 const CORE = path.join(ROOT, 'core');
-const blueprintPath = path.join(CORE, 'blueprint.json');
-const mappingsPath = path.join(CORE, 'mappings.json');
-const webOut = path.join(CORE, 'executed.spec.ts');
+const STATE = process.env.AUTOTEST_STATE_DIR;
+fs.mkdirSync(STATE, { recursive: true });
+fs.mkdirSync(process.env.AUTOTEST_DATA_DIR, { recursive: true });
+fs.mkdirSync(process.env.AUTOTEST_RESULTS_DIR, { recursive: true });
+const blueprintPath = path.join(STATE, 'blueprint.json');
+const mappingsPath = path.join(STATE, 'mappings.json');
+const webOut = path.join(STATE, 'executed.spec.ts');
 
 let pass = 0, fail = 0;
 function check(name, cond) {
   if (cond) { pass++; console.log(`  PASS ${name}`); }
   else { fail++; console.log(`  FAIL ${name}`); }
-}
-
-const backup = {};
-for (const p of [blueprintPath, mappingsPath]) {
-  backup[p] = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null;
 }
 
 function compile(scenarioData) {
@@ -35,7 +40,7 @@ function compile(scenarioData) {
   fs.writeFileSync(mappingsPath, JSON.stringify({
     'Fill Field': { steps: [{ type: 'fill', target: "getByRole('textbox')", value: 'literal, no placeholder' }] }
   }, null, 2));
-  execFileSync(process.execPath, [path.join(CORE, 'compiler.js')], { cwd: ROOT, env: { ...process.env, AUTOTEST_PLATFORM: 'web' } });
+  execFileSync(process.execPath, [path.join(CORE, 'compiler.js')], { cwd: ROOT, env: { ...process.env, AUTOTEST_STATE_DIR: STATE, AUTOTEST_PLATFORM: 'web' } });
   return fs.readFileSync(webOut, 'utf8');
 }
 
@@ -53,9 +58,9 @@ try {
   check('Scenario with only non-sensitive Data keeps tracing.start', withoutSecret.includes('tracing.start'));
   check('Scenario with only non-sensitive Data keeps tracing.stop', withoutSecret.includes('tracing.stop'));
 } finally {
-  for (const p of [blueprintPath, mappingsPath]) {
-    if (backup[p] === null) { try { fs.unlinkSync(p); } catch (e) {} }
-    else fs.writeFileSync(p, backup[p]);
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+  for (const [key, value] of Object.entries(previousEnv)) {
+    if (value === undefined) delete process.env[key]; else process.env[key] = value;
   }
 }
 

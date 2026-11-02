@@ -1,43 +1,52 @@
 # 🪁 Ponytail Audit — AutoTest Studio
-**Date:** 2026-08-14  
-**Method:** Full tree scan (all .js, .ts, .html, .md files)  
-**Scope:** Over-engineering only — not correctness
+**Updated:** 2026-10-07 · **Method:** verified against master (not the 08-14 scan) · **Scope:** over-engineering only, never correctness/security
 
----
+CONFIDENCE: AMBIGUOUS
+RELATIONS:
+- depends_on::[[Engineering Plan]]
+- derived_from::[[Plan Reconciliation]]
+GOD_NODES: [[[Engineering Plan]], [[Module Contracts]]]
+SURPRISING_CONNECTIONS: Historical architecture and current runtime evidence may diverge; preserve both with explicit dates.
 
-## Findings (ranked: biggest cut first)
+### KEY FINDINGS:
+- This retained context predates the current plan; its detailed claims below are historical until revalidated.
+- Current ownership, priorities and acceptance criteria are in Engineering Plan and Plan Reconciliation.
 
-| Tag | What to cut | Replacement | Path |
-|---|---|---|---|
-| `delete` | `isSafeChain`, `interpolate`, `const q` all copy-pasted verbatim into `/record` handler | Extract to shared module `core/helpers.js`, `require` in both files | `studio/server.js` L348-371 vs `core/compiler.js` L27-67 |
-| `delete` | `globalBrowser` state + 10-minute inactivity timer + `updateActivity()` | `updateActivity()` is defined but **never called anywhere** — the timer fires on wall-clock time regardless. Delete `updateActivity`, delete `lastActivity`, simplify timer to just `if (globalBrowser)` guard | `studio/server.js` L25-74 |
-| `delete` | `core/executed.spec.ts` committed to repo | Add to `.gitignore` — it is 100% generated on every `/run`. Committing it leaks test data and causes merge conflicts | `core/executed.spec.ts` |
-| `delete` | Duplicate startup replay cleanup runs twice — once for `CORE_DIR` and once for `ROOT_DIR` | Merge into a single `[CORE_DIR, ROOT_DIR].forEach(dir => ...)` loop. 5 lines → 2 | `studio/server.js` L796-816 |
-| `yagni` | `sit_runner.js` — a manual SIT script that hardcodes `PT.1` scenario and requires a running server | Not a real test suite. `human_workflow_test.js` (referenced in AGENTS.md) and `qa_audit_round21.md` superseded it. Dead weight | `sit_runner.js` |
-| `yagni` | `webdriverio` in `package.json` dependencies | Mobile Appium path has **never been E2E tested**. It should be an optional/peer dep or a note in README, not a mandatory install that adds ~100MB+ to `DRIVERS/node_modules` | `package.json` L29 |
-| `shrink` | Data Matrix accordion (L716-731 in `studio-ui.html`) builds table HTML via string concatenation into `body.innerHTML` | `scenarioId` is server-derived (safe), `v` (variable names) come from mapped code (safe), but `iter[v]` (user-entered data) is escaped via `replace(/"/g, '&quot;')` — partial. Use `input.value = ...` via DOM after insertion. Medium XSS risk | `studio-ui.html` L708, L724, L726 |
-| `shrink` | `header.innerHTML` in data matrix accordion interpolates `scenarioId` directly | `scenarioId` is an alphanumeric key from Excel parsing (safe per regex), but the comment on L303 says "no innerHTML with user data" — be consistent. Use `textContent` | `studio-ui.html` L708 |
-| `shrink` | `getBundledBrowserPath()` has 5 hardcoded path variants, called 3× (spawn for codegen, replay, and /run) | Extract the result once at startup into a module-level `const BUNDLED_BROWSER = getBundledBrowserPath()` — currently re-scans disk on every single record/run request | `studio/server.js` L47-63 |
-| `stdlib` | Orphan cleanup uses `fs.readdirSync(...).filter(f => f.startsWith('replay_') && ...)` | `glob` not needed — this `filter` pattern is correct and minimal. No cut here — already using stdlib | — |
+### PRIMARY SOURCES:
+- [Playwright codegen](https://playwright.dev/docs/codegen) — VERIFIED accessible 2026-10-16; recording workflow reference only, not verification of every historical claim below.
+- Local source/document anchors remain in the retained body below. Unrevalidated historical claims are AMBIGUOUS.
 
----
+### SIGNIFICANCE:
+Preserves prior reasoning without allowing stale checkmarks to certify current behavior.
 
-## Net Removable
-- **~80 lines** of duplicated `isSafeChain`/`interpolate`/`q` code across server.js + compiler.js  
-- **~20 lines** of dead `updateActivity`/`lastActivity`/inactivity-timer complexity  
-- **~20 lines** of duplicate replay cleanup loops  
-- **164 lines** of `core/executed.spec.ts` (committed generated artifact)  
-- **34 lines** of `sit_runner.js` (dead manual SIT script)  
-- **1 dependency**: `webdriverio` (untested, ~100MB in DRIVERS)
+### GAPS/CONSTRAINTS IDENTIFIED:
+Historical implementation and verification statements require current-code and runtime checks before use.
 
-**Total removable: ~320 lines + 1 heavy dependency**
+> **Current plan amendment — 2026-10-17:** Read [[Engineering Plan]], [[Module Contracts]], [[Recording Acceptance]] and [[Plan Reconciliation]] first. This document preserves earlier context/inventories; its priorities and verification claims are historical unless independently revalidated. Manual real-codegen → complete replay is the MVP.
 
----
+## Already cut (verified in code — do not re-propose)
 
-## What NOT to touch (load-bearing complexity)
-- `acorn` + `acorn-walk` — the AST parsing is the security backbone, not over-engineering  
-- `isSafeChain` logic itself — complex-looking but every line earns its keep  
-- The `trackedProcesses` Set — needed for SIGKILL cleanup  
-- The startup replay glob sweep — necessary crash recovery  
-- `playwright.config.ts` — minimal already  
-- `start.js` symlink logic — needed for air-gapped deploy
+- Shared `core/helpers.js` extracted (`isSafeChain/interpolate/q/tokenizeLiterals/sweepOrphans/...`) — P1-A done.
+- Dead `updateActivity`/`lastActivity` gone (`grep` → 0 matches) — P1-B done.
+- Orphan sweep merged (`[CORE_DIR, DATA_DIR].flatMap(sweepOrphans)`) — P1-C done.
+- `BUNDLED_BROWSER` cached at startup — P1-D done.
+- `sit_runner.js` deleted — P1-E done.
+- `platform_state.json` persisted + restored — P2 done.
+- Generated specs gitignored (`core/executed.spec.ts`, `executed.mobile.js`, `replay_*`, `codegen_*`, `runtime_data.json`, `platform_state.json`) — P0 done.
+
+## Remaining findings (ranked)
+
+| # | Tag | Cut | Replacement | Status |
+|---|---|---|---|---|
+| 1 | `delete` | `globalBrowser` + `process.on('exit')` closer (`server.js:65,87-89,235-239`) — nothing assigns it; only `trackedProcesses` + codegen/runner refs do work | Delete var + both handlers | Safe, unexecuted |
+| 2 | `shrink` | `getBundledBrowserPath` (~30 lines) duplicated logic vs `resolveBundledBrowser` in `playwright.config.ts` | Extract to `core/helpers.js`, require in both | Safe — pure path probing |
+| 3 | `shrink` | `launchVisibleCodegen` vs `launchVisibleReplay` — same spawn/track/close/unlink shape | One `launchVisibleChild({args,env,onClose})` | Do inside [[Server-Split]] slice 2 |
+| 4 | `shrink` | `stepsToLines` (preview) vs replay-builder + compiler emit — three Playwright-line renderers | Share one renderer from `lib/parse.js` | Do inside slice 3/5, with regression tests |
+| 5 | `yagni` | `webdriverio` (`package.json:68`, ~100MB+) — mobile never E2E-tested | **KEEP (decision).** Removing breaks the mobile compile path + contradicts board Reality Box `10:389` which promises it as bounded scope. Revisit only if product defers mobile explicitly | Product decision required |
+| 6 | `shrink` | `/results` HTML index built by string concat (`server.js:258-325`, `${dir}`/`${f}` unescaped) | Escape names or build via DOM-ish join with escape helper | Correctness-adjacent; normal review, not blind cut |
+
+**Net now: ~60 lines removable + 1 dedup. The 08-14 "~320 lines" estimate is spent — most of it is already cut.**
+
+## What NOT to touch (load-bearing)
+
+Acorn + walk, `isSafeChain` logic, `trackedProcesses`, startup sweep, `runNodeScript` packaged branches (`isPackaged`/`RUN_AS_NODE`/asar cwd — each encodes a real `.dmg` failure), `execFileSync` argv style (space-in-path fix), 409 guard order, `tokenizeLiterals`, trace redaction, wipe hooks, `AUTOTEST_*` relocation. Correctness/security/product requirements outrank deletion — always.

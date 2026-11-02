@@ -5,6 +5,199 @@ validation status. Newest entries are added at the top.
 
 ---
 
+## 2026-10-21 — Resume live codegen feedback fix and acceptance
+
+- Files: `BRAIN/CHANGE-LOG.md`, `BRAIN/Implementation Progress.md`, `AGENTS.md`, `blueprint.html`, `defect.md`, `TEST_RESULTS.md`; current candidate is `studio/server.js`, `studio/studio-ui.html`, `tests/codegen_result_test.js`. Recorded the verified import-only snapshot and native focus/selection lessons in AGENTS.md.
+- Resumed the user-requested live preview while codegen stays open, preserving explicit finalization, edit protection and failure Save blocking. Fresh Luna static review and independent runtime QA assigned.
+- Implementation: `studio/server.js` now verifies a generated Playwright test-body envelope before publishing live snapshots; `tests/codegen_result_test.js` covers valid import-only prefixes preserving the prior preview/version. The prior Save/failure/timeout corrections in `studio/studio-ui.html` were rechecked.
+- Validation: import-only regression RED on old route and GREEN after guard; focused codegen/UI11, syntax and whitespace checks passed. Final `rtk npm test` EXIT0, all 23 configured suite processes. Fresh static rereview found no remaining blocker. Real live ComputerUse QA observed clean navigation and Username fill before close (session 1792600176692003), with provisional label and disabled Save. Native Quit delivered identical final source; repeated reads, explicit UI save and preview passed. Independent QA: five scoped gates PASS, zero FAIL; live races/edit-retention runtime reruns, complete workbook replay and installed-package acceptance remain open. Protected workbook/data hashes unchanged; BRAIN links, blueprint links/IDs and whitespace checks passed. Owned QA server and temporary-profile UI browser stopped.
+
+---
+
+
+## 2026-10-17 — User correction: show code live during recording
+
+- Files: `AGENTS.md`, `BRAIN/Engineering Plan.md`, `BRAIN/Module Contracts.md`, `BRAIN/Recording Acceptance.md`, `BRAIN/Implementation Progress.md`, `TEST_SCENARIOS.md`, `blueprint.html`, `BRAIN/CHANGE-LOG.md`.
+- `README.md` and `RUN_GUIDE.md` describe the new live/final workflow; implementation files/results are added below as completed.
+- Close-only display did not meet Gabriel Alvin's expected feedback. Approved provisional live preview through the existing poll, followed by authoritative final capture on successful close and explicit save. Require valid session-owned snapshots, ordered versions, preserved edits, modal ownership and Save gating.
+- Implementation: `studio/server.js`, `studio/studio-ui.html`, `tests/codegen_result_test.js` add syntax-checked session-owned live snapshots, ordered versions, input/render ownership, read-only live source and provisional Save blocking. Existing `tests/run_all.js` includes the regression. `defect.md` records independent review.
+- Validation: previous final-only route RED lacked previewCode while recording; live candidate focused checks and 23-suite run EXIT0. Review then found failed-launch Save/recovery messaging inconsistent; correction pending. Final-only native delivery/save and edit retention in TEST_RESULTS.md remain baseline; fresh live native acceptance pending.
+
+---
+
+
+## 2026-10-17 — Approved final codegen file delivery architecture
+
+- Files: `BRAIN/Engineering Plan.md`, `BRAIN/Module Contracts.md`, `BRAIN/Recording Acceptance.md`, `BRAIN/Implementation Progress.md`, `TEST_SCENARIOS.md`, `blueprint.html`, `BRAIN/CHANGE-LOG.md`.
+- Primary delivery becomes final session-owned CLI output → AutoTest review → explicit save; native manual Copy/Paste is fallback. Reuse existing polling; do not consume early output. Preserve cancellation, failure, user-edit and session isolation. Intermediate replay and packaged release stay separate gates.
+- Implementation files: `studio/server.js`, `studio/studio-ui.html`, new `tests/codegen_result_test.js`, suite inclusion `tests/run_all.js`, and `AGENTS.md` amendment. `README.md` and `RUN_GUIDE.md` now describe successful-exit delivery, preserved edits, replay fallback, and the existing bundled-browser preference accurately.
+- Validation: original route RED ready:true on an early output versus candidate pending; focused regression/API63/UI11 GREEN. Initial 23-suite `rtk npm test` EXIT0. Static review then found focus-only final-output loss and delayed manual-preview overwrite; each received a specific RED/GREEN regression and fix. Final full 23-suite run EXIT0; static rereview found no further blocker. First real native recording → final delivery → UI save/preview passed with exact OrangeHRM navigation and repeatable HTTP output. A subsequent final-preview ordering review found a late previous mapping could overwrite automatic insertion; advancing the input revision fixed it with a specific RED/GREEN regression. Focused/UI11 pass after that last line; final runtime repetition and full-suite recheck pending. `defect.md` retains review findings/dispositions and `TEST_RESULTS.md` records runtime evidence.
+
+---
+
+
+
+## 2026-10-17 — Selected full-workbook native recording baseline exposes stale capture
+
+- Files: `TEST_RESULTS.md`, `defect.md`, `BRAIN/Implementation Progress.md`, `AGENTS.md`, `blueprint.html`, `BRAIN/CHANGE-LOG.md`.
+- Used `orangehrm_full_scenario.xlsx` unchanged in disposable isolated Studio. ComputerUse native navigation reached the actual OrangeHRM login page through bundled Playwright Chrome. Binding the actual running chromium-1234 symlink app path succeeded.
+- Validation: intake PASS (API setup); real native navigation PASS; latest-source presentation FAIL (modal about:blank versus completed generated file OrangeHRM navigation). Native Inspector Copy → AutoTest Paste BLOCKED; complete workbook replay NOT RUN. No production code changed, no fabricated or saved mapping, no source-file read counted as native clipboard evidence. Exact observations retained in TEST_RESULTS.md.
+
+---
+
+
+## 2026-10-17 — Prioritize full-workbook native codegen copy/paste acceptance
+
+- `BRAIN/Recording Acceptance.md`: records Gabriel Alvin’s selected `orangehrm_full_scenario.xlsx`, permits programmatic file selection as setup, and prioritizes native Playwright Inspector/terminal Copy → AutoTest Paste → save → scenario replay. Original workbook and existing project data are preserved.
+- `BRAIN/Implementation Progress.md`, `blueprint.html`, `TEST_RESULTS.md`: outcome recorded after the isolated Luna operator run; prior blocked evidence retained.
+- Cleanup: selected-workbook test supervisor stopped; owned server absent, port closed and temporary runtime removed. Original workbook preserved.
+- `AGENTS.md`: verified lesson 18 records a false missing-browser conclusion from an empty wrapped search and requires exact-path checks.
+- Validation: selected workbook API upload/scan and Record response succeeded in isolated Studio. Native copy/paste is BLOCKED: ComputerUse explicitly rejected access to the bundled Chrome for Testing app. App-access request sent; no native PASS or fabricated source. Workbook SHA-256 remains 2067659c1128f762be8ca5b4714c1a1515862d1d779e6bc56b98232c8c26dc58.
+
+---
+
+## 2026-10-17 — Execute G1 test isolation and G2 upload repair with Luna agents
+
+### Changed
+
+- `tests/run_all.js`: owned startStudio helper with pre-created temporary state/data/results, dynamic ready port, controlled offline env, signal/liveness checks, bounded readiness buffer, awaited shutdown and per-suite child completion. Added the new upload regression to the existing suite list; no prior suite removed.
+- `tests/run_all_test.js`: meaningful fixture writes to all roots, real Studio provider-disable check, held-port not-ready check, signal exit and failed-start cleanup regression.
+- `tests/upload_test.js`: new isolated real multipart regression covering valid persistence/scan, invalid and missing-file preservation, staging cleanup, mapping keep/reset and stale data reset.
+- `tests/action_db_corruption_test.js`, `tests/scenario_parser_test.js`, `tests/trace_redaction_test.js`, `tests/mobile_compile_test.js`: private test roots replace repo mutation/restore; compiler children receive explicit isolated env; original behavior assertions retained.
+- `tests/api_test.js`, `tests/mutual_exclusion_test.js`, `tests/ui_behavior_test.js`: own isolated Studio and actual dynamic port; private fixture/probe paths; awaited teardown.
+- `tests/state_dir_test.js`: isolated standalone server/compiler/config paths and env, dynamic collision test, bounded awaited child cleanup; synthetic-provider regression forces disabled optional provider.
+- `tests/fixtures_smoke_test.js`, `tests/journey_test.js`, `tests/fixtures/serve.js`: dynamic fixture ports, accurate machine/human URL output, awaited owned cleanup, preserved original fixture/journey assertions.
+- `studio/server.js`: removed the pre-existing stray standalone d from POST /upload. This targeted repair restores that line to repository HEAD; the new upload regression records the local dirty-tree failure.
+- `TEST_SCENARIOS.md`: corrected historical UP-E-01 false-success description to strict 400+preservation; added missing-file preservation UP-N-02. `TEST_RESULTS.md` receives independent runtime reports separately.
+- `README.md`: current isolated harness/focused test instructions and realistic acceptance boundary.
+- `AGENTS.md`, `BRAIN/Agent Personas.md`: explicit gpt-6-luna delegation, headed browser-use/ComputerUse requirement, resource-writing versus path-string testing lesson.
+- `BRAIN/Implementation Progress.md` created; `BRAIN/Index.md`, `BRAIN/Engineering Plan.md`, `BRAIN/Module Contracts.md`, `BRAIN/Recording Acceptance.md`, `blueprint.html`: current file/function contracts, execution status, actual checks and open gates.
+- `defect.md`: independent Luna static review/fix note; original ranked findings preserved. `BRAIN/CHANGE-LOG.md`: this entry.
+
+### Validation
+
+- Three explicit RED/GREEN sequences: missing harness directories (actual fixture write ENOENT → created roots), valid upload (400 d-is-not-defined → 200), standalone relocation provider leakage (enabled:true with synthetic settings → disabled).
+- `rtk npm test`: EXIT 0; all 22 configured offline suite processes passed. Live LLM request deliberately skipped. Includes API 63/63, mutual exclusion 4/4, UI 11/11, trace 7/7, mobile compile/stub 22/22, journey 22/22, fixture pages and development Electron boot/shutdown. The post-review standalone env hardening was then verified by rerunning state_dir_test successfully.
+- Existing behavior assertions retained; no existing suite or failing expectation deleted to obtain green. Historical catalog correction strengthens rejection/preservation.
+- Independent Luna static review found no further test-isolation blockers after corrections; reviewer did not self-certify runtime behavior.
+- Syntax checks passed for all 15 changed/repaired scripts; `git diff --check` clean at checks. User-data/ignore/prior-task SHA-256 preservation checks passed after the complete suite.
+- Independent Luna runtime QA in `TEST_RESULTS.md`: seven assigned upload/scan rows PASS, zero FAIL. Headed upload used programmatic file selection; native chooser remains BLOCKED. Actual ComputerUse interaction in the bundled codegen browser searched Carrot and changed five results to one; generated-source transfer/save/full replay remain BLOCKED. No fabricated generated code or personal-profile interaction. Owned Studio, fixture and temporary stable-Chrome supervisor stopped after testing.
+- Oversized uploads reject with raw HTTP 500/Multer HTML: catalog rejection passes, clearer user-facing error remains an open usability concern. No installed-package/mobile-device/real-provider acceptance is claimed.
+- Cleanup verification: the independent tester confirmed the owned Recorder/Chrome for Testing process exited with Studio, and the named autotest-luna Browser Use daemon stopped. Unrelated processes were left untouched. Screenshots were observed in tool output but no standalone screenshot file was saved; the persistent evidence is the written runtime report.
+
+---
+
+
+## 2026-10-17 — Repo audit and manual-recording-first engineering plan
+
+### Changed
+
+- `BRAIN/Engineering Plan.md`: confirmed MVP, ordered G0–G12 backlog, dependencies, slice/release gates, rollback, offline setup/update and provisional workload characterization.
+- `BRAIN/Module Contracts.md`: proposed file/function responsibilities, typed boundary objects, inputs/outputs/errors and protecting tests; extraction is conditional on demonstrated need.
+- `BRAIN/Recording Acceptance.md`: exclusive ComputerUse operation of real browser/Inspector, genuine-code provenance, RC01–RC20, fresh-context independent QA and native-package acceptance.
+- `defect.md` and `BRAIN/Engineering Audit.md`: 16 ranked source/probe findings, smallest fixes, plan mapping and explicit untested boundaries.
+- `BRAIN/Plan Reconciliation.md`: previous plan/PRD/FigJam conflicts and their resolutions; unfinished `tasks/plan.md` and `tasks/todo.md` preserved and mapped to new gates.
+- `blueprint.html`: current summarized plan with diagrams/tables and links to detailed BRAIN nodes; full previous PRD body retained as collapsed historical reference; local assets only.
+- `AGENTS.md`: current direction and 16 verified maintenance/acceptance lessons; historical Electron/CDP claims explicitly qualified.
+- `BRAIN/Index.md`, `BRAIN/Next Direction.md`, `BRAIN/Architecture.md`, `BRAIN/Agent Personas.md`, `BRAIN/Data-Driven Parameterization.md`, `BRAIN/Figma Plan.md`, `BRAIN/Maintainer Reference.md`, `BRAIN/Omnichannel Orchestration.md`, `BRAIN/Ponytail Audit.md`, `BRAIN/Security & Compiler.md`, `BRAIN/Server-Split.md`, `BRAIN/What Happened.md`, `BRAIN/Workflow & Execution.md`, `BRAIN/Zero-Trust Data Lifecycle.md`: current-plan precedence notice/graph metadata; prior bodies preserved; broken manual-only tester reference replaced with current orchestration.
+- `BRAIN/CHANGE-LOG.md`: this entry; prior log entries retained verbatim.
+
+### Validation
+
+- Three read-only audit agents covered runtime/compiler, existing plans/distribution, and test/codegen evidence. Independent plan reviews corrected circular baseline gates, migration timing, unsafe legacy-suite assumptions, missing controller-boundary task and dependency labels.
+- FigJam read through Figma MCP; official Playwright, Electron and Node references checked. Plan facts distinguish local dirty-tree source evidence, bounded parser probe and future runtime acceptance.
+- Static documentation checks: all BRAIN wikilinks resolve; blueprint local links/anchors resolve; no duplicate HTML IDs or remote runtime assets; current conceptual nodes contain required source/confidence/relation/constraint fields.
+- Browser document verification: rendered current blueprint at 1470px and 390px widths; page width equals viewport; wide tables scroll locally; eight current sections present; history collapsed. Desktop and mobile screenshots inspected. A favicon-only preview 404 was removed using a local data icon.
+- Baseline SHA-256 checks preserve existing `studio/server.js`, `core/mappings.json`, `core/action_database.json`, `.gitignore`, `tasks/plan.md`, and `tasks/todo.md`. No application/dependency/data changes made by this planning pass.
+- No application suite, live codegen acceptance, real target application or native installer was run/certified. The broad legacy suite requires harness and per-test isolation before use; current runtime defects remain open.
+
+---
+
+## 2026-10-08 — Add Maintainer Reference with every section/function contract
+
+### Purpose
+
+Provide 100%-clarity maintenance tables for humans and agents: every server
+section/route/helper, all 50 UI handlers, and all core/Electron/config modules
+with purpose, inputs/outputs, callers, invariants, tests, and safe-change
+checklists. Follows best maintenance protocol: scope → read → preserve
+contracts → one logical change → runnable check → narrow-to-broad validation →
+black-box loop → changelog → diff review.
+
+### Changed
+
+- `BRAIN/Maintainer Reference.md` created (§1 protocol, §2 ownership/state,
+  §3 server routes/helpers, §4 UI handlers, §5 core modules, §6 test map,
+  §7–8 checklists/document rules).
+- `BRAIN/Index.md` links the new reference.
+- `BRAIN/CHANGE-LOG.md` updated for this change.
+
+### Validation
+
+- Source re-read before writing: full `server.js`, UI script `333-1760`,
+  all `core/*.js`, `electron/main.js`, `playwright.config.ts`, `package.json`.
+- Docs only; no application code touched.
+
+---
+
+## 2026-10-07 — Server-Split v2: every-function inventory, per-function chunk map
+
+### Purpose
+
+V1 mapped blocks; v2 maps **every function** (15 server fns, 31 routes, 50 UI
+handlers, 30+ core fns) to its chunk after a per-file inventory, and rules on the
+"one file per function" request: rejected as execution shape (50+ files = more
+breakage surface), kept as inventory — chunks stay flow-grouped (10 files),
+split further only past ~350 lines with zero shared mutable state.
+
+### Changed
+
+- `BRAIN/Server-Split.md` rewritten: §0 verdict, §2 per-function tables with
+  line numbers + callers + move notes, §3 core/electron/config verdicts
+  (incl. `cdp_session.js` as next split candidate), §4 UI 50-handler inventory
+  (file stays single — air-gap contract), §6–8 slices/rules/done-when.
+- `BRAIN/CHANGE-LOG.md` updated for this change.
+
+### Validation
+
+- Inventories pulled live: server routes/state/fns, UI 50 handlers,
+  action_db 13 methods, cdp exports, line counts (4579 total).
+- No application code touched; docs only.
+
+---
+
+## 2026-10-07 — Fill BRAIN from Figma board + blueprint PRD; add Server-Split plan
+
+### Purpose
+
+BRAIN stubs were stale (2026-08-14, pre-relocation claims) and missing the full
+development plan. Rebuilt from the FigJam board (4 flows + red/blue alignment
+marks), `blueprint.html` §1–14, and master code; added a file-by-file plan to
+split `studio/server.js` (1391 lines, 31 routes) into a thin bootstrap + 4 flow
+routers + lib without breaking cross-route mutexes.
+
+### Changed
+
+- `BRAIN/Index.md`, `Architecture.md`, `Workflow & Execution.md`,
+  `Security & Compiler.md`, `Data-Driven Parameterization.md`,
+  `Zero-Trust Data Lifecycle.md`, `Omnichannel Orchestration.md`,
+  `Agent Personas.md`, `Ponytail Audit.md`, `Next Direction.md`,
+  `What Happened.md` rewritten against verified master state.
+- `BRAIN/Server-Split.md` created: 10-file target layout, exact line-move table,
+  shared-`ctx` sentinel design, 6 abort-safe slices, scalability review rules.
+- `BRAIN/CHANGE-LOG.md` updated for this change.
+
+### Validation
+
+- Load-bearing facts verified before writing: `action_db.js:9-10` (STATE_DIR),
+  `package.json:68` (webdriverio kept), `server.js:47/73` (platform persisted),
+  `.gitignore` (specs + transient artifacts), `electron/main.js` (userData fork),
+  `grep` zero-matches for `updateActivity`/`sit_runner.js`.
+- No application code touched; docs only (Figma board edits likewise need no
+  code validation).
+
+---
+
 ## 2026-10-07 — Restore Electron window creation for startup tests
 
 ### Purpose

@@ -28,10 +28,11 @@ This engine requires **NO** internet access and **NO** `npx` execution. Everythi
 
 ### 2. Mapping Steps (AutoTest Chrome Recorder)
 For every unique step found in your Excel file, you must map it to Playwright actions:
-- Click the **"Record"** button next to an unmapped step. AutoTest opens the separate stable-Chrome profile named `autotest`; your normal Chrome profile is not used.
+- Click the **"Record"** button next to an unmapped step. AutoTest opens visible Playwright Chrome with the separate `autotest` profile. Your normal Chrome profile is not used.
 - Perform the action in the AutoTest Chrome window. You do not need to close your normal Chrome.
-- Recorded code transfers automatically into the AutoTest mapping modal. Review or edit it, then click **"Sync & Save Action"**.
-- If stable Chrome is installed outside the standard location, put its absolute executable path in `.env` as `AUTOTEST_CHROME_PATH=/absolute/path/to/chrome`.
+- For a new recording, AutoTest shows generated actions as a **live preview** while you work. Finish and close the recorder to finalize the capture and enable **Sync & Save Action**. If you edit the box while recording, your edits stay and the live/final source appears in a separate expandable section.
+- For replay-before-recording, follow the modal’s manual-copy instructions. Automatic export for this mode remains an open engineering gate.
+- Default recording prefers the bundled Playwright browser, with stable Chrome as fallback. `AUTOTEST_CHROME_PATH` configures the optional CDP path.
 - **Parameterization (DDT)**: If the step requires dynamic variables from the Excel's "Test Data" column, replace literal values with `{variable_name}` syntax (e.g., `fill('{username}')`).
 - Click **"Sync & Save Action"**. The step will turn blue. The system's AST engine securely extracts and validates your target commands automatically.
 

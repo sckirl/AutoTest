@@ -2,6 +2,10 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const XLSX = require('xlsx');
+const { execFileSync } = require('child_process');
+const { startStudio } = require('./run_all');
+
+let PORT;
 
 function uploadExcel(fileBuffer) {
   return new Promise((resolve, reject) => {
@@ -10,7 +14,7 @@ function uploadExcel(fileBuffer) {
     const post = `\r\n--${boundary}--\r\n`;
     const body = Buffer.concat([Buffer.from(pre), fileBuffer, Buffer.from(post)]);
     const opts = {
-      hostname: 'localhost', port: process.env.PORT || 3000, path: '/upload', method: 'POST',
+      hostname: '127.0.0.1', port: PORT, path: '/upload', method: 'POST',
       headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': body.length }
     };
     const r = http.request(opts, res => {
@@ -26,7 +30,7 @@ function req(method, urlPath, body) {
   return new Promise((resolve, reject) => {
     const data = body !== undefined ? JSON.stringify(body) : null;
     const opts = {
-      hostname: 'localhost', port: process.env.PORT || 3000, path: urlPath, method,
+      hostname: '127.0.0.1', port: PORT, path: urlPath, method,
       headers: { 'Content-Type': 'application/json', 'Content-Length': data ? Buffer.byteLength(data) : 0 }
     };
     const r = http.request(opts, res => {
@@ -46,12 +50,10 @@ async function run() {
     else { fail++; log.push('  FAIL ' + name + (detail ? ' | ' + String(detail).substring(0,120) : '')); }
   }
 
-  const mappingsFile = path.join(__dirname, '..', 'core', 'mappings.json');
-  const mappingsBackup = fs.existsSync(mappingsFile) ? fs.readFileSync(mappingsFile, 'utf8') : null;
-  const dbFile = path.join(__dirname, '..', 'core', 'action_database.json');
-  const dbBackup = fs.existsSync(dbFile) ? fs.readFileSync(dbFile, 'utf8') : null;
-
+  let studio;
   try {
+    studio = await startStudio();
+    PORT = studio.port;
     let r;
 
     // --- Core API ---
@@ -120,9 +122,11 @@ async function run() {
   // --- NEW: /preview-scenario/:scenarioId ---
   // Need a blueprint: run parser first using uploaded excel
   // Use the practicetest_scenario.xlsx already on disk
-  const { execSync } = require('child_process');
   try {
-    execSync('node core/scenario_parser.js practicetest_scenario.xlsx', { stdio: 'pipe', cwd: path.join(__dirname, '..') });
+    execFileSync(process.execPath, [
+      path.join(__dirname, '..', 'core', 'scenario_parser.js'),
+      path.join(__dirname, '..', 'practicetest_scenario.xlsx'),
+    ], { stdio: 'pipe', cwd: path.join(__dirname, '..'), env: studio.env });
   } catch(e) {}
 
   r = await req('GET', '/preview-scenario/' + encodeURIComponent('PT.1'));
@@ -187,13 +191,13 @@ async function run() {
   // --- A0.6.1: path traversal in GET /codegen-result/:sessionId ---
   // Run against a throwaway probe file rather than studio/server.js so a regression can never
   // delete the repository's real source code during npm test.
-  const probeFile = path.join(__dirname, '_probe_target.js');
+  const probeFile = path.join(studio.root, '_probe_target.js');
   fs.writeFileSync(probeFile, '// probe target');
   try {
-    r = await req('GET', '/codegen-result/' + encodeURIComponent('../../../tests/_probe_target'));
+    r = await req('GET', '/codegen-result/' + encodeURIComponent('../../../_probe_target'));
     check('T32 path traversal sessionId rejected 400', r.status === 400);
     check('T32b probe target file untouched on disk', fs.existsSync(probeFile));
-    r = await req('GET', '/codegen-result/' + encodeURIComponent('..\\..\\tests\\_probe_target'));
+    r = await req('GET', '/codegen-result/' + encodeURIComponent('..\\..\\_probe_target'));
     check('T32c backslash traversal sessionId rejected 400', r.status === 400);
   } finally {
     try { fs.unlinkSync(probeFile); } catch (e) {}
@@ -211,9 +215,7 @@ async function run() {
   }
 
   // --- A0.6.2: /upload must report real failures, not always "Uploaded." ---
-  const backupExcel = path.join(__dirname, '..', 'scenario_uploaded.xlsx');
-  const backupExcelData = fs.existsSync(backupExcel) ? fs.readFileSync(backupExcel) : null;
-  try {
+  {
     const badWb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(badWb, XLSX.utils.aoa_to_sheet([['Not', 'The', 'Right', 'Headers']]));
     r = await uploadExcel(XLSX.write(badWb, { type: 'buffer', bookType: 'xlsx' }));
@@ -245,12 +247,6 @@ async function run() {
     r = await req('GET', '/scan');
     const scanScenarios = JSON.parse(r.body).scenarios || [];
     check('T36b GET /scan dedupes the same Scenario_ID it warned about on upload', new Set(scanScenarios).size === scanScenarios.length && scanScenarios.includes('A.1_dup2'));
-  } finally {
-    if (backupExcelData === null) { try { fs.unlinkSync(backupExcel); } catch (e) {} }
-    else {
-      fs.writeFileSync(backupExcel, backupExcelData);
-      try { execSync('node core/scenario_parser.js scenario_uploaded.xlsx', { stdio: 'pipe', cwd: path.join(__dirname, '..') }); } catch (e) {}
-    }
   }
 
   // --- A0.7.1: /record must reject mobile, never silently spawn a Web codegen ---
@@ -278,8 +274,7 @@ async function run() {
   }
 
   } finally {
-    if (mappingsBackup !== null) fs.writeFileSync(mappingsFile, mappingsBackup);
-    if (dbBackup !== null) fs.writeFileSync(dbFile, dbBackup);
+    if (studio) await studio.stop();
   }
 
   console.log('\n=== AutoTest Studio API Test Suite v2 ===');
